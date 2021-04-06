@@ -1,0 +1,8 @@
+default:
+  root: .
+  models: models
+  mero_project: "models"
+  mero_datafile: "../data/Simulated_DatasetMeropenem.csv"
+  epo_datafile: "../data/Simulated_EPO_dataset.csv"
+  epo_post: "../data/post_real.RDS"
+  epo_project: "models/"

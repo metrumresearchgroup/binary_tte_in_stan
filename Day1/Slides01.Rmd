@@ -1,0 +1,321 @@
+---
+title: "Foundational Concepts"
+output:
+  slidy_presentation:
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: slidystyles.css
+    footer: metrumrg &copy 2017
+    mathjax: local
+    self_contained: false
+#bibliography: alpha.bib
+#nocite: | 
+#    @2795, @2192, @3684
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(GGally)
+library(binom)
+library(texreg)
+set.seed(314159)
+
+expit <- function(x) 1 / (1+exp(-x))
+``` 
+
+# Causal model: small molecule
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\node (v0) at (0,0) {exposure};
+\node (v1) at (4,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\draw [->] (v0) edge (v1);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\end{tikzpicture}
+```
+
+# Causal model: large molecule
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\node (v0) at (0,0) {exposure};
+\node (v1) at (4,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\draw [->] (v0) edge (v1);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v2) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\end{tikzpicture}
+```
+
+
+# Causal model with TGI
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\node (v0) at (0,0) {exposure};
+\node (v1) at (4,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\node (v6) at (2,0) {SLD};
+\draw [->] (v0) edge (v6);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v2) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\draw [->] (v6) edge (v1);
+\end{tikzpicture}
+```
+
+
+# Basic Notation
+
+For now, we will use this high-level notation: 
+
+* $\mu$  model parameter ("intercept")
+* $\beta$ model parameter (coefficient for effect of exposure or covariate)
+* $C$, $D$, $T$ : exposure (think of a steady-state exposure metric for now, e.g. $\mathrm{CAVG}_\mathrm{ss}$), or dose, or just treatment indicator. 
+* $X$ : covariates
+* $Y$ : As-yet-unrealized / unobserved response ("DV")
+* $y$ : Observed value for $Y$ 
+
+# Probability versus statistics
+
+In some cases we will be thinking  in the "forward" / probability / "Greek to Roman" direction: 
+
+$$
+\begin{eqnarray*} 
+\mu,\, \beta,\, C,\, X & \stackrel{\mathrm{Probability}}{\longrightarrow} & Y 
+\end{eqnarray*}
+$$
+
+In other cases we will be thinking in the "reverse" / statistics / "Roman to Greek" direction:
+
+$$
+\begin{eqnarray*} 
+\mu,\, \beta & \stackrel{\mathrm{Statistics}}{\longleftarrow} &  C,\, X,\, y 
+\end{eqnarray*}
+$$
+
+# Stats notation for the Bernoulli distribution
+
+
+$$
+Y_i \sim \mathrm{Ber}(p) \,\,\, \mathrm{independently} \text{ for} \,\, i = 1, \ldots, n
+$$
+Or equivalently, we could specify the probability mass function:
+
+$$
+\begin{eqnarray*}
+P(Y_i=y_i \, | \, p) = p^{y_i}(1-p)^{(1-y_i)} \,\, \text{for} \,\, i = 1, \ldots, n  \\ (\text{where each} \,\, y_i = 0 \,\, \text{or} \,\, 1).
+\end{eqnarray*}
+$$
+
+# Workbook 
+
+* rbinom
+* dbinom
+
+# The Likelihood function
+
+__Likelihood__ for a single Bernoulli observation
+
+$$
+l(p \, | \, Y_i = y_i) = P(Y_i=y_i) = p^{y_i}(1-p)^{(1-y_i)} 
+$$
+
+__Joint likelihood__ for a sample for independent Bernoulli observations
+
+$$
+\begin{eqnarray*}
+l(p | \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i)  =   \prod_{i=1}^{n}p^{y_i}(1-p)^{(1-y_i)} \\
+& = & p^{(\# \, \text{of "ones"})}(1-p)^{n - (\# \, \text{of "ones"})}
+\end{eqnarray*}
+$$
+
+# Log likelihood
+
+Joint __log__ likelihood:
+
+$$
+\begin{eqnarray*}
+L(p \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = & (\# \, \text{of successes}) \log(p)  \\ 
+& + & (n-\# \, \text{of successes}) \log(1-p) 
+\end{eqnarray*}
+$$
+
+Derivative of joint log likelihood: 
+
+$$
+\frac{\mathrm{d}L}{\mathrm{d}p} = 0 \iff  p = \frac{(\# \, \text{of successes})}{n}
+$$
+
+* When we have a full GLM with covariates, there is no analytical solution to the likelihood equations. 
+* However there is a numerical root finder that is specially tailored to the structure of GLM models: the `Newton-Raphson` method ([see @2795]). 
+
+# Likelihood maximization
+
+* As in the workbook exercises, an generic numerical optimization algorithm (e.g. `optim()`) *can* be used to maximize the likelihood for a full GLM.  
+* In fact, in (rare) special cases, it makes sense to do exactly that. (E.g. if there are constraints on some parameters: [see @3625], p. 269]). 
+* Again, more typically, Newton-Raphson is used. 
+
+# Workbook 
+
+* likelihood computation 
+* likelihood maximization
+
+# Odds of an event
+
+* `Conditional probability` of an event, conditional on treatment "1".
+
+$$ P(Y=1 \, | \, T = 1) $$
+* `Odds` of an event, conditional on treatment "1": 
+
+$$ \frac{P(Y=1 \, | \, T = 1)}{P(Y=0 \, | \, T = 1)} = \frac{P(Y=1 \, | \, T = 1)}{1 - P(Y=1 \, | \, T = 1)}$$
+
+* `Odds ratio` of an event, for treatment "1" versus treatment "0":
+
+$$ \frac{\left.P(Y=1 \, | \, T = 1)\, \right/ P(Y=0 \, | \, T = 1)}{\left.P(Y=1 \, | \, T = 0) \, \right/ P(Y=0 \, | \, T = 0) }$$
+
+
+# Other measures of efficacy for binary data
+
+Relative risk of an event, for treatment "1" versus treatment "0":
+
+$$ \frac{P(Y=1 \, | \, T = 1)}{P(Y=1 \, | \, T = 0)}$$
+Anecdotally, this is often the preferred / most interpretable way to quantify efficacy.
+
+NB: Odds ratio and relative risk are sometimes confused with each other. Note the difference. 
+
+
+# Other measures of efficacy for binary data
+    
+Difference in probability of events, for treatment "1" versus treatment "0":
+    
+
+$$ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) $$
+Often undesirable: do you want to treat the difference between 3% and 5% the same way that you treat the difference between 23% and 25% ? 
+
+# Workbook
+
+* odds ratios
+
+# The logit transform
+
+* The logit, or "log odds" function
+
+$$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)$$
+
+* The standard logistic function (also called the "expit") is the inverse of the logit:
+
+$$p = \mathrm{expit}(x)=1/(1+\exp(-x))$$ 
+
+# Workbook
+
+* logistic function
+
+# Other "link functions"
+
+* logit function takes us from the unit interval to the full Real line: 
+
+$$ (0, 1) \stackrel{\mathrm{expit}}{\longrightarrow} \mathbb{R} $$
+
+* Another alternative "link" function is the `probit` : 
+
+$$ \mathrm{probit}(p) = \Phi^{-1}(p)$$ 
+Where $\Phi$ is the Normal Cumulative Density Function (CDF): 
+
+$$ \Phi(x) = P(\mbox{Std. Normal Variate} < x)  $$
+
+# A logit-link GLM
+
+A GLM with a logit link and Bernoulli (or more generally, Binomial) residuals is referred to as a *logistic regression*. 
+
+A logistic regression with exposure ($C_i$) as the sole predictor would be expressed as: 
+
+$$ Y_i \sim \mathrm{Ber}(p_i) \,\,\, \text{where} \,\,\, p_i = \mathrm{expit}(\mu + \beta C_i) \,\, ; \,\,i = 1,\ldots, n$$
+
+Or equivalently:
+
+$$ Y_i \sim \mathrm{Ber}(p_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(p_i) = \mu + \beta C_i \,\, ; \,\,i = 1,\ldots, n$$
+
+
+# What exactly is a GLM?
+
+* The `generalized` in `generalized linear model` refers to the non-Normal residuals (in this case, Bernoulli residuals). 
+* NB: `generalized` $\neq$ `general`. A `general linear model` has Normally distributed residuals; `general` in that context refers to possible correlation amongst the residuals.   
+* The `linear` in `generalized linear model` refers to the fact that the right hand side of, e.g. 
+    
+$$ \mathrm{logit}(p_i) = \mu + \beta C_i $$
+is linear __in the parameters__ (i.e. it is a linear function of $\mu$ and $\beta$).
+
+
+# Quiz 
+
+Which (if any) of the following is linear in the parameters?
+
+$$\mu + \beta \log(C)  \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta}{C} \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta_1 C}{(\beta_2 + C)}$$
+
+
+# Anatomy of a GLM
+
+Taking the following model as an example: 
+
+$$ Y_i \sim \mathrm{Ber}(p_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(p_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
+
+Standard terminology to refer to the model components is:
+
+* $Y_i \sim \mathrm{Ber}(p_i)$ is the `residual` component of the model. (Sometimes also called the `random` component of the model, but we avoid that terminology is it becomes ambiguous in a `GLMM` context that includes random effects).
+* The logit transformation is the `link` function. 
+* $\mu + \beta C^*_i$ is the `linear predictor`.
+
+
+
+# Other examples of GLMs
+
+|Common Name            | Link function   | Residual component      | Application
+|:----------------------|:----------------|:------------------------|:---------------
+|Logistic regression    | logit           | Binomial (or Bernoulli) | Binary response
+|Probit regression      | probit          | Binomial (or Bernoulli) | Binary response
+|Poisson regression     | log             | Poisson                 | Count data
+|Cumulative link models | logit or probit | Multinomial             | Ordered categorical
+|Beta regression        | logit or probit | Beta                    | Bounded response
+|ANCOVA                 | identity        | Normal                  | Continuous response
+
+
+See @2795 for more examples and general discussion of GLMs. 
+
+# GLMs and Time-to-event models
+
+* Many parametric time-to-event models (e.g. many accelerated failure time models) also *can* be expressed as GLMs with a log or identity link, but they usually require different techniques to optimize the likelihood in order to accomodate censored time-to-event data, and so aren't typically presented in a GLM context. However, here is an ...
+* __Advanced Pro-tip__ (not covered here) : Functions not explicitly designed to fit GLMs can  sometimes be used for that purpose. E.g. `flexsurv::flexsurvreg` could be used to fit a GLM with a log link and Gamma residuals. (Your data doesn't *have* to be censored or consist of times-to-event in order to use those functions).
+
+# Workbook
+
+* simulating a GLM
+
+
+
+# References

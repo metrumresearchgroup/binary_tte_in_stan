@@ -1,0 +1,141 @@
+---
+title: "Introduction to the Analysis of Binary and Time-to-Event Data"
+output:
+  slidy_presentation:
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: slidystyles.css
+    footer: metrumrg &copy 2021
+
+---
+
+
+# Why Start Here?
+
+* The beginning is a very good place to start.
+* Why start with GLMs?
+* Why start with binary endpoints?
+* Why time-to-event analysis?
+
+----
+
+# Why start with GLMs? Broadly Useful.
+
+* `Binary` (the focus of this course)
+* `Ordered categorical` (e.g. grade of adverse event)
+* `Continuous`
+    * bounded below (e.g. Lognormal residuals), 
+    * bounded above and below (e.g. Beta residuals), 
+    * unbounded (e.g. Normal residuals) 
+* `Counts`
+* `Time-to-event` (Many TTE models are GLMs, even though they are generally fit using slightly different machinery)
+
+
+----
+
+# Why start with GLMs? Mind-expanding.
+
+* If you are coming from a Pop PK background, moving away from models with Normal (or log-Normal) residuals may force you to think at a new level of abstraction. 
+* If you are not used to modeling in R and Stan, the `glm()` and `brm()` functions in R provide a good introduction, because they conform to somewhat standard R conventions for model-fitting functions. 
+
+
+----
+
+# What does this mean?
+* Minimal NONMEMese
+* $\eta$ is not what you're used to
+* No $\sigma$ (For the most part)
+* No random effects
+
+----
+
+# Why start with binary data?
+
+* The Bernoulli distribution for binary data is (in most respects) as simple a statistical distribution as there is. Good place to start for many basic statistical concepts.  
+* There are fewer choices to make and fewer assumptions to check when dealing with binary data (e.g. as compared to time-to-event data). 
+
+---- 
+
+# Course objectives
+
+We want you to finish this course with: 
+
+* General conceptual understanding and basic intuitions for Logistic Regression. 
+* General conceptual understanding and basic intuitions for the analysis of time-to-event data. 
+* Specific tips, tricks, and recipes for getting the job done "soup to nuts".
+
+
+----
+
+# What this course isn't
+
+* __Not__ primarily a course on R programming.
+    * We expect a full range of experience levels. 
+    * R techniques __not__ taught systematically "from the ground up"
+    * Instead: __"copy and modify" / "learn by playing"__
+
+* __Not__ a comprehensive course on the analysis of odd-type data
+    * But, we will touch on most of the key concepts for analyzing binary and TTE data
+    * Will get into more complex examples during the technical sessions
+
+
+----
+
+# Course organization
+
+* Four 3-4 hour sessions
+* Roughly one per week
+* Didactic + hands-on learning
+* Homework + "office hours"
+
+----
+
+# Session 1
+
+* `Basic concepts for binary data` : 
+    * Study designs and confounded exposure-response
+    * Notational conventions, Bernoulli distribution, Maximum likelihood
+    * Visualizing relationships
+    * Models, model checking, and measures of effect
+    * Bayesian models for binary data (T)
+    
+----
+
+# Session 2
+`Basic concepts for time-to-event data` : 
+    * Time-to-event (TTE) data:: what makes it different?
+    * Visualizing TTE data - the Kaplan-Meier estimator
+    * Cox proportional hazards model
+    * Parametric regression models
+
+----
+
+# Session 3
+* `Advanced concepts for time-to-event data` : 
+    * Bayesian TTE parametric modeling
+    * Additional topics in TTE modeling
+    * TTE models with a continuously time-varying hazard
+    * Repeated time-to-event data
+    * Markov models for analysis of longitudinal discrete state data
+
+----
+
+# Session 4
+* `More advanced concepts for time-to-event data` : 
+    * Joint modeling of continuous and time-to-event data (TD and TTE)
+    * Modeling of treatment related AEs (neutropenia, diarrhea, etc)
+
+
+----
+
+
+# Course materials
+
+* Each session has a slide set and a workbook.
+* Navigate slides by first typing "t". 
+* Workbooks are "Rmarkdown" documents. 
+    * GUI button to execute a code chunk. 
+    * GUI button to execute all prior code. __(Try this now. It will be useful if you mess up your data mid-session)__. 
+
