@@ -118,6 +118,7 @@ $$
 \mu,\, \beta & \stackrel{\mathrm{Statistics}}{\longleftarrow} &  C,\, X,\, y 
 \end{eqnarray*}
 $$
+# Insert content from ACOP slides 10-31
 
 # Stats notation for the Bernoulli distribution
 
