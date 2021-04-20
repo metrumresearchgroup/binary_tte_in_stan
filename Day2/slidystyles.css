@@ -1,0 +1,121 @@
+h1 {
+  color: black;
+}
+h2 {
+  color: black;
+}
+h3 {
+  color: black;
+}
+a {
+  color: steelblue;
+}
+
+
+body{ /* Normal  */
+    font-family: Helvetica, arial, sans-serif;
+    line-height: 1.25;
+}
+
+
+pre {
+  font-family:  "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+
+code {
+  font-size: 90%;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: auto;
+  font-size: 90%;
+  line-height: 1.45;
+  border-radius: 5px;
+}
+
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: auto;
+  font-size: 90%;
+  line-height: 1.45;
+  border: 0;
+  padding: 16px;
+  border-radius: 5px;
+  margin-top: 16px;
+  margin-bottom: 18px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+pre:not([class]) {
+  border: 1;
+  font-weight: bold;
+}
+
+code {
+  border: 1;
+  background-color: #EAEDED
+  font-weight: bold;
+  font-family:  "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+}
+
+code:not([class]) {
+  background-color: #EAEDED
+  font-family:   Consolas, Menlo, Courier, monospace;
+  font-weight: bold;
+  color: green;
+}
+
+
+.sourceCode.r  {
+  font-family:  Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 95%;
+  background-color: #f6f8fa;
+}
+
+.sourceCode.c  {
+  font-family:  Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 95%;
+  background-color: #f6f8fa;
+}
+
+.slide.section {
+  line-height: 1.1;
+  margin-left: 100px;
+  margin-right: 50px;
+}
+
+
+.slide.titlepage {
+  font-size: 48px;
+}
+
+.alert {
+  color: firebrick;
+  font-weight: bold;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  
+}
+.defout  {
+  background-color: #F7F9F9;
+  font-weight: normal;
+  color: black;
+  border: 5px;
+  margin-top: 16px;
+  margin-bottom: 18px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  font-size: 75%;
+}
+
+alrt {
+  color: firebrick;
+  font-weight: bold;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+dsb {
+  color: darkslateblue;
+  font-weight: bold;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
