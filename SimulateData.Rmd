@@ -1,0 +1,110 @@
+---
+title: "Simulate data"
+output:
+  html_document:
+    df_print: paged
+---
+
+* Assume a hazard model of the form: $h(t) = \lambda_0 \cdot \left( 1 + \frac{\theta \cdot C(t)}{EC50 + C(t)} \right)$
+* Assume 2\% event rate over 6 months on placebo and 30% event rate if $C(t) >> EC50$
+* Implies $\lambda_0 = -\log(0.02)/180$ and $\theta = 1 - \log(0.30)/\log(0.02)$
+* PK model: $V (L) = 3.5*(WT/70)*exp(\eta_V)$, $CL (L/day) = 0.5*(WT/70)^{0.75}*\exp(\eta_{CL})/24$
+
+Study with doses of 0, 5, 10, 40 mg, IV bolus.  50 subjects per arm.  10% uniform drop-out; independent of AE hazard.
+
+
+
+```{r}
+library(tidyverse)
+library(survival)
+library(mrgsolve)
+library(survminer)
+
+theme_set(theme_bw())
+
+set.seed(1234)
+
+n_per_dose = 50
+doses = c(0,5,10,20,40)
+n_total = n_per_dose * length(doses)
+
+## time units = days
+
+dsim = tibble(ID = 1:n_total,
+              dose = rep(doses, each=n_per_dose),
+              BWT = rlnorm(n_total, meanlog = log(80), sdlog = 0.2),
+              eta_V = rnorm(n_total,0,0.30),
+              eta_CL = rnorm(n_total, 0, 0.30),
+              eta_KA = rnorm(n_total, 0.30)) %>% 
+  mutate(VC = 4.5 * (BWT/70) * exp(eta_V),
+         CL = 0.5  * (BWT/70)^0.75 * exp(eta_CL) * 24,
+         KA = (0.92*24) * exp(eta_KA),
+         EC50 = 2, LAMBDA0 = -log(0.98)/180,
+         EMAX = log(.50)/log(.98)-1,
+         evid=1,
+         amt=dose,
+         time=0,
+         ii=1,
+         addl = 180,
+         cmt=1,
+         u_ae = runif(n_total))
+
+```
+
+
+
+```{r}
+mod <- mread_cache(model = "Day1",project = 'model/mrgsolve/')
+```
+```{r}
+dout = mod %>% 
+  data_set(dsim) %>% 
+  carry_out(dose,KA,CL,VC,LAMBDA0,u_ae) %>% 
+  mrgsim_df(del=1/24) %>% 
+  mutate(Surv = exp(-CHAZARD))
+```
+
+```{r}
+dout %>% 
+  filter(time <10) %>% 
+  ggplot(aes(x=time, y=CENT, group=ID, col=as.factor(dose))) +
+  geom_line() +
+  facet_wrap(~dose)+
+  theme_bw()
+```
+
+
+```{r}
+dout %>% 
+  filter(ID %in% seq(1,201,by=50)) %>% 
+  ggplot(aes(x=time, y=Surv, group=ID, col=as.factor(dose))) +
+  geom_line() +
+  theme_bw()
+```
+```{r}
+dae = dout %>% 
+  filter(Surv > u_ae) %>% 
+  group_by(ID) %>% 
+  slice(n()) %>% 
+  mutate(AE = as.numeric(time < 180))
+```
+
+```{r}
+dae %>% group_by(dose) %>% summarise(p=mean(AE))
+```
+
+
+# Boxplots of CAVG_ss by dose group
+CAVG_ss = dose/CL
+
+
+# Plot AE prob vs CAVG_ss
+
+# Plot time to AE by dose group
+
+# Plot time to AE by CAVG_ss quartile
+
+
+
+
+

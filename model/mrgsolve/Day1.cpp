@@ -1,0 +1,20 @@
+$PARAM  
+VC = 2.44, KA = 0.92, CL=1, 
+LAMBDA0 = 0.0217, EMAX = 0.692, EC50=4.956
+
+$SET delta=0.1, end=180
+
+$CMT GUT CENT CHAZARD
+
+$ODE 
+double CP = CENT/VC;
+
+dxdt_GUT = -KA*GUT;
+dxdt_CENT = KA*GUT - (CL/VC)*CENT;
+dxdt_CHAZARD = LAMBDA0 * (1 + EMAX * CP / (EC50 + CP));
+
+$TABLE
+double EFFECT = LAMBDA0 * (1 + EMAX * CP / (EC50 + CP));
+CP = CENT/VC;
+
+$CAPTURE CP EFFECT
