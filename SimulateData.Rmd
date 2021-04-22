@@ -10,8 +10,10 @@ output:
 * Implies $\lambda_0 = -\log(0.02)/180$ and $\theta = 1 - \log(0.30)/\log(0.02)$
 * PK model: $V (L) = 3.5*(WT/70)*exp(\eta_V)$, $CL (L/day) = 0.5*(WT/70)^{0.75}*\exp(\eta_{CL})/24$
 
-Study with doses of 0, 5, 10, 40 mg, IV bolus.  50 subjects per arm.  10% uniform drop-out; independent of AE hazard.
+Study with doses of 0, 5, 10, 20, 40 mg, IV bolus.  50 subjects per arm.  10% uniform drop-out; independent of AE hazard.
 
+10% ECOG
+25% ECOG > 1
 
 
 ```{r}
@@ -28,18 +30,32 @@ n_per_dose = 50
 doses = c(0,5,10,20,40)
 n_total = n_per_dose * length(doses)
 
+
+levels.dose = c("Placebo",paste0(doses[-1]," (mg)"))
+
 ## time units = days
 
 dsim = tibble(ID = 1:n_total,
               dose = rep(doses, each=n_per_dose),
+              dosef = factor(ifelse(dose>0,paste0(dose," (mg)"),"Placebo"),levels=levels.dose),
               BWT = rlnorm(n_total, meanlog = log(80), sdlog = 0.2),
               eta_V = rnorm(n_total,0,0.30),
               eta_CL = rnorm(n_total, 0, 0.30),
-              eta_KA = rnorm(n_total, 0.30)) %>% 
+              eta_KA = rnorm(n_total, 0.30),
+              ECOGN = sample(c(0:2),size=250,replace=TRUE,prob=c(.60,.30,.10)),
+              ECOGF = case_when(ECOGN==0~"ECOG Status = 0",
+                                ECOGN==1~"ECOG Status = 1",
+                                ECOGN==2~"ECOG Status = 2"),
+              TIMEDO = sample(c(0:1),size=250,replace=TRUE,prob=c(.90,.10))) %>% 
+  # 10% of subjets drop out otherwise they have DO TIME of 180 days (~ administrative censoring)
+  mutate(TIMEDO = ifelse(TIMEDO,runif(1,0,180),180)) 
+
+dsim = dsim %>% 
   mutate(VC = 4.5 * (BWT/70) * exp(eta_V),
          CL = 0.5  * (BWT/70)^0.75 * exp(eta_CL) * 24,
          KA = (0.92*24) * exp(eta_KA),
-         EC50 = 2, LAMBDA0 = -log(0.98)/180,
+         EC50 = 2, 
+         LAMBDA0 = -log(0.98)/180,
          EMAX = log(.50)/log(.98)-1,
          evid=1,
          amt=dose,
@@ -49,20 +65,37 @@ dsim = tibble(ID = 1:n_total,
          cmt=1,
          u_ae = runif(n_total))
 
-```
 
+```
 
 
 ```{r}
 mod <- mread_cache(model = "Day1",project = 'model/mrgsolve/')
 ```
+
 ```{r}
 dout = mod %>% 
   data_set(dsim) %>% 
-  carry_out(dose,KA,CL,VC,LAMBDA0,u_ae) %>% 
+  carry_out(dose,KA,CL,VC,LAMBDA0,u_ae,TIMEDO) %>% 
   mrgsim_df(del=1/24) %>% 
-  mutate(Surv = exp(-CHAZARD))
+  mutate(Surv = exp(-CHAZARD)) %>% 
+  left_join(dsim %>% distinct(ID,ECOGF,dosef))
+
+# lets simulate AE time
+# subjects not observed to have an AE time are given an AE time of 180 days 
+dout = dout %>% 
+  group_split(ID) %>% 
+  lapply(function(x) {
+        x %>% mutate(TIMEAE=suppressWarnings(approx(x=1-x$Surv,y=x$time,xout=x$u_ae[1],yright=180)$y))
+  }) %>% bind_rows() %>% 
+  # taking into consideration censoring/drop out
+  mutate(TIMEAE=ifelse(TIMEAE<TIMEDO,TIMEAE,TIMEDO),
+         # indicator of whether subject had AE
+         AE=ifelse(TIMEAE<TIMEDO,1,0))
+
+
 ```
+
 
 ```{r}
 dout %>% 
@@ -81,6 +114,7 @@ dout %>%
   geom_line() +
   theme_bw()
 ```
+
 ```{r}
 dae = dout %>% 
   filter(Surv > u_ae) %>% 
@@ -94,15 +128,82 @@ dae %>% group_by(dose) %>% summarise(p=mean(AE))
 ```
 
 
-# Boxplots of CAVG_ss by dose group
-CAVG_ss = dose/CL
+# Boxplots of CAVGSS by dose group
+```{r}
+dout = dout %>% 
+    mutate(CAVGSS=dose/CL) 
 
+dout %>% 
+  ggplot() + 
+  geom_boxplot(aes(y=CAVGSS,x=dosef)) + 
+  labs(y=expression(C["ave,ss"]),
+       x="Dose (mg)")
+```
 
-# Plot AE prob vs CAVG_ss
+# Plot AE prob vs CAVGSS
+```{r}
+
+dat.AE = dout %>% 
+  distinct(ID,TIMEAE,AE,CAVGSS,dosef)
+
+dout %>% 
+  filter(time==180) %>% 
+  ggplot() + 
+  geom_smooth(aes(y=1-Surv,x=CAVGSS,color="True probability"),se=FALSE) +
+     geom_rug(data = dat.AE %>% filter(AE == 0),
+              aes(x = CAVGSS), sides = "b") +
+     geom_rug(data = dat.AE %>% filter(AE == 1),
+              aes(x = CAVGSS), sides = "t") +
+     geom_smooth(data = dat.AE,
+                 aes(x = CAVGSS, y = AE, color="Estimated probability from data"),
+                 se=FALSE,
+                 method = "glm",
+                 method.args = list(family="binomial")) + 
+  labs(x=expression(C["ave,ss"]),
+       y="Probability of AE",
+       color="Smoothed Probability") + 
+  ylim(c(0,1))
+```
+
 
 # Plot time to AE by dose group
 
-# Plot time to AE by CAVG_ss quartile
+```{r}
+sfit <- survfit(Surv(TIMEAE, AE) ~ dosef, data = dat.AE)
+p <- ggsurvplot(sfit,
+                fun="event",
+                data=dat.AE,
+                ggtheme=theme_bw(),
+                conf.int = FALSE,
+                legend.labs=levels.dose,
+                legend.title="Doses",
+                xlab = "Time (days)", 
+                ylab = "Probability of AE",
+                ylim=c(0,1))
+p  
+```
+
+# Plot time to AE by CAVGSS quartile
+```{r}
+dat.AE = dat.AE %>% 
+mutate(Quartile = factor(paste0("Q", ntile(CAVGSS, n = 4)))) 
+
+sfit <- survfit(Surv(TIMEAE, AE) ~ Quartile, data = dat.AE)
+p <- ggsurvplot(sfit,
+                fun="event",
+                data=dat.AE,
+                ggtheme=theme_bw(),
+                conf.int = FALSE,
+                legend.labs=levels(dat.AE$Quartile),
+                legend.title=expression("Quartiles of C"["ave,ss"]),
+                xlab = "Time (days)", 
+                ylab = "Probability of AE",
+                ylim=c(0,1))
+p  
+```
+
+
+
 
 
 
