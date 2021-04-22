@@ -5,16 +5,12 @@ output:
     df_print: paged
 ---
 
-* Assume a hazard model of the form: $h(t) = \lambda_0 \cdot \left( 1 + \frac{\theta \cdot C(t)}{EC50 + C(t)} \right)$
+* Assume a hazard model of the form: $h(t) = \lambda_0 \cdot \left( 1 + \frac{\text{EMAX} \cdot C(t)}{EC50 + C(t)} \right)$
 * Assume 2\% event rate over 6 months on placebo and 30% event rate if $C(t) >> EC50$
 * Implies $\lambda_0 = -\log(0.02)/180$ and $\theta = 1 - \log(0.30)/\log(0.02)$
 * PK model: $V (L) = 3.5*(WT/70)*exp(\eta_V)$, $CL (L/day) = 0.5*(WT/70)^{0.75}*\exp(\eta_{CL})/24$
 
 Study with doses of 0, 5, 10, 20, 40 mg, IV bolus.  50 subjects per arm.  10% uniform drop-out; independent of AE hazard.
-
-10% ECOG
-25% ECOG > 1
-
 
 ```{r}
 library(tidyverse)
@@ -32,6 +28,7 @@ n_total = n_per_dose * length(doses)
 
 
 levels.dose = c("Placebo",paste0(doses[-1]," (mg)"))
+levels.ecog = c("ECOG Status = 0","ECOG Status = 1","ECOG Status > 1")
 
 ## time units = days
 
@@ -39,13 +36,17 @@ dsim = tibble(ID = 1:n_total,
               dose = rep(doses, each=n_per_dose),
               dosef = factor(ifelse(dose>0,paste0(dose," (mg)"),"Placebo"),levels=levels.dose),
               BWT = rlnorm(n_total, meanlog = log(80), sdlog = 0.2),
+              AGE = rnorm(n_total, 40, 5),
+              cAGE = AGE-40,
               eta_V = rnorm(n_total,0,0.30),
               eta_CL = rnorm(n_total, 0, 0.30),
               eta_KA = rnorm(n_total, 0.30),
               ECOGN = sample(c(0:2),size=250,replace=TRUE,prob=c(.60,.30,.10)),
-              ECOGF = case_when(ECOGN==0~"ECOG Status = 0",
-                                ECOGN==1~"ECOG Status = 1",
-                                ECOGN==2~"ECOG Status = 2"),
+              ECOGF = factor(case_when(ECOGN==0~"ECOG Status = 0",
+                                       ECOGN==1~"ECOG Status = 1",
+                                       ECOGN==2~"ECOG Status > 1"),levels=levels.ecog),
+              ECOG1 = ifelse(ECOGN==1,1,0),
+              ECOG2 = ifelse(ECOGN>1,1,0),
               TIMEDO = sample(c(0:1),size=250,replace=TRUE,prob=c(.90,.10))) %>% 
   # 10% of subjets drop out otherwise they have DO TIME of 180 days (~ administrative censoring)
   mutate(TIMEDO = ifelse(TIMEDO,runif(1,0,180),180)) 
@@ -76,7 +77,7 @@ mod <- mread_cache(model = "Day1",project = 'model/mrgsolve/')
 ```{r}
 dout = mod %>% 
   data_set(dsim) %>% 
-  carry_out(dose,KA,CL,VC,LAMBDA0,u_ae,TIMEDO) %>% 
+  carry_out(dose,KA,CL,VC,LAMBDA0,u_ae,TIMEDO,ECOG1,ECOG2,cAGE) %>% 
   mrgsim_df(del=1/24) %>% 
   mutate(Surv = exp(-CHAZARD)) %>% 
   left_join(dsim %>% distinct(ID,ECOGF,dosef))
@@ -144,7 +145,7 @@ dout %>%
 ```{r}
 
 dat.AE = dout %>% 
-  distinct(ID,TIMEAE,AE,CAVGSS,dosef)
+  distinct(ID,TIMEAE,AE,CAVGSS,dosef,ECOGF,cAGE)
 
 dout %>% 
   filter(time==180) %>% 
@@ -191,7 +192,7 @@ mutate(Quartile = factor(paste0("Q", ntile(CAVGSS, n = 4))))
 sfit <- survfit(Surv(TIMEAE, AE) ~ Quartile, data = dat.AE)
 p <- ggsurvplot(sfit,
                 fun="event",
-                data=dat.AE,
+                  data=dat.AE,
                 ggtheme=theme_bw(),
                 conf.int = FALSE,
                 legend.labs=levels(dat.AE$Quartile),
@@ -202,8 +203,42 @@ p <- ggsurvplot(sfit,
 p  
 ```
 
+# Plot time to AE by ECOG status
+
+```{r}
+sfit <- survfit(Surv(TIMEAE, AE) ~ ECOGF, data = dat.AE)
+p <- ggsurvplot(sfit,
+                fun="event",
+                data=dat.AE,
+                ggtheme=theme_bw(),
+                conf.int = FALSE,
+                legend.labs=levels.ecog,
+                legend.title="Doses",
+                xlab = "Time (days)", 
+                ylab = "Probability of AE",
+                ylim=c(0,1))
+p  
+```
 
 
+# Plot time to AE by AGE quartile
+```{r}
+dat.AE = dat.AE %>% 
+mutate(Quartile = cut(cAGE+40,breaks=c(0,35,40,45,100))) 
+
+sfit <- survfit(Surv(TIMEAE, AE) ~ Quartile, data = dat.AE)
+p <- ggsurvplot(sfit,
+                fun="event",
+                  data=dat.AE,
+                ggtheme=theme_bw(),
+                conf.int = FALSE,
+                legend.labs=levels(dat.AE$Quartile),
+                legend.title=expression("Quartiles of AGE"),
+                xlab = "Time (days)", 
+                ylab = "Probability of AE",
+                ylim=c(0,1))
+p  
+```
 
 
 
