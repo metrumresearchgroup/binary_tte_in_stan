@@ -186,8 +186,14 @@ p
 
 # Plot time to AE by CAVGSS quartile
 ```{r}
-dat.AE = dat.AE %>% 
-mutate(Quartile = factor(paste0("Q", ntile(CAVGSS, n = 4)))) 
+dat.AE = dat.AE %>% filter(CAVGSS>0) %>% 
+  mutate(Quartile = paste0("Q", ntile(CAVGSS, n = 4))) %>%
+  select(ID,Quartile) %>% 
+  right_join(dat.AE) %>% 
+  mutate(Quartile=ifelse(CAVGSS==0,"Placebo",Quartile),
+         Quartile=factor(Quartile,levels=c("Placebo",paste0("Q",1:4))))
+  
+  
 
 sfit <- survfit(Surv(TIMEAE, AE) ~ Quartile, data = dat.AE)
 p <- ggsurvplot(sfit,
