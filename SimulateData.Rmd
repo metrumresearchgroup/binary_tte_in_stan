@@ -12,6 +12,18 @@ output:
 
 Study with doses of 0, 5, 10, 20, 40 mg, IV bolus.  50 subjects per arm.  10% uniform drop-out; independent of AE hazard.
 
+To-Do:
+-------
+
+* Check censoring - doesn't seem to be working based on TTE plots?
+* Add shrinkage for 'observed' CL?
+* Run exploratory logistic regression model
+* "standard plot"
+   * 
+* VPC from fitted model
+   * Simulate AE (0,1)
+   * Smooth
+
 ```{r}
 library(tidyverse)
 library(survival)
@@ -150,7 +162,8 @@ dat.AE = dout %>%
 dout %>% 
   filter(time==180) %>% 
   ggplot() + 
-  geom_smooth(aes(y=1-Surv,x=CAVGSS,color="True probability"),se=FALSE) +
+  geom_smooth(aes(y=1-Surv,x=CAVGSS,color="True probability"),se=FALSE, 
+              method='gam') +
      geom_rug(data = dat.AE %>% filter(AE == 0),
               aes(x = CAVGSS), sides = "b") +
      geom_rug(data = dat.AE %>% filter(AE == 1),
@@ -158,7 +171,7 @@ dout %>%
      geom_smooth(data = dat.AE,
                  aes(x = CAVGSS, y = AE, color="Estimated probability from data"),
                  se=FALSE,
-                 method = "glm",
+                 method = "gam",
                  method.args = list(family="binomial")) + 
   labs(x=expression(C["ave,ss"]),
        y="Probability of AE",
@@ -246,6 +259,11 @@ p <- ggsurvplot(sfit,
 p  
 ```
 
+```{r}
+dat.AE
+
+summary(glm(AE ~ CAVGSS + ECOGF + cAGE, data=dat.AE, family='binomial'))
+```
 
 
 
