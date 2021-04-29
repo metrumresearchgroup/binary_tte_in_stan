@@ -8,7 +8,9 @@ output:
 * Assume a hazard model of the form: $h(t) = \lambda_0 \cdot \left( 1 + \frac{\text{EMAX} \cdot C(t)}{EC50 + C(t)} \right)$
 * Assume 2\% event rate over 6 months on placebo and 30% event rate if $C(t) >> EC50$
 * Implies $\lambda_0 = -\log(0.02)/180$ and $\theta = 1 - \log(0.30)/\log(0.02)$
-* PK model: $V (L) = 3.5*(WT/70)*exp(\eta_V)$, $CL (L/day) = 0.5*(WT/70)^{0.75}*\exp(\eta_{CL})/24$
+* PK model: 
+  - $V (L) = 3.5*(WT/70)*exp(\eta_V)$
+  - $CL (L/day) = 0.5*(WT/70)^{0.75}*\exp(\eta_{CL})/24$
 
 Study with doses of 0, 5, 10, 20, 40 mg, IV bolus.  50 subjects per arm.  10% uniform drop-out; independent of AE hazard.
 
@@ -29,6 +31,8 @@ library(tidyverse)
 library(survival)
 library(mrgsolve)
 library(survminer)
+library(binom)
+library(readr)
 
 theme_set(theme_bw())
 
@@ -40,7 +44,8 @@ n_total = n_per_dose * length(doses)
 
 
 levels.dose = c("Placebo",paste0(doses[-1]," (mg)"))
-levels.ecog = c("ECOG Status = 0","ECOG Status = 1","ECOG Status > 1")
+levels.ecog = c("0","1",">1")
+levels.smoke = c("Never Smoked","Current/Past Smoker")
 
 ## time units = days
 
@@ -50,18 +55,21 @@ dsim = tibble(ID = 1:n_total,
               BWT = rlnorm(n_total, meanlog = log(80), sdlog = 0.2),
               AGE = rnorm(n_total, 40, 5),
               cAGE = AGE-40,
+              qAGE = cut(AGE,c(0,35,40,45,100),include.lowest = TRUE),
               eta_V = rnorm(n_total,0,0.30),
               eta_CL = rnorm(n_total, 0, 0.30),
               eta_KA = rnorm(n_total, 0.30),
-              ECOGN = sample(c(0:2),size=250,replace=TRUE,prob=c(.60,.30,.10)),
-              ECOGF = factor(case_when(ECOGN==0~"ECOG Status = 0",
-                                       ECOGN==1~"ECOG Status = 1",
-                                       ECOGN==2~"ECOG Status > 1"),levels=levels.ecog),
+              ECOGN = sample(c(0:2),size=n_total,replace=TRUE,prob=c(.50,.25,.25)),
+              ECOGF = factor(case_when(ECOGN==0~levels.ecog[1],
+                                       ECOGN==1~levels.ecog[2],
+                                       ECOGN==2~levels.ecog[3]),levels=levels.ecog),
               ECOG1 = ifelse(ECOGN==1,1,0),
               ECOG2 = ifelse(ECOGN>1,1,0),
-              TIMEDO = sample(c(0:1),size=250,replace=TRUE,prob=c(.90,.10))) %>% 
+              TIMEDO = sample(c(0:1),size=n_total,replace=TRUE,prob=c(.90,.10)),
+              SMOKEN = sample(c(0:1),size=250,replace=TRUE,prob=c(.60,.40)),
+              SMOKEF = factor(ifelse(SMOKEN,levels.smoke[1],levels.smoke[2]),levels=levels.smoke)) %>% 
   # 10% of subjets drop out otherwise they have DO TIME of 180 days (~ administrative censoring)
-  mutate(TIMEDO = ifelse(TIMEDO,runif(1,0,180),180)) 
+  mutate(TIMEDO = ifelse(TIMEDO,runif(n_total,0,180),180)) 
 
 dsim = dsim %>% 
   mutate(VC = 4.5 * (BWT/70) * exp(eta_V),
@@ -70,6 +78,9 @@ dsim = dsim %>%
          EC50 = 2, 
          LAMBDA0 = -log(0.98)/180,
          EMAX = log(.50)/log(.98)-1,
+         beta1 = .22, # log(1.25) ~ 25% increase in hazard ECOG=1 vs ECOG=0,
+         beta2 = .33, # log(1.4) ~ 40% increase in hazard ECOG>1 vs ECOG=0,
+         beta3 = .095, # log(1.1) increase in hazard for age 
          evid=1,
          amt=dose,
          time=0,
@@ -84,15 +95,13 @@ dsim = dsim %>%
 
 ```{r}
 mod <- mread_cache(model = "Day1",project = 'model/mrgsolve/')
-```
 
-```{r}
 dout = mod %>% 
   data_set(dsim) %>% 
   carry_out(dose,KA,CL,VC,LAMBDA0,u_ae,TIMEDO,ECOG1,ECOG2,cAGE) %>% 
   mrgsim_df(del=1/24) %>% 
   mutate(Surv = exp(-CHAZARD)) %>% 
-  left_join(dsim %>% distinct(ID,ECOGF,dosef))
+  left_join(dsim %>% distinct(ID,ECOGF,SMOKEF,qAGE,AGE,dosef))
 
 # lets simulate AE time
 # subjects not observed to have an AE time are given an AE time of 180 days 
@@ -106,10 +115,31 @@ dout = dout %>%
          # indicator of whether subject had AE
          AE=ifelse(TIMEAE<TIMEDO,1,0))
 
+dout = dout %>% 
+    mutate(CAVGSS=dose/CL) 
+dout = dout %>% 
+  filter(CAVGSS>0) %>% 
+  mutate(CAVGSSQ = paste0("Q", ntile(CAVGSS, n = 4))) %>%
+  distinct(ID,CAVGSSQ) %>% 
+  right_join(dout) %>% 
+  mutate(CAVGSSQ=ifelse(CAVGSS==0,"Placebo",CAVGSSQ),
+         CAVGSSQ=factor(CAVGSSQ,levels=c("Placebo",paste0("Q",1:4))))
+
+# dataset with real values of concentration/tte
+dout %>% write_csv("data/derived/datdout.csv")
+
+dat.AE = dout %>% distinct(ID,dose,KA,CL,VC,ECOGF,AGE,qAGE,cAGE,SMOKEF,CAVGSS,CAVGSSQ,dosef,AE)
+# adverse event dataset 
+dat.AE %>% write_csv("data/derived/datAE.csv")
+
+dat.TTE = dout %>% distinct(ID,dose,KA,CL,VC,ECOGF,AGE,qAGE,cAGE,SMOKEF,CAVGSS,CAVGSSQ,dosef,AE,TIMEAE,TIMEDO)
+# TTE dataset 
+dat.TTE %>% write_csv("data/derived/datTTE.csv")
+
 
 ```
 
-
+# Plot of central compartment concetration by dose
 ```{r}
 dout %>% 
   filter(time <10) %>% 
@@ -119,7 +149,7 @@ dout %>%
   theme_bw()
 ```
 
-
+# Plot of probabily of adverse event for random subject from each dose group
 ```{r}
 dout %>% 
   filter(ID %in% seq(1,201,by=50)) %>% 
@@ -128,37 +158,17 @@ dout %>%
   theme_bw()
 ```
 
+# Boxplot of CAVGSS by dose group
 ```{r}
-dae = dout %>% 
-  filter(Surv > u_ae) %>% 
-  group_by(ID) %>% 
-  slice(n()) %>% 
-  mutate(AE = as.numeric(time < 180))
-```
-
-```{r}
-dae %>% group_by(dose) %>% summarise(p=mean(AE))
-```
-
-
-# Boxplots of CAVGSS by dose group
-```{r}
-dout = dout %>% 
-    mutate(CAVGSS=dose/CL) 
-
-dout %>% 
+dat.AE %>% 
   ggplot() + 
   geom_boxplot(aes(y=CAVGSS,x=dosef)) + 
   labs(y=expression(C["ave,ss"]),
        x="Dose (mg)")
 ```
 
-# Plot AE prob vs CAVGSS
+# Plot probability of AE (true and estimated) vs CAVGSS
 ```{r}
-
-dat.AE = dout %>% 
-  distinct(ID,TIMEAE,AE,CAVGSS,dosef,ECOGF,cAGE)
-
 dout %>% 
   filter(time==180) %>% 
   ggplot() + 
@@ -174,7 +184,7 @@ dout %>%
                  method = "gam",
                  method.args = list(family="binomial")) + 
   labs(x=expression(C["ave,ss"]),
-       y="Probability of AE",
+       y="Probability of Adverse Event",
        color="Smoothed Probability") + 
   ylim(c(0,1))
 ```
@@ -183,41 +193,32 @@ dout %>%
 # Plot time to AE by dose group
 
 ```{r}
-sfit <- survfit(Surv(TIMEAE, AE) ~ dosef, data = dat.AE)
+sfit <- survfit(Surv(TIMEAE, AE) ~ dosef, data = dat.TTE)
 p <- ggsurvplot(sfit,
                 fun="event",
-                data=dat.AE,
+                data=dat.TTE,
                 ggtheme=theme_bw(),
                 conf.int = FALSE,
                 legend.labs=levels.dose,
                 legend.title="Doses",
                 xlab = "Time (days)", 
-                ylab = "Probability of AE",
+                ylab = "Probability of Adverse Event",
                 ylim=c(0,1))
 p  
 ```
 
 # Plot time to AE by CAVGSS quartile
 ```{r}
-dat.AE = dat.AE %>% filter(CAVGSS>0) %>% 
-  mutate(Quartile = paste0("Q", ntile(CAVGSS, n = 4))) %>%
-  select(ID,Quartile) %>% 
-  right_join(dat.AE) %>% 
-  mutate(Quartile=ifelse(CAVGSS==0,"Placebo",Quartile),
-         Quartile=factor(Quartile,levels=c("Placebo",paste0("Q",1:4))))
-  
-  
-
-sfit <- survfit(Surv(TIMEAE, AE) ~ Quartile, data = dat.AE)
+sfit <- survfit(Surv(TIMEAE, AE) ~ CAVGSSQ, data = dat.TTE)
 p <- ggsurvplot(sfit,
                 fun="event",
-                  data=dat.AE,
+                data=dat.TTE,
                 ggtheme=theme_bw(),
                 conf.int = FALSE,
-                legend.labs=levels(dat.AE$Quartile),
+                legend.labs=levels(dat.TTE$CAVGSSQ),
                 legend.title=expression("Quartiles of C"["ave,ss"]),
                 xlab = "Time (days)", 
-                ylab = "Probability of AE",
+                ylab = "Probability of Adverse Event",
                 ylim=c(0,1))
 p  
 ```
@@ -225,44 +226,311 @@ p
 # Plot time to AE by ECOG status
 
 ```{r}
-sfit <- survfit(Surv(TIMEAE, AE) ~ ECOGF, data = dat.AE)
+sfit <- survfit(Surv(TIMEAE, AE) ~ ECOGF, data = dat.TTE)
 p <- ggsurvplot(sfit,
                 fun="event",
-                data=dat.AE,
+                data=dat.TTE,
                 ggtheme=theme_bw(),
                 conf.int = FALSE,
                 legend.labs=levels.ecog,
-                legend.title="Doses",
+                legend.title="ECOG Status",
                 xlab = "Time (days)", 
-                ylab = "Probability of AE",
+                ylab = "Probability of Adverse Event",
                 ylim=c(0,1))
 p  
 ```
-
 
 # Plot time to AE by AGE quartile
 ```{r}
-dat.AE = dat.AE %>% 
-mutate(Quartile = cut(cAGE+40,breaks=c(0,35,40,45,100))) 
-
-sfit <- survfit(Surv(TIMEAE, AE) ~ Quartile, data = dat.AE)
+sfit <- survfit(Surv(TIMEAE, AE) ~ qAGE, data = dat.TTE)
 p <- ggsurvplot(sfit,
                 fun="event",
-                  data=dat.AE,
+                data=dat.TTE,
                 ggtheme=theme_bw(),
                 conf.int = FALSE,
-                legend.labs=levels(dat.AE$Quartile),
-                legend.title=expression("Quartiles of AGE"),
+                legend.labs=levels(dat.TTE$qAGE),
+                legend.title=expression("Quartiles of AGE (years)"),
                 xlab = "Time (days)", 
-                ylab = "Probability of AE",
+                ylab = "Probability of Adverse Event",
                 ylim=c(0,1))
 p  
 ```
 
+# Plot time to AE by smoking status
 ```{r}
-dat.AE
 
-summary(glm(AE ~ CAVGSS + ECOGF + cAGE, data=dat.AE, family='binomial'))
+sfit <- survfit(Surv(TIMEAE, AE) ~ SMOKEF, data = dat.TTE)
+p <- ggsurvplot(sfit,
+                fun="event",
+                data=dat.TTE,
+                ggtheme=theme_bw(),
+                conf.int = FALSE,
+                legend.labs=levels.smoke,
+                legend.title=expression("Smoking Status"),
+                xlab = "Time (days)", 
+                ylab = "Probability of Adverse Event",
+                ylim=c(0,1))
+p  
+```
+
+EDA plots of probability of AE by CAVGSS, age, ECOG status, and smoking status
+```{r,EDA}
+# EDA plots incidence of AE
+
+ret = tibble(cov=c("AGE","CAVGSS"),
+             lab=c("Age (years)","Concentration Average at Steady State")) 
+ret = ret %>% mutate(plot=map2(cov,lab, function(.cov,.lab)  {
+  ds.tmp = dat.AE %>% mutate(cov=get(.cov))
+  ds.tmp1 = ds.tmp %>% 
+    mutate(Quartile = paste0("Q", ntile(cov, n = 4))) %>%
+    group_by(Quartile) %>% 
+    summarize(MedConc = median(cov,na.rm=TRUE),
+              mean=mean(AE,na.rm=TRUE),
+              min=binom.confint(sum(AE,na.rm=TRUE),length(AE),methods = "wilson")$lower,
+              max=binom.confint(sum(AE,na.rm=TRUE),length(AE),methods = "wilson")$upper
+    ) 
+  ggplot() +
+    geom_rug(data = ds.tmp %>% filter(AE == 0),
+             aes(x = cov), sides = "b") +
+    geom_rug(data = ds.tmp %>% filter(AE == 1),
+             aes(x = cov), sides = "t") +
+    geom_smooth(data = ds.tmp,
+                aes(x = cov, y = AE),
+                method = "gam",
+                method.args=list(family='binomial'),
+                formula = y ~ s(x)) +
+    geom_point(data=ds.tmp1,aes(MedConc,mean)) + 
+    geom_errorbar(data=ds.tmp1,aes(x=MedConc,ymin=min,ymax=max)) + 
+    ylim(0,1) +
+    labs(y="Probability of Adverse Event",
+         x=.lab) + 
+    theme_bw()
+}))
+  
+ret$plot
+
+ret = tibble(cov=c("ECOGF","SMOKEF","qAGE"),
+             lab=c("ECOG Status","Smoking Status","Age (years)")) 
+ret = ret %>% mutate(plot=map2(cov,lab, function(.cov,.lab)  {
+
+  ds.tmp = dat.AE %>% mutate(cov=get(.cov))
+  ds.tmp = ds.tmp %>% 
+    group_by(cov) %>%
+    summarise(
+      mean=mean(AE,na.rm=TRUE),
+      min=binom.confint(sum(AE,na.rm=TRUE),length(AE),methods = "wilson")$lower,
+      max=binom.confint(sum(AE,na.rm=TRUE),length(AE),methods = "wilson")$upper)
+    
+  ds.tmp %>% 
+    ggplot() + 
+    geom_point(aes(cov,mean)) + 
+    geom_errorbar(aes(x=cov,ymin=min,ymax=max)) + 
+    ylim(0,1) +
+    labs(y="Probability of Adverse Event",
+         x=.lab) + 
+    theme_bw() 
+}))
+
+ret$plot
+
+
+```
+
+
+```{r}
+fit = glm(AE ~ CAVGSS + ECOGF + cAGE + SMOKEF, data=dat.AE, family='binomial')
+summary(fit )
+```
+
+```{r, VPCs}
+
+# VPCs
+
+ret = tibble(cov=c("ECOGF","SMOKEF","qAGE"),
+             lab=c("ECOG Status","Smoking Status","Age (years)"))
+ret = ret %>% mutate(fit = list(fit))
+
+#VPCs
+col.vpc = RColorBrewer::brewer.pal(7,"Set1")[1:2]
+names(col.vpc) = c("observed","predicted")
+
+set.seed(100)
+nsim = 100
+prop <- function(x) sum(x, na.rm = TRUE) / sum(!is.na(x))
+
+stat_fn <- function(simy, ds_orig, cov) {
+  dati <- ds_orig
+  dati$AE <- simy
+  dati = 
+  suppressMessages(
+    dati %>%
+    group_by(cov, CAVGSSQ) %>%
+    summarise(pAE = prop(AE))
+  )
+}
+
+ret = ret %>% 
+  mutate(plot=pmap(list(fit,cov,lab),function(.fit,.cov,.lab)  {
+
+
+    ds.tmp = dat.AE %>% 
+      mutate(cov = get(.cov),
+             cov = factor(cov,labels=glue::glue("{.lab} : {levels(cov)}")))
+    
+    
+    sim_dat <- simulate(.fit, nsim)
+    lab.x = c("Quartiles of CAVGSS")
+    
+    obs_stat = 
+      ds.tmp %>%
+      group_by(cov, CAVGSSQ) %>%
+      summarise(pAE = prop(AE)) 
+    
+    sim_stat <- apply(sim_dat, 2, stat_fn, ds_orig = ds.tmp, cov = .cov) %>% bind_rows()
+    
+    sim_stat_q <-
+      suppressMessages(
+        sim_stat %>%
+          group_by(cov,CAVGSSQ) %>%
+          summarize(LB=quantile(pAE, prob=.05),
+                    MED=median(pAE),
+                    UB=quantile(pAE, prob=.95))
+      )
+    comb_stat <- full_join(obs_stat, sim_stat_q)
+    
+    p = ggplot(data = comb_stat) +
+      geom_pointrange(aes(x = CAVGSSQ, y = MED, ymin = LB, ymax = UB, colour = names(col.vpc)[2])) +
+      geom_point(aes(x = CAVGSSQ, y = pAE, colour = names(col.vpc)[1]), size = 3, alpha = 0.5) +
+      facet_wrap(~ cov) + 
+      scale_color_manual("",values=col.vpc) +
+      ylim(0,1) +
+      labs(y="Probability of Adverse Event",
+           x=lab.x) + 
+      theme_bw()
+    p
+  }))
+
+
+ret$plot
+
+
+
+ret = tibble(cov=c("AGE","CAVGSS"),
+             lab=c("Age","Concentration Average at Steady State")) 
+ret = ret %>% mutate(fit = list(fit))
+
+ret = ret %>% mutate(plot=pmap(list(fit,cov,lab), function(.fit,.cov,.lab)  {
+  ds.tmp = dat.AE
+  ds.tmp = ds.tmp %>% mutate(cov=get(.cov))
+
+  obs_stat <-
+    ds.tmp %>%
+    ungroup %>%
+    mutate(pAE=predict(mgcv::gam(AE ~ s(cov,k=4) , data=. , family=binomial()), type="response")) %>% 
+    group_by(cov) %>%
+    summarize(pAE=mean(pAE)) # Could use distinct, should be identical
+  stat_fn <- function(simy, dat_orig ) {
+    dati <- dat_orig
+    dati$pAE <- simy
+    dati$pAE <- predict(mgcv::gam(pAE ~ s(cov,k=4), data= dati, family=binomial()), type="response") 
+    dati %>% group_by(cov) %>% summarize(pAE=mean(pAE))
+  }
+  sim_dat <- simulate(.fit, nsim)
+  
+  sim_stat <-
+    data.frame(sim_dat) %>%
+    select_all() %>%
+    map(~stat_fn(.,ds.tmp)) %>%
+    bind_rows
+  sim_stat_q <-
+    sim_stat %>%
+    group_by(cov) %>%
+    summarize(LB=quantile(pAE, prob=c(0.05)),
+              MED=median(pAE),
+              UB=quantile(pAE, prob=.95)
+    )
+  comb_stat <- full_join(obs_stat, sim_stat_q)
+  ggplot(data = comb_stat) +
+    geom_rug(data = ds.tmp %>% filter(AE == 0),
+             aes(x = cov), sides = "b") +
+    geom_rug(data = ds.tmp %>% filter(AE == 1),
+             aes(x = cov), sides = "t") +
+    geom_ribbon(aes(x = cov, ymin = LB, ymax = UB, fill = names(col.vpc)[2]), alpha=.25) +
+    geom_line(aes(x = cov, y = MED, colour = names(col.vpc)[2]), size = 1, alpha = .50, linetype = "dashed") +
+    geom_line(aes(x = cov, y = pAE, colour = names(col.vpc)[1]), size = 1) +
+    scale_color_manual("",values=col.vpc) +
+    scale_fill_manual("",values=col.vpc) +
+    ylim(0,1) +
+    xlim(range(obs_stat$cov)) +
+      labs(y="Probability of Adverse Event",
+         x=.lab) + 
+    theme_bw() 
+}))
+
+ret$plot
+
+
+
+ret = tibble(cov=c("AGE","CAVGSS"),
+             lab=c("Age","Concentration Average at Steady State")) 
+ret = ret %>% mutate(fit = list(fit))
+
+ret = ret %>% mutate(plot=pmap(list(fit,cov,lab), function(.fit,.cov,.lab)  {
+  
+  ds.tmp = dat.AE
+  ds.tmp = ds.tmp %>% mutate(cov=get(.cov))
+  ds.tmp = ds.tmp %>% 
+    mutate(Quartile = paste0("Q", ntile(cov, n = 5)))
+  
+  ds.tmp = ds.tmp %>% 
+    group_by(Quartile) %>% 
+    summarise(MedConc = median(cov,na.rm=TRUE)) %>% 
+    distinct(Quartile,MedConc) %>% 
+    right_join(ds.tmp)
+  
+  obs_stat <-
+    ds.tmp %>%
+    ungroup %>%
+    mutate(pAE=predict(mgcv::gam(AE ~ s(cov,k=4) , data=. , family=binomial()), type="response")) %>% 
+    group_by(cov) %>%
+    summarize(pAE=mean(pAE)) # Could use distinct, should be identical
+  stat_fn <- function(simy, dat_orig ) {
+    dati <- dat_orig
+    dati$pAE <- simy
+    dati %>% group_by(MedConc) %>% summarize(pAE=mean(pAE))
+  }
+  sim_dat <- simulate(.fit, nsim)
+  
+  sim_stat <-
+    data.frame(sim_dat) %>%
+    select_all() %>%
+    map(~stat_fn(.,ds.tmp)) %>%
+    bind_rows
+  sim_stat_q <-
+    sim_stat %>%
+    group_by(MedConc) %>%
+    summarize(mean=mean(pAE,na.rm=TRUE),
+              min=binom.confint(sum(pAE,na.rm=TRUE),length(pAE),methods = "wilson")$lower,
+              max=binom.confint(sum(pAE,na.rm=TRUE),length(pAE),methods = "wilson")$upper)
+      
+  ggplot(data = obs_stat) +
+    geom_rug(data = ds.tmp %>% filter(AE == 0),
+             aes(x = cov), sides = "b") +
+    geom_rug(data = ds.tmp %>% filter(AE == 1),
+             aes(x = cov), sides = "t") +
+    geom_errorbar(data = sim_stat_q,
+                  aes(x = MedConc, min = min, max = max), alpha=.50) +
+    geom_line(aes(x = cov, y = pAE, colour = names(col.vpc)[1]), size = 1) +
+    scale_color_manual("",values=col.vpc) +
+    ylim(0,1) +
+    xlim(range(obs_stat$cov)) +
+      labs(y="Probability of Adverse Event",
+         x=.lab) + 
+    theme_bw() 
+}))
+
+ret$plot
+
 ```
 
 
