@@ -1,0 +1,201 @@
+---
+title: "Confounded Exposure Response"
+output:
+  slidy_presentation:
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: slidystyles.css
+    footer: metrumrg &copy 2017
+    mathjax: local
+    self_contained: false
+#bibliography: alpha.bib
+#nocite: | 
+#    @2795, @2192, @3684
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(GGally)
+library(binom)
+library(texreg)
+set.seed(314159)
+
+expit <- function(x) 1 / (1+exp(-x))
+``` 
+
+# Outline
+
+* What is the issue?
+* Why is it a problem?
+* Thinking causally
+* What are some solutions?
+
+# Important to understand exposure-response relationships
+
+A key componant of decision-making:
+
+* Sponsors: Dose-selection for Phase 3
+* Regulators: "Optimizing" benefit-risk in a population
+* Physicians: "Optimizing" benefit-risk for a patient
+
+# In some development programs, only one dose is studied extensively
+
+* Common practice in oncology
+   * Find MTD -> run expansion cohort (1b/2) -> Phase 3
+* Not uncommon in other disease areas
+   * Vedolizumab in UC
+   * __other examples__
+   
+# With biologics this can cause a problem
+
+* Apparent exposure-response not confirmed in subesquent studies
+* __Give examples from Dai__
+# sss
+
+* 
+
+# Why is this a problem?
+
+We want to know the __causal__ effect of exposure on the outcome.
+
+That is, if we change exposure how does the response change?
+
+The data going into these analyses are essentially observational.
+
+# Thinking causally
+
+
+
+# Causal model: small molecule
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {exposure};
+\node (v1) at (6,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\draw [->] (v0) edge (v1);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\end{tikzpicture}
+```
+
+Weight: baseline factor indirectly affecting exposure (through CL)
+Disease severity: baseline factor directly affecting outcome
+
+
+# Causal model: large molecule
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {exposure};
+\node (v1) at (6,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\draw [->] (v0) edge (v1);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v2) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\end{tikzpicture}
+```
+
+Weight: baseline factor indirectly affecting exposure (through CL)
+Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure 
+
+
+# Causal model with PD marker
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {exposure};
+\node (v1) at (6,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\node (v6) at (3,0) {PD marker};
+\draw [->] (v0) edge (v6);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v2) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\draw [->] (v6) edge (v1);
+\end{tikzpicture}
+```
+
+Weight: baseline factor indirectly affecting exposure (through CL)
+Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure 
+
+# Causal model with PD marker and feedback
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {exposure};
+\node (v1) at (6,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\node (v6) at (3,0) {PD marker};
+\draw [->] (v0) edge (v6);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v2) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\draw [->] (v6) edge (v1);
+\draw [->, red] (v6) to [out=210,in=330] (v3);
+
+\end{tikzpicture}
+```
+
+
+# Basic Notation
+
+For now, we will use this high-level notation: 
+
+* $\mu$  model parameter ("intercept")
+* $\beta$ model parameter (coefficient for effect of exposure or covariate)
+* $C$, $D$, $T$ : exposure (think of a steady-state exposure metric for now, e.g. $\mathrm{CAVG}_\mathrm{ss}$), or dose, or just treatment indicator. 
+* $X$ : covariates
+* $Y$ : As-yet-unrealized / unobserved response ("DV")
+* $y$ : Observed value for $Y$ 
+
+# Probability versus statistics
+
+In some cases we will be thinking  in the "forward" / probability / "Greek to Roman" direction: 
+
+$$
+\begin{eqnarray*} 
+\mu,\, \beta,\, C,\, X & \stackrel{\mathrm{Probability}}{\longrightarrow} & Y 
+\end{eqnarray*}
+$$
+
+In other cases we will be thinking in the "reverse" / statistics / "Roman to Greek" direction:
+
+$$
+\begin{eqnarray*} 
+\mu,\, \beta & \stackrel{\mathrm{Statistics}}{\longleftarrow} &  C,\, X,\, y 
+\end{eqnarray*}
+$$
+

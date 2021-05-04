@@ -47,7 +47,7 @@ output:
 * Minimal NONMEMese
 * $\eta$ is not what you're used to
 * No $\sigma$ (For the most part)
-* No random effects
+* No random effects (to start)
 
 ----
 
@@ -62,7 +62,7 @@ output:
 
 We want you to finish this course with: 
 
-* General conceptual understanding and basic intuitions for Logistic Regression. 
+* General conceptual understanding and basic intuitions for the analysis of binary outcomes 
 * General conceptual understanding and basic intuitions for the analysis of time-to-event data. 
 * Specific tips, tricks, and recipes for getting the job done "soup to nuts".
 
@@ -94,12 +94,12 @@ We want you to finish this course with:
 
 # Session 1
 
+* `Study designs and confounded exposure-response`
 * `Basic concepts for binary data` : 
-    * Study designs and confounded exposure-response
     * Notational conventions, Bernoulli distribution, Maximum likelihood
     * Visualizing relationships
     * Models, model checking, and measures of effect
-    * Bayesian models for binary data (T)
+    * Bayesian models for binary data (Technical session)
     
 ----
 
@@ -123,7 +123,7 @@ We want you to finish this course with:
 ----
 
 # Session 4
-* `More advanced concepts for time-to-event data` : 
+* `Even more advanced concepts for time-to-event data` : 
     * Joint modeling of continuous and time-to-event data (TD and TTE)
     * Modeling of treatment related AEs (neutropenia, diarrhea, etc)
 
