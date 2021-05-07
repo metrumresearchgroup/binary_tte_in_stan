@@ -32,7 +32,8 @@ expit <- function(x) 1 / (1+exp(-x))
 
 # Outline
 
-* What is the issue?
+* Trastuzumab in mGC
+* What is confounding?
 * Why is it a problem?
 * Thinking causally
 * What are some solutions?
@@ -57,9 +58,201 @@ A key componant of decision-making:
 
 * Apparent exposure-response not confirmed in subesquent studies
 * __Give examples from Dai__
-# sss
 
-* 
+
+# ToGA: Trastuzumab in metastatic gastric cancer
+
+:::: {style="display: grid; grid-template-columns: 50% 50%; grid-column-gap: 10px;"}
+
+::: {}
+ToGA trial demonstrated benefit of trastuzumab in mGC, but possibly less effective in patients with low exposure
+
+* Phase 3, randomized, OL study
+* Fluoropyrimidine and cisplatin (FC) vs. trastuzumab + FC (T+FC)
+* Trastuzumab dosed with 'standard' regimen
+* Overall effect (top panel @Bang2010-lp)
+* By $C{\text{min},1}$ quartile (bottom panel @Yang2013-tr)
+
+Led to a trial designed to compare a standard and high-dose trastuzumab regimens.
+
+:::
+
+::: {}
+
+
+```{r, echo=FALSE, out.width="60%", fig.cap="Overall OS effect"}
+knitr::include_graphics("graphics/ToGA-overall.png")
+```
+
+
+```{r, echo=FALSE, out.width="60%", fig.cap="OS by exposure quartile"}
+knitr::include_graphics("graphics/Yang-Figure1A.png")
+```
+
+:::
+
+::::
+
+
+# The analysis of ToGA led to the HELOISE trial
+
+:::: {style="display: grid; grid-template-columns: 50% 50%; grid-column-gap: 10px;"}
+
+::: {}
+HELOISE trial demonstrated no additional benefit of high dose trastuzumab in mGC
+
+* Phase 3b, randomized, OL study in 1L mGC
+* Trastuzumab standard regimen vs high-dose regimen
+* Both regimens included cisplatin + capecitabine
+* Overall effect (top panel @Shah2017-yo)
+* By $C{\text{min},1}$ quartile (bottom panel @Shah2017-yo)
+
+
+:::
+
+::: {}
+
+
+```{r, echo=FALSE, out.width="60%", fig.cap=""}
+knitr::include_graphics("graphics/HELOISE-overall.png")
+```
+
+
+```{r, echo=FALSE, out.width="60%", fig.cap=""}
+knitr::include_graphics("graphics/HELOISE-subset.png")
+```
+
+:::
+
+::::
+
+
+# What happened?
+
+* The apparent exposure-response in the ToGA trial was an artefact of `counfounding`
+
+* Subsequent analyses (@Yang2013-tr) confirmed the lack of an exposure-response relationship in the ToGA study.
+
+
+# This observation is common with large molecules which are studied at one dose
+
+<< give other examples: T-DM1, tremi, vedo >>
+
+* Why is this a particular problem for large molecules?
+* Why is that compounded when studying a single dose regimen?
+
+
+# What is confounding?
+
+* Our primary interest is in the _causal_ effect of exposure on an outcome.
+   * _If we change exposure, how does the response change?_
+* `Confounding` is a bias in the estimate of the causal effect.
+* Occurs when there is a `common cause` of exposure and the outcome.
+
+```{example}
+Exposure-response confounding occurs when there is a common cause of exposure and the outcome of interest.
+```
+
+# How does a common cause introduce bias?
+
+* Suppose there is no relationship between exposure (E) and the outcome (O)
+* There is one common cause (A) of both
+* We can represent tghis in a _directed acyclic graph_ (DAG)
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {E};
+\node (v1) at (6,0)  {O};
+\node[align=center] (v2) at (0,-2)  {A} ;
+\draw [->] (v2) edge (v1);
+\draw [->] (v2) edge (v0);
+\end{tikzpicture}
+```
+
+* This induces a relationship between exposure and outcome
+    * Yet, there is no causal effect of exposure on the outcome
+    * _Association is not causation_
+
+# Simulated data
+
+```{r}
+simulated_data <- tibble(
+  A = rnorm(100),
+  E = exp(-2 + A + rnorm(100,sd=0.2)),
+  O = 10 + 2*A + rnorm(100)  # No direct link between E and O
+)
+```
+
+```{r, echo=FALSE}
+simulated_data %>% 
+  ggplot(aes(x=E, y=O)) + 
+  geom_point() +
+  geom_smooth(method='gam') +
+  theme_bw() +
+  labs(x='Exposure (E)', y="Outcome (O)")
+```
+
+# The same type of problem can occur when there is an E-R relationship
+
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {E};
+\node (v1) at (6,0)  {O};
+\node[align=center] (v2) at (0,-2)  {A} ;
+\draw [->] (v2) edge (v1);
+\draw [->] (v2) edge (v0);
+\draw [->] (v0) edge (v1);
+\end{tikzpicture}
+```
+
+* The apparant relationship will differ from the causal one
+
+```{r}
+simulated_data <- tibble(
+  A = rnorm(100),
+  E = exp(-2 + A + rnorm(100,sd=0.2)),
+  O = 10 + 2*A + -2*E + rnorm(100)  # E reduces O
+)
+```
+
+
+```{r, echo=FALSE}
+simulated_data %>% 
+  ggplot(aes(x=E, y=O)) + 
+  geom_point() +
+  geom_smooth(method='gam') +
+  theme_bw() +
+  labs(x='Exposure (E)', y="Outcome (O)")
+```
+# Potential DAG for the trastuzumab example
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {exposure};
+\node (v1) at (6,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\draw [->] (v0) edge (v1);
+\draw [->] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->] (v2) edge (v3);
+\draw [->] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\end{tikzpicture}
+```
+
+__Weight:__ _baseline_ factor indirectly affecting exposure (through CL)
+
+__Disease severity:__ _baseline_ factor directly affecting outcome and indirectly affecting exposure 
+
+* Basline disease severity is counfounding the causal relationship between exposure and survival
+
 
 # Why is this a problem?
 
@@ -69,11 +262,9 @@ That is, if we change exposure how does the response change?
 
 The data going into these analyses are essentially observational.
 
-# Thinking causally
+# Why is this a large molecule issue?
 
-
-
-# Causal model: small molecule
+* For small molecules, baseline disease severity has much less of an impact on exposure
 
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
@@ -92,11 +283,12 @@ The data going into these analyses are essentially observational.
 \end{tikzpicture}
 ```
 
-Weight: baseline factor indirectly affecting exposure (through CL)
-Disease severity: baseline factor directly affecting outcome
+__Weight:__ _baseline_ factor indirectly affecting exposure (through CL)
+
+__Disease severity:__ _baseline_ factor directly affecting outcome
 
 
-# Causal model: large molecule
+# Why is this a 'one regimen' issue?
 
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
@@ -170,32 +362,5 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 ```
 
 
-# Basic Notation
-
-For now, we will use this high-level notation: 
-
-* $\mu$  model parameter ("intercept")
-* $\beta$ model parameter (coefficient for effect of exposure or covariate)
-* $C$, $D$, $T$ : exposure (think of a steady-state exposure metric for now, e.g. $\mathrm{CAVG}_\mathrm{ss}$), or dose, or just treatment indicator. 
-* $X$ : covariates
-* $Y$ : As-yet-unrealized / unobserved response ("DV")
-* $y$ : Observed value for $Y$ 
-
-# Probability versus statistics
-
-In some cases we will be thinking  in the "forward" / probability / "Greek to Roman" direction: 
-
-$$
-\begin{eqnarray*} 
-\mu,\, \beta,\, C,\, X & \stackrel{\mathrm{Probability}}{\longrightarrow} & Y 
-\end{eqnarray*}
-$$
-
-In other cases we will be thinking in the "reverse" / statistics / "Roman to Greek" direction:
-
-$$
-\begin{eqnarray*} 
-\mu,\, \beta & \stackrel{\mathrm{Statistics}}{\longleftarrow} &  C,\, X,\, y 
-\end{eqnarray*}
-$$
+# Solutions
 

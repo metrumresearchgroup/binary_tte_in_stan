@@ -19,6 +19,7 @@ Packages:
   - pdftools
   - mrgsolve
   - survminer
+  - GGally
 
 Repos:
   - templ: https://s3.amazonaws.com/mpn.metworx.dev/releases/templ/0.1.0
