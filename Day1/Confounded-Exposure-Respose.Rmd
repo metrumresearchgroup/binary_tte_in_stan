@@ -7,7 +7,7 @@ output:
     font_adjustment: 3
     transition: none
     css: slidystyles.css
-    footer: metrumrg &copy 2017
+    footer: metrumrg &copy 2021
     mathjax: local
     self_contained: false
 #bibliography: alpha.bib
@@ -157,7 +157,7 @@ Exposure-response confounding occurs when there is a common cause of exposure an
 
 * Suppose there is no relationship between exposure (E) and the outcome (O)
 * There is one common cause (A) of both
-* We can represent tghis in a _directed acyclic graph_ (DAG)
+* We can represent this in a _directed acyclic graph_ (DAG)
 
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
@@ -180,7 +180,7 @@ Exposure-response confounding occurs when there is a common cause of exposure an
 simulated_data <- tibble(
   A = rnorm(100),
   E = exp(-2 + A + rnorm(100,sd=0.2)),
-  O = 10 + 2*A + rnorm(100)  # No direct link between E and O
+  O = 10 + A + rnorm(100)  # No direct link between E and O
 )
 ```
 
@@ -188,9 +188,11 @@ simulated_data <- tibble(
 simulated_data %>% 
   ggplot(aes(x=E, y=O)) + 
   geom_point() +
-  geom_smooth(method='gam') +
+  geom_smooth(method='gam', mapping=aes(color='Association')) +
+  geom_hline(yintercept = 10, color='red') +
   theme_bw() +
-  labs(x='Exposure (E)', y="Outcome (O)")
+  labs(x='Exposure (E)', y="Outcome (O)") +
+  scale_color_manual(name="Effect", values=c('Association'="blue",'Causal'="red"))
 ```
 
 # The same type of problem can occur when there is an E-R relationship
@@ -214,7 +216,7 @@ simulated_data %>%
 simulated_data <- tibble(
   A = rnorm(100),
   E = exp(-2 + A + rnorm(100,sd=0.2)),
-  O = 10 + 2*A + -2*E + rnorm(100)  # E reduces O
+  O = 10 + A + -4*E + rnorm(100)  # E reduces O
 )
 ```
 
@@ -224,10 +226,13 @@ simulated_data %>%
   ggplot(aes(x=E, y=O)) + 
   geom_point() +
   geom_smooth(method='gam') +
+  geom_abline(intercept = 10, slope=-4, col='red') +
   theme_bw() +
   labs(x='Exposure (E)', y="Outcome (O)")
 ```
-# Potential DAG for the trastuzumab example
+
+
+# Simple DAG for the trastuzumab example
 
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
