@@ -3,12 +3,14 @@ title: "Workbook"
 author: "Introduction to BRMS for exposure-response with binary endpoints"
 date: "`r Sys.Date()`"
 output:
-  html_document:
-    css: docs/src/styles/styles.css
-    number_sections: true
-    theme: united
+  pdf_document:
     toc: true
-    toc_float: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
 params:
   include: TRUE
 ---
@@ -190,7 +192,7 @@ Excercise:
 
 ```{r}
 exp(fixef(mod02_stan)[,c("Estimate","Q2.5","Q97.5")])
-# odds of an AE for PT! versus HV are .21 lower
+# odds of an AE for HV versus PT1 are .21 lower
 ```
 
 ## residual plot
@@ -272,13 +274,20 @@ ggplot(obs_stat) +
   geom_point(aes(x = Quartile, y = pAE)) +
   facet_wrap(~ PTTYPE)
 
-nsim = 100
-sim_dat = posterior_linpred(mod03_stan) %>% 
-  # applying expit function
-  plogis() %>% 
-  data.frame() %>% 
-  slice(1:nsim)
-sim_dat = apply(sim_dat,1,function(x) rbinom(length(x), 1, x))
+nsim = 1000
+sim_dat = posterior_predict(mod03_stan, nsamples = nsim)
+sim_dat_long <- tibble(
+  sim = rep(1:nrow(sim_dat), times = ncol(sim_dat)),
+  id = rep(1:ncol(sim_dat), each = nrow(sim_dat)),
+  value = c(sim_dat)
+) %>% 
+  left_join(mod03_stan$data %>% mutate(id=1:n()))
+
+sim_dat_long %>% 
+  group_by(PTTYPE,sim) %>% 
+  summarise(phat=mean(value)) %>% 
+  ggplot() + 
+  geom_density(aes(x=phat, col=PTTYPE))
 
 vpc.cat = function(cov)  {
   
@@ -321,7 +330,7 @@ vpc.cat("PTTYPE")
 Exercise: Create a VPC for the proportion of patients with an AE within each gender.
 
 ```{r}
-fun("SEXTXT")
+vpc.cat("SEXTXT")
 ```
 
 ## VPC against continuous predictors
