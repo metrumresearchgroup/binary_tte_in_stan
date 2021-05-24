@@ -30,13 +30,15 @@ library(survival)
 library(survminer)
 library(texreg)
 library(mgcv)
+
+theme_set(theme_bw())
 ```
 
 
 # Plotting hazard and survival functions over time for some common distributions
 
 
-## Exponential
+## Exponential distribution
 
 The hazard is constant as a funtion of time: $h(t) = \lambda$.
 
@@ -65,7 +67,8 @@ plot_data %>%
 
 The Weibull distribution has two parameters: lambda and gamma
 
-The log hazard is linar in the log of time: $h(t) = \gamma \lambda t^{\gamma-1} \iff \log h(t) = \log\gamma + \log \lambda + (\gamma - 1) \log t$
+The log hazard is linear in the log of time: 
+$$h(t) = \gamma \lambda t^{\gamma-1} \iff \log h(t) = \log\gamma + \log \lambda + (\gamma - 1) \log t$$
 
 
 From first principles:
@@ -89,13 +92,15 @@ plot_data %>%
   geom_line() +
   facet_grid(type~lambda, scales = "free_y")
 ```
+
 ## Log-normal
 
-The hazard isn't easily expressed in closed form.  How can you derive it from first principles?
+The hazard isn't easily expressed in closed form.  How can you derive it from first principles?  Edit the code below to make the plots.
 
 Hint: the log normal pdf and survival function are obtained using the `dlnorm` and `plnorm` functions, respectively.
 
 Plot the log-normal hazard function for combinations of mean (1, 2) and starndard deviation (0.3,1) modifying the code below.
+
 
 
 ```{r}
@@ -115,25 +120,15 @@ plot_data %>%
 ```
 
 
+# Estimating the survival function 
 
-## Toy data
+We'll use the `survfit` function to estimate the Survival function.  
+
+Using our example data from the last class, let's estimate the overall S(t), i.e., not stratifting by any covariates.
 
 ```{r, "TRY toydata", purl=TRUE, results = "hide"}
 load('../data/aedat.RDS')
-```
 
-* This data set is comprised of a two week study (protocol A) and a six week study (protocol B)
-* The data set includes patients of type `PT2`, a patient type that (let's say) has not been studied at higher dose levels.
-* Suppose further that a dose level under consideration for a phase 2 study in `PT2` would have typical value exposures near 2.5 ug/mL.
-* The objective of *this* anlaysis is to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
-
-
-
-## EDA: data key
-
-```{r, "TRY datakey", purl=TRUE, results = "hide"}
-
-# Create a variable for time-to-serious AE's, matching "AE01"
 aedat <-
   aedat %>% 
   mutate(AETOXGR = factor(aedat$AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
@@ -147,34 +142,35 @@ aedat <-
   # Time of severe event for those that had one
   TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
   )
-```
 
-
-## derived variables
-
-Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
-
-```{r, "TRY varderive", purl=TRUE, results = "hide"}
+# Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
 dat_use <-
   aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
   group_by(PBO) %>%
   mutate(Quartile = ifelse(PBO == "PBO", "PBO",
                            paste0("Q", ntile(CAVGSS, n = 4))))
+
 ```
 
-## Estimating and plotting Kaplan-Meier estimates of survival distribution
 
-The
+The key elements:
+
+* `survfit`: the function used to obtain the K-M (or Flemming-Harrington)
+* `Surv` funtion for defining the outcome
+
+The `ggsurvplot
 
 ```{r}
-km_est = survfit(Surv(TTE,ae_any)~STUDYID, data = dat_use)
+km_est = survfit(Surv(TTE,ae_any)~1, data = dat_use)
 ggsurvplot(km_est, risk.table = TRUE)
 ```
 Often it's helpful to add the number of subjects at risk to the bottom of the plot (a risk table).
 
-```{r}
-ggsurvplot(km_est, risk.table = TRUE)
-```
+
+Plotting vs catrergorical covariatesa
+
+How to handel continuous covariates?
+  - Use optimal splitting ( Dan P)?
 
 
 Your turn:

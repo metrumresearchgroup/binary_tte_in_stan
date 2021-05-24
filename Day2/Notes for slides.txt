@@ -14,19 +14,19 @@
   - show connection to density, cumumlative hazard and survival functions
    - importance of survival function
   -Almost always assume censoring is independent of event time
-  ---> Workbook: Parametric functions
+  ---> Workbook: Examining hazard and survival for some parametric functions
   
 * Non-parametric estimation of survival, cumulative hazard and hazard functions
   - Kaplan-Meier (product limit) - basic ideas
   - Standard error of K-M
-  - Nelson-Aalen estimator of CH
+  - Nelson-Aalen estimator of cumulative hazard (Flemming-Harrington estimate of S(t))
      - S(t) based on this is nearly the same but not identical
-  ---> Workbook: survfit and muhaz, plotting vs categorical and continuouas predictors
+  ---> Workbook: survfit estimation and plotting vs categorical and continuouas predictors
   
 * Summary measures of S(t)
   - Median
   - Percent surviving to time t
-  - Restricted mean survival
+  - Restricted mean survival time
   ---> Workbook
   
 * Comparing two survival curves
@@ -43,7 +43,7 @@
       - May also hear about rhe generalized wilcoxan test
          - most sensitive when early differences in survival
          - good when true distributon is log-normal or log-logistic
-  ---> Workbook
+
   
 * Modeling
  - Semi-parametric: Cox PH model
@@ -51,7 +51,7 @@
     - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
     - We don't need to estimate h_0(t)!!
     - assumptions
- ---> Workbook
+ ---> Workbook: fitting model, extracting estimates, interpreting estimates, log-rank test, stratifying
  
 * Extensions to standard Cox model
   - Stratified Cox model
