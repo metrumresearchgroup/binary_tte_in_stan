@@ -1,0 +1,964 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Introduction to TTE modeling"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+```
+
+
+# Plotting hazard and survival functions over time for some common distributions
+
+
+## Exponential
+
+The hazard is constant as a funtion of time: $h(t) = \lambda$.
+
+From first principles:
+ * h(t) = lambda
+ * H(t) = lambda * t
+ * S(t) = exp(-lambda * t)
+ * f(t) = h(t) * S(t) = lambda * exp(-lambda * t)
+ 
+```{r}
+plot_data <- crossing(lambda = c(0.5,1,2), times = seq(0,5,length=100)) %>% 
+  mutate(hazard = lambda,
+         cumulative_hazard = lambda * times,
+         survival = exp(-cumulative_hazard),
+         density = hazard * survival)
+
+plot_data %>% 
+  pivot_longer(cols=hazard:density, names_to = 'type', values_to='value') %>% 
+  ggplot(aes(x=times, y=value, col=as.factor(lambda), group=lambda)) +
+  geom_line() +
+  facet_wrap(~type, scales = "free_y")
+```
+
+
+## Weibull
+
+The Weibull distribution has two parameters: lambda and gamma
+
+The log hazard is linar in the log of time: $h(t) = \gamma \lambda t^{\gamma-1} \iff \log h(t) = \log\gamma + \log \lambda + (\gamma - 1) \log t$
+
+
+From first principles:
+ * h(t) = lambda * gamma * t^(gamma-1)
+ * H(t) = lambda * t^gamma
+ * S(t) = exp(-lambda * t^gamma)
+ * f(t) = h(t) * S(t) = lambda * gamma * t^(gamma-1) * exp(-lambda * t^gamma)
+
+```{r}
+plot_data <- crossing(lambda = c(0.5,2), gamma = c(0.5, 1, 3), times = seq(0,5,length=100)) %>% 
+  mutate(hazard = lambda * gamma * times^(gamma-1),
+         cumulative_hazard = lambda * times^gamma,
+         survival = exp(-cumulative_hazard),
+         density = hazard * survival
+)
+
+plot_data %>% 
+  pivot_longer(cols=hazard:density, names_to = 'type', values_to='value') %>% 
+  mutate(combination = paste(lambda,gamma,sep='-')) %>% 
+  ggplot(aes(x=times, y=value, col=as.factor(gamma), group=combination)) +
+  geom_line() +
+  facet_grid(type~lambda, scales = "free_y")
+```
+## Log-normal
+
+The hazard isn't easily expressed in closed form.  How can you derive it from first principles?
+
+Hint: the log normal pdf and survival function are obtained using the `dlnorm` and `plnorm` functions, respectively.
+
+Plot the log-normal hazard function for combinations of mean (1, 2) and starndard deviation (0.3,1) modifying the code below.
+
+
+```{r}
+plot_data <- crossing(mean = c(1,2), sd = c(0.3, 1), times = seq(0,5,length=100)) %>% 
+  mutate(survival = ,
+         density = ,
+         cumulative_hazard = ,
+         hazard =
+)
+
+plot_data %>% 
+  pivot_longer(cols=survival:hazard, names_to = 'type', values_to='value') %>% 
+  mutate(combination = paste(mean,sd,sep='-')) %>% 
+  ggplot(aes(x=times, y=value, col=as.factor(sd), group=combination)) +
+  geom_line() +
+  facet_grid(type~mean, scales = "free_y")
+```
+
+
+
+## Toy data
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+```
+
+* This data set is comprised of a two week study (protocol A) and a six week study (protocol B)
+* The data set includes patients of type `PT2`, a patient type that (let's say) has not been studied at higher dose levels.
+* Suppose further that a dose level under consideration for a phase 2 study in `PT2` would have typical value exposures near 2.5 ug/mL.
+* The objective of *this* anlaysis is to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
+
+
+
+## EDA: data key
+
+```{r, "TRY datakey", purl=TRUE, results = "hide"}
+
+# Create a variable for time-to-serious AE's, matching "AE01"
+aedat <-
+  aedat %>% 
+  mutate(AETOXGR = factor(aedat$AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
+         ae_any = AETOXGR != 'None') %>% 
+  group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
+  )
+```
+
+
+## derived variables
+
+Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+
+```{r, "TRY varderive", purl=TRUE, results = "hide"}
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4))))
+```
+
+## Estimating and plotting Kaplan-Meier estimates of survival distribution
+
+The
+
+```{r}
+km_est = survfit(Surv(TTE,ae_any)~STUDYID, data = dat_use)
+ggsurvplot(km_est, risk.table = TRUE)
+```
+Often it's helpful to add the number of subjects at risk to the bottom of the plot (a risk table).
+
+```{r}
+ggsurvplot(km_est, risk.table = TRUE)
+```
+
+
+Your turn:
+ * Plot K-M estimates for quartiles of exposure (`Quartile`)
+
+
+## Parametric survival model using Stan/brms
+
+The censoring variable should contain the values 'left', 'none', 'right', and 'interval' (or equivalently -1, 0, 1, and 2) to indicate that the corresponding observation is left censored, not censored, right censored, or interval censored. For interval censored data, a second variable (let's call it y2) has to be passed to cens. In this case, the formula has the structure y | cens(censored, y2) ~ predictors. 
+
+
+```{r, "TRY firststan", purl=TRUE, results = "hide"}
+mod01_stan <- brm(formula = TTE | cens(1-ae_any) ~ Quartile,  
+                  data=dat_use, 
+                  family = weibull(),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "0", 
+                  cores = 4,
+                  seed = 123)
+```
+
+Assess convergence (traceplots, rhat)
+
+```{r}
+rhat(mod01_stan)
+```
+
+```{r}
+plot
+```
+
+
+Look at posterior distributions
+
+Calculate model fit summary
+
+```{r}
+waic(mod01_stan)
+```
+
+Posterior predictive distributions
+
+```{r}
+# Generate posterior predictive samples (100 posterior samples)
+post_preds <- dat_use %>% 
+  add_predicted_draws(mod01_stan, n=100) %>%
+  mutate(
+    # TODO: Use a more general plug-in censoring function that is a function of data and .prediction
+    # Censor using same process as in the source data
+    .simdv = if_else(.prediction < STUDYDUR, 1, 0),
+    .simtte = if_else(.prediction >= STUDYDUR, STUDYDUR,.prediction)) %>% 
+  ungroup()
+
+# Summarise posterior predictions at a grid of times
+times = seq(0,6,length=100)
+
+post_preds <- post_preds %>% 
+  nest(sim_data = -.draw) %>% 
+  bind_rows(dat_use %>% mutate(.draw=0, .simtte=TTE, .simdv=ae_any) %>% nest(sim_data = -.draw)) %>% 
+  mutate(
+    # Kaplan-Meier fits to each simulated dataset
+    km = map(sim_data, ~survfit(Surv(.simtte, .simdv)~Quartile, data = .x)),
+    # Extract predictions at a grid of times
+    preds = map2(km, sim_data, function(.x,.y){
+      .simfit = summary(.x, times=times)
+      tibble(strata = .simfit$strata,
+             surv = .simfit$surv,
+             time = .simfit$time)
+    })
+  )
+
+# Obtain median and quantiles for simulated data
+post_pred_summary <- post_preds %>% 
+  filter(.draw > 0) %>% 
+  select(.draw, preds) %>% 
+  unnest(cols=preds) %>% 
+  group_by(strata, time) %>% 
+  summarise(lpl = quantile(surv, probs = 0.05),
+            upl = quantile(surv, probs = 0.95),
+            surv = median(surv),
+            n=n()) %>% 
+  mutate(type = 'Simulated')
+
+
+obs_summary <- post_preds %>% 
+  filter(.draw == 0) %>% 
+  select(preds) %>% 
+  unnest(cols=preds) %>% 
+  mutate(type='Observed')
+  
+  
+  
+bind_rows(obs_summary,post_pred_summary) %>% 
+  ggplot(aes(x = time)) +
+  geom_step(aes(y = surv, color=type)) +
+  geom_ribbon(aes(ymin=lpl, ymax=upl, fill=type), alpha=0.25) +
+  facet_wrap(~strata) +
+  ylim(0,1)
+  
+```
+
+
+```{r}
+post_preds01 <- posterior_predict(mod01_stan)
+```
+
+
+Exercise:
+* Re-fit the model using a probit link
+* Re-fit the model with STUDYID as an additional covariate
+
+```{r}
+
+# * Re-fit the model using a probit link
+brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT ,
+    data=dat_mod,
+    family = bernoulli(link = "probit"),
+    warmup = 500,
+    iter = 2000,
+    chains = 4,
+    inits = "0",
+    cores = 4,
+    seed = 123)
+
+# * Re-fit the model with STUDYID as an additional covariate
+# brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT + STUDYID,  
+#     data=dat_mod, 
+#     family = bernoulli(link = "logit"),
+#     warmup = 500, 
+#     iter = 2000, 
+#     chains = 4, 
+#     inits = "0", 
+#     cores = 4,
+#     seed = 123)
+
+```
+
+## reading R help
+
+R help pages can be overwhelming ... but you have to learn to read them:  
+
+```{r, "TRY extractors", purl=TRUE, results = "hide"}
+?brm # See especially the "See Also" section
+?summary.brmsfit # See expecially the "Value" section
+?fixef
+?predict
+?predict.brmsfit
+```
+
+Exercise:
+
+* Print out a table of estimated coefficients and their standard errors.
+* Print out 95% confidence intervals for the model parameters.
+* Print out 90% confidence intervals for the model parameters.
+
+```{r}
+fixef(mod01_stan)
+fixef(mod01_stan,probs = c(0.05, 0.95))
+```
+
+## re-coding predictors
+
+```{r, "TRY recoding", purl=TRUE, results = "hide"}
+ref_bwt <- median(dat_use$BWT) # will want reference value later, so save as variable!
+dat_mod <- dat_use %>% mutate(
+  BWT_norm = BWT - ref_bwt,
+  PTTYPE = relevel(PTTYPE, ref = c("PT1"))
+  )
+```
+
+Exercise: re-fit the model so that the intercept corresponds to a `PT1` type patient with typical bodyweight.
+
+```{r}
+
+mod02_stan <- brm(formula = AE01 ~ CAVGSS + BWT_norm + PTTYPE + SEXTXT,  
+                  data=dat_mod, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "0", 
+                  cores = 4,
+                  seed = 123)
+```
+
+Excercise:
+
+* Transform the covariate coefficients to be more interpretable.
+* How many fold higher are the odds of an AE for `PT1` versus `HV`?
+
+```{r}
+exp(fixef(mod02_stan)[,c("Estimate","Q2.5","Q97.5")])
+# odds of an AE for HV versus PT1 are .21 lower
+```
+
+## residual plot
+
+```{r, "TRY resid", purl=TRUE, results = "hide"}
+dat_plus <- dat_mod
+dat_plus$res <- residuals(mod02_stan)[,"Estimate"]
+dat_plus$pred <- predict(mod02_stan)[,"Estimate"]
+
+resplot <-
+  ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
+  geom_point() +
+  geom_smooth()
+
+resplot  
+resplot + facet_wrap(~ PTTYPE)
+```
+
+
+Extended Exercise:
+
+* Re-fit the model to allow a different slope of exposure-response relationship for each level of `PTTYPE`.
+* Re-generate the residual and pred v. conc plots and compare the results.
+* Read `?aic` and compare the models with and without interaction in terms of AIC.
+
+```{r}
+
+mod03_stan <- brm(formula = AE01 ~ CAVGSS + BWT_norm + PTTYPE + SEXTXT + CAVGSS*PTTYPE,  
+                  data=dat_mod, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "0", 
+                  cores = 4,
+                  seed = 123)
+
+dat_plus <- dat_mod
+dat_plus$res <- residuals(mod03_stan)[,"Estimate"]
+dat_plus$pred <- predict(mod03_stan)[,"Estimate"]
+
+resplot <-
+  ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
+  geom_point() +
+  geom_smooth()
+
+resplot  
+resplot + facet_wrap(~ PTTYPE)
+
+waic1 <- waic(mod02_stan)
+waic2 <- waic(mod03_stan)
+loo_compare(waic1,waic2)
+
+```
+
+## summarizing interaction parameters
+
+```{r, "TRY lincombo", purl=TRUE, results = "hide"}
+
+posterior_samples(mod03_stan) %>% 
+  transmute(lin_combo=`b_CAVGSS`+`b_CAVGSS:PTTYPEHV`) %>%
+  with(list(est=mean(lin_combo),
+            se=sd(lin_combo)))
+
+```
+
+
+# Slides03
+
+## my first BRMS/STAN VPC
+
+```{r, "TRY glmvpc", purl=TRUE, results = "hide"}
+prop <- function(x) sum(x, na.rm = TRUE) / sum(!is.na(x))
+obs_stat <-
+  dat_mod %>%
+  group_by(PTTYPE, Quartile) %>%
+  summarise(pAE = prop(AE01))
+ggplot(obs_stat) +
+  geom_point(aes(x = Quartile, y = pAE)) +
+  facet_wrap(~ PTTYPE)
+
+nsim = 1000
+sim_dat = posterior_predict(mod03_stan, nsamples = nsim)
+sim_dat_long <- tibble(
+  sim = rep(1:nrow(sim_dat), times = ncol(sim_dat)),
+  id = rep(1:ncol(sim_dat), each = nrow(sim_dat)),
+  value = c(sim_dat)
+) %>% 
+  left_join(mod03_stan$data %>% mutate(id=1:n()))
+
+sim_dat_long %>% 
+  group_by(PTTYPE,sim) %>% 
+  summarise(phat=mean(value)) %>% 
+  ggplot() + 
+  geom_density(aes(x=phat, col=PTTYPE))
+
+vpc.cat = function(cov)  {
+  
+  obs_stat <-
+    dat_mod %>%
+    group_by(across(all_of(c(cov,"Quartile")))) %>%
+    summarise(pAE = prop(AE01))
+  
+  # Function to calculate predicted prob of event per PTTYPE and quartile
+  stat_fn <- function(simy, dat_orig = dat_mod) {
+    dati <- dat_orig
+    dati$AE01 <- simy
+    dati %>%
+      group_by(across(all_of(c(cov,"Quartile")))) %>%
+      summarise(pAE = prop(AE01))
+  }
+  
+  sim_stat <- apply(sim_dat, 2, stat_fn) %>% bind_rows()
+  
+  sim_stat_q <-
+    sim_stat %>%
+    group_by(across(all_of(c(cov,"Quartile")))) %>%
+    summarize(LB=quantile(pAE, prob=c(0.05)),
+              MED=median(pAE),
+              UB=quantile(pAE, prob=.95)
+    )
+  
+  comb_stat <- full_join(obs_stat, sim_stat_q)
+  
+  ggplot(data = comb_stat) +
+    geom_pointrange(aes(x = Quartile, y = MED, ymin = LB, ymax = UB, colour = "Predicted")) +
+    geom_point(aes(x = Quartile, y = pAE, colour = "Observed"), size = 3, alpha = 0.5) +
+    facet_wrap(~ get(cov)) + theme_bw()
+}
+
+vpc.cat("PTTYPE")
+```
+
+
+Exercise: Create a VPC for the proportion of patients with an AE within each gender.
+
+```{r}
+vpc.cat("SEXTXT")
+```
+
+## VPC against continuous predictors
+
+```{r, "TRY continvpc", purl=TRUE, results = "hide"}
+
+
+vpc.cont = function(cov) {
+  
+  obs_stat <-
+    dat_mod %>%
+    ungroup %>%
+    mutate(pAE=predict(loess(AE01 ~ get(cov), data = dat_mod))) %>%
+    group_by(across(all_of(cov))) %>%
+    summarize(pAE=mean(pAE)) # Could use distinct, should be identical
+  
+  stat_fn <- function(simy, dat_orig = dat_mod) {
+    dati <- dat_orig
+    dati$AE01 <- simy
+    dati$pAE <- predict(loess(AE01 ~ get(cov), data = dati))
+    dati %>% group_by(across(all_of(cov))) %>% summarize(pAE=mean(pAE))
+  }
+  
+  sim_stat <-
+    data.frame(sim_dat) %>%
+    select_all() %>%
+    map(~stat_fn(.)) %>%
+    bind_rows
+  
+  sim_stat_q <-
+    sim_stat %>%
+    group_by(across(all_of(cov))) %>%
+    summarize(LB=quantile(pAE, prob=c(0.05)),
+              MED=median(pAE),
+              UB=quantile(pAE, prob=.95)
+    )
+  
+  comb_stat <- full_join(obs_stat, sim_stat_q)
+  
+  ggplot(data = comb_stat) +
+    geom_ribbon(aes(x = get(cov), ymin = LB, ymax = UB, colour = "Predicted"), fill = "lightgrey") +
+    geom_line(aes(x = get(cov), y = MED, colour = "Predicted"), size = 3) +
+    geom_line(aes(x = get(cov), y = pAE, colour = "Observed"), size = 3) +
+    theme_bw()
+  
+}
+
+vpc.cont("CAVGSS") + 
+  labs(x="Concentraiton Average at Steady State",
+       y="Probability of Adverse event",
+       colour="")
+
+```
+
+Exercise: make a similar VPC plotted against bodyweight.
+
+```{r}
+vpc.cont("BWT") + 
+  labs(x="Bodyweight",
+       y="Probability of Adverse event",
+       colour="")
+
+
+```
+
+
+Exercise: Our model includes an interacation term, make a VPC of CAVGSS by PTTYPE
+
+```{r}
+
+vpc.contcat = function(cont,
+                       cat,
+                       lev.cat) {
+  
+  dat_mod = dat_mod %>% ungroup()
+  
+  fun = function(lev,dat=dat_mod) {
+    data.tmp = dat %>% ungroup() %>% filter(get(cat)==lev)
+    data.tmp %>% mutate(pAE=predict(loess(AE01 ~ get(cont), data = data.tmp))) %>%
+      group_by(across(all_of(c(cont,cat)))) %>% 
+      summarize(pAE=mean(pAE)) 
+  }
+  
+  obs_stat = map(lev.cat, fun) %>% bind_rows()
+  
+  stat_fn <- function(simy, dat_orig = dat_mod) {
+    dati <- dat_orig
+    dati$AE01 <- simy
+    map(lev.cat,~fun(.x,dat=dati)) %>% 
+      bind_rows()
+  }
+  
+  sim_stat <-
+    data.frame(sim_dat) %>%
+    select_all() %>%
+    map(~stat_fn(.)) %>%
+    bind_rows
+  
+  sim_stat_q <-
+    sim_stat %>%
+    group_by(across(all_of(c(cont,cat)))) %>% 
+    summarize(LB=quantile(pAE, prob=c(0.05)),
+              MED=median(pAE),
+              UB=quantile(pAE, prob=.95)
+    )
+  
+  comb_stat <- full_join(obs_stat, sim_stat_q)
+  
+  comb_stat %>%  
+    
+    ggplot() +
+    geom_ribbon(aes(x = get(cont), ymin = LB, ymax = UB, colour = "Predicted"), fill = "lightgrey") +
+    geom_line(aes(x = get(cont), y = MED, group = get(cat), colour = "Predicted"), size = 3) +
+    geom_line(aes(x = get(cont), y = pAE, group = get(cat), colour = "Observed"), size = 3) +
+    facet_wrap(~ get(cat)) + theme_bw()
+}
+
+vpc.contcat("CAVGSS","PTTYPE",c("HV","PT1","PT2")) + 
+  labs(x="Concentration Average at Steady State",
+       y="Probability of Adverse event",
+       colour="")
+
+```
+
+# Conditional predictions
+
+```{r, "TRY forest", purl=TRUE, results = "hide"}
+# We need some reference exposure levels:
+ref_exp <- 1:3
+# and some reference bodyweights:
+ref_bwt_norm <- c(65, 75, 85) - ref_bwt
+# For categorical covariates it is more straightforward:
+ref_sex <- unique(dat_mod$SEXTXT)
+ref_type <- unique(dat_mod$PTTYPE)
+# Now let's make a grid of setting where we want predictions:
+pred_frame <- expand.grid(BWT_norm = ref_bwt_norm,
+                          CAVGSS = ref_exp,
+                          SEXTXT = ref_sex,
+                          PTTYPE = ref_type
+                          )
+
+qfun = function(x) {
+  ret <- tibble::tibble(p = quantile(x, probs=c(.025,.5,.975),na.rm = TRUE))
+  ret$q = c('LB','EST','UB')
+  list(ret)
+}
+
+pred_frame0 = pred_frame
+pred_frame = posterior_linpred(mod03_stan,newdata=pred_frame)
+
+pred_frame = 
+  plogis(pred_frame) %>% 
+  data.frame() %>% 
+  tibble() %>% pivot_longer(cols=everything(),
+                            names_to="type",
+                            values_to="value") %>% 
+  group_by(type) %>% 
+  summarise(across(c(value),list(qfun=~qfun(.x)))) %>% 
+  unnest(value_qfun) %>% 
+  pivot_wider(values_from=p,names_from=q) %>% 
+  transmute(type=as.numeric(gsub("X","",type)),LB,EST,UB) %>% 
+  arrange(type) %>% 
+  cbind(pred_frame0) %>% 
+  select(-type)
+
+
+pred_frame$BWT <- round(pred_frame$BWT_norm + ref_bwt, 0)
+pred_frame$Label = with(pred_frame, paste(PTTYPE, SEXTXT, BWT, CAVGSS))
+
+pred_frame
+
+ggplot(data = filter(pred_frame, PTTYPE != "HV")) +
+  geom_pointrange(aes(x=Label, y=EST, ymin=LB, ymax=UB)) +
+  coord_flip() + facet_wrap(~PTTYPE, scales="free_y") +
+  xlab("Estimated AE Rate")
+
+ggplot(data = filter(pred_frame, PTTYPE != "HV")) +
+  geom_pointrange(aes(x=Label, y=EST, ymin=LB, ymax=UB)) +
+  coord_flip() + facet_wrap(~SEXTXT, scales="free_y") +
+  xlab("Estimated AE Rate")
+
+```
+
+
+Exercise: Re-fit the model without any covariate-expsoure interactions and re-make the "forest plot" of conditional predictions.
+
+```{r}
+
+# We need some reference exposure levels:
+ref_exp <- 1:3
+# and some reference bodyweights:
+ref_bwt_norm <- c(65, 75, 85) - ref_bwt
+# For categorical covariates it is more straightforward:
+ref_sex <- unique(dat_mod$SEXTXT)
+ref_type <- unique(dat_mod$PTTYPE)
+# Now let's make a grid of setting where we want predictions:
+pred_frame <- expand.grid(BWT_norm = ref_bwt_norm,
+                          CAVGSS = ref_exp,
+                          SEXTXT = ref_sex,
+                          PTTYPE = ref_type
+                          )
+
+qfun = function(x) {
+  ret <- tibble::tibble(p = quantile(x, probs=c(.025,.5,.975),na.rm = TRUE))
+  ret$q = c('LB','EST','UB')
+  list(ret)
+}
+
+pred_frame0 = pred_frame
+#note using object mod02_stan instead of mod03_stan
+pred_frame = posterior_linpred(mod02_stan,newdata=pred_frame)
+
+pred_frame = 
+  plogis(pred_frame) %>% 
+  data.frame() %>% 
+  tibble() %>% pivot_longer(cols=everything(),
+                            names_to="type",
+                            values_to="value") %>% 
+  group_by(type) %>% 
+  summarise(across(c(value),list(qfun=~qfun(.x)))) %>% 
+  unnest(value_qfun) %>% 
+  pivot_wider(values_from=p,names_from=q) %>% 
+  transmute(type=as.numeric(gsub("X","",type)),LB,EST,UB) %>% 
+  arrange(type) %>% 
+  cbind(pred_frame0) %>% 
+  select(-type)
+
+
+pred_frame$BWT <- round(pred_frame$BWT_norm + ref_bwt, 0)
+pred_frame$Label = with(pred_frame, paste(PTTYPE, SEXTXT, BWT, CAVGSS))
+
+pred_frame
+
+ggplot(data = filter(pred_frame, PTTYPE != "HV")) +
+  geom_pointrange(aes(x=Label, y=EST, ymin=LB, ymax=UB)) +
+  coord_flip() + facet_wrap(~PTTYPE, scales="free_y") +
+  xlab("Estimated AE Rate")
+
+ggplot(data = filter(pred_frame, PTTYPE != "HV")) +
+  geom_pointrange(aes(x=Label, y=EST, ymin=LB, ymax=UB)) +
+  coord_flip() + facet_wrap(~SEXTXT, scales="free_y") +
+  xlab("Estimated AE Rate")
+
+```
+
+## Marginal predictions
+
+When making marginal predictions, we wish to describe an average (marginal) effect over some population.
+
+Let's compare marginal predictions of CAVGSS for PT1 and PT2 like those studied:
+
+```{r, "TRY marginal-cavg-pttype", purl=TRUE}
+dat_mod = dat_mod %>% ungroup()
+
+pt1pats <- filter(dat_mod, PTTYPE=="PT1") %>%
+  sample_n(1000,replace=TRUE) %>%
+  select(CAVGSS,PTTYPE,BWT_norm,SEXTXT)
+
+pt2pats <- filter(dat_mod, PTTYPE=="PT2") %>%
+  sample_n(1000,replace=TRUE) %>%
+  select(CAVGSS,PTTYPE,BWT_norm,SEXTXT)
+
+pt1pats %>% ungroup %>% summary
+pt2pats %>% ungroup %>% summary
+
+CAVGSS_at <- seq(min(dat_mod$CAVGSS[dat_mod$CAVGSS>0]),
+                 max(dat_mod$CAVGSS), length.out = 50)
+
+pats <- bind_rows(pt1pats,pt2pats)%>% ungroup
+
+pats$CAVGSS <- NULL
+
+pred_eff <-
+  map_df(seq_along(CAVGSS_at), function(CAVGSS_i){
+    
+    data.tmp =  pats %>% mutate(CAVGSS=CAVGSS_at[CAVGSS_i]) 
+    
+    posterior_linpred(mod03_stan, newdata=data.tmp) %>%
+      plogis()%>% 
+      data.frame() %>% 
+      tibble() %>% pivot_longer(cols=everything(),
+                                names_to="type",
+                                values_to="value") %>% 
+      group_by(type) %>% summarise(across(c(value),median)) %>% 
+      transmute(type=as.numeric(gsub("X","",type)),value) %>% 
+      arrange(type) %>% 
+      cbind(data.tmp) %>%
+      group_by(CAVGSS,PTTYPE) %>%
+      summarize(pAE=median(value),
+                ul=quantile(value,prob=.025),
+                ll=quantile(value,prob=.975))
+  })
+
+pred_eff %>%
+  ggplot(aes(x=CAVGSS, y=pAE, color=PTTYPE, fill=PTTYPE, ymax=ul, ymin=ll)) +
+  geom_line() + theme_bw() +
+  geom_ribbon(alpha=.25) +
+  ggtitle("Marginal effect")
+```
+
+Exercise:
+Suppose that exposure varies with bodyweight, plot the net effect across studied weights.
+
+```{r}
+
+dat_mod = dat_mod %>% mutate(BWT_Q=paste0("Q", ntile(BWT, n = 4))) 
+
+pats = dat_mod %>% 
+  group_by(BWT_Q) %>% 
+  summarise(medBWT=median(BWT)) %>%
+  right_join(dat_mod) %>% 
+  group_by(BWT_Q) %>% 
+  sample_n(1000,replace=TRUE) %>% 
+  ungroup()
+
+pats = pats %>% mutate(medBWT=factor(medBWT)) 
+
+pats$CAVGSS <- NULL
+
+pred_eff <-
+  map_df(seq_along(CAVGSS_at), function(CAVGSS_i){
+    
+    data.tmp =  pats %>% mutate(CAVGSS=CAVGSS_at[CAVGSS_i]) 
+    
+    posterior_linpred(mod03_stan, newdata=data.tmp) %>%
+      plogis()%>% 
+      data.frame() %>% 
+      tibble() %>% pivot_longer(cols=everything(),
+                                names_to="type",
+                                values_to="value") %>% 
+      group_by(type) %>% summarise(across(c(value),median)) %>% 
+      transmute(type=as.numeric(gsub("X","",type)),value) %>% 
+      arrange(type) %>% 
+      cbind(data.tmp) %>%
+      group_by(CAVGSS,medBWT) %>%
+      summarize(pAE=median(value),
+                ul=quantile(value,prob=.025),
+                ll=quantile(value,prob=.975))
+  })
+
+pred_eff %>%
+  ggplot(aes(x=CAVGSS, y=pAE, color=medBWT, fill=medBWT, ymax=ul, ymin=ll)) +
+  geom_line() + theme_bw() +
+  geom_ribbon(alpha=.25) +
+  ggtitle("Marginal effect")
+
+
+```
+
+## Clinical trial simulation
+
+There is a planned Ph2 study in 100 PT2 patients.  
+The patients will be dosed with a target CAVGSS of 2.5, and we expect values to fall
+between 2.25 and 2.75 (say it varies normally around 2.5).  
+
+* What rate of serious AE's should we expect in this trial?
+* Compare with and without parameter uncertainty
+
+Hint:
+? MASS::mvrnorm
+? model.matrix
+? model.frame
+
+
+```{r}
+
+nsim = 100
+# We need some reference exposure levels:
+# range of CAVGSS if norm should approx 6 x sd 
+ref_exp <- MASS::mvrnorm(nsim,mu=2.5,Sigma=(2.75-2.25)/6)
+# and some reference bodyweights:
+ref_bwt <- c(65, 75, 85)
+# For categorical covariates it is more straightforward:
+ref_sex <- unique(dat_mod$SEXTXT)
+ref_type <- "PT1"
+# Now let's make a grid of setting where we want predictions:
+pred_frame <- expand.grid(BWT = ref_bwt,
+                          CAVGSS = ref_exp,
+                          SEXTXT = ref_sex,
+                          PTTYPE = ref_type
+                          )
+pred_frame = pred_frame %>% 
+  mutate(BWT_norm = BWT - ref_bwt,
+         index=row_number())
+
+pred_frame0 = pred_frame
+pred_frame = posterior_linpred(mod03_stan,newdata=pred_frame) %>% 
+  plogis() %>% 
+  data.frame() %>%
+  mutate(sim=row_number())
+
+pred_frame = pred_frame %>% 
+  tibble() %>% pivot_longer(cols=c(-sim),
+                            names_to="index",
+                            values_to="value") %>% 
+  transmute(index=as.numeric(gsub("X","",index)),sim,value) %>% 
+  left_join(pred_frame0)
+
+pred_frame1 =  pred_frame %>% 
+  group_by(index) %>% 
+  summarise(across(c(value),median)) %>% 
+  left_join(pred_frame0) %>% 
+  group_by(CAVGSS,SEXTXT,BWT) %>% 
+  summarize(pAE=median(value))
+  
+pred_frame1 %>%
+  ggplot(aes(x=CAVGSS, y=pAE, )) +
+  geom_line() + theme_bw() +
+  facet_grid(SEXTXT~BWT) + 
+  ggtitle("PAE without parameter uncertainty") + 
+  ylim(c(0,1))
+
+pred_frame2 =  pred_frame %>% 
+  group_by(sim,CAVGSS,SEXTXT,BWT) %>% 
+  summarise(across(c(value),median)) %>% 
+  group_by(CAVGSS,SEXTXT,BWT) %>% 
+      summarize(pAE=median(value),
+                ul=quantile(value,prob=.025),
+                ll=quantile(value,prob=.975))
+
+pred_frame2 %>%
+  ggplot(aes(x=CAVGSS, y=pAE, ), fill = "grey") +
+  geom_line() + theme_bw() +
+  geom_ribbon(aes(ymax=ul, ymin=ll),alpha=.25) +
+  facet_grid(SEXTXT~BWT) + 
+  ggtitle("PAE with parameter uncertainty") + 
+  ylim(c(0,1))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

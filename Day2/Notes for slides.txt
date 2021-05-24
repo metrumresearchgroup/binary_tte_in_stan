@@ -1,0 +1,77 @@
+* What makes TTE data different?  
+  - Censoring
+  - types of censoring: right, left, interval
+  - most often we deal with right censoring
+  
+* Goal - estimation of the distribution of times to event
+  - Mention we observe T* = min(T,C) but we are estimating cfd for T!!
+  - To define a time to event variable we need a clearly defined time origen, a time scale, a well-defined event
+  - Show example of enrollment into a trial vs analysis time and end-of-study censoring
+
+
+* Due to censoring, we'll use the hazard function
+  - define hazard in simple terms
+  - show connection to density, cumumlative hazard and survival functions
+   - importance of survival function
+  -Almost always assume censoring is independent of event time
+  ---> Workbook: Parametric functions
+  
+* Non-parametric estimation of survival, cumulative hazard and hazard functions
+  - Kaplan-Meier (product limit) - basic ideas
+  - Standard error of K-M
+  - Nelson-Aalen estimator of CH
+     - S(t) based on this is nearly the same but not identical
+  ---> Workbook: survfit and muhaz, plotting vs categorical and continuouas predictors
+  
+* Summary measures of S(t)
+  - Median
+  - Percent surviving to time t
+  - Restricted mean survival
+  ---> Workbook
+  
+* Comparing two survival curves
+  _ Measuring differences
+      - difference in medians
+      - difference in RMST
+      - hazard ratio
+  - Testing
+      - log rank test
+         - Tests Ho: S_0(t) = S_1(t) vs not equal
+         - Equivalent to CMH test for binary data, where stratification is at unique event times
+         - A good test when the hazard ratio is constant (but applicable even if it is not)
+         - Most sensitive to late differences?
+      - May also hear about rhe generalized wilcoxan test
+         - most sensitive when early differences in survival
+         - good when true distributon is log-normal or log-logistic
+  ---> Workbook
+  
+* Modeling
+ - Semi-parametric: Cox PH model
+    - likelihood contributions for censored and observed events
+    - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
+    - We don't need to estimate h_0(t)!!
+    - assumptions
+ ---> Workbook
+ 
+* Extensions to standard Cox model
+  - Stratified Cox model
+  - Time-varying covariates
+  - (Demonstrate using supplemental workbook but no explicit hands-on)
+
+
+*  Parametric
+
+
+ 
+* Good reading
+ - Nick Holford's tutorial
+ 
+ 
+ 
+ 
+ ### Technical session
+ 
+ * muhaz
+ 
+ 
+ - 
