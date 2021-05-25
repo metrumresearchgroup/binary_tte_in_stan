@@ -1,0 +1,314 @@
+---
+title: "Exposure-response modeling for time-to-event data"
+output:
+  slidy_presentation:
+#    theme: cerulean
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: ../stylesheets/slidystyles.css
+    duration: 45
+    footer: Metrum Research Group &copy 2021
+    mathjax: local
+    self_contained: false
+    df_print: kable
+#bibliography: alpha.bib
+#nocite: | 
+#    @2795, @2192, @3684
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(survminer)
+library(texreg)
+
+set.seed(314159)
+
+``` 
+
+
+
+```{r, echo=FALSE}
+load('../data/aedat.RDS')
+
+aedat <-
+  aedat %>% 
+  mutate(AETOXGR = factor(AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
+         ae_any = AETOXGR != 'None') %>% 
+  group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE),
+  AE03 = ifelse(AETOXGR=="Severe", 1, 0)
+  )
+
+# Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4))))
+```
+
+
+# Outline
+
+
+# Key learning objectives
+
+* One
+* Two
+* Three
+
+# What is time-to-event data?
+  
+  - In clinical studies, we often measure the time to a specific event:
+    - time to death
+    - time to disease worsening
+    - time to incident adverse event
+    - time to abnormal lab value (e.g., AST > 3xULN)
+    - time to infection
+    - time to study discontinuation
+    - duration of hospital visit
+
+# Three essential components
+
+ - Well-defined event
+ - Clear time origin
+ - Defined time scale
+ 
+:::: {style="padding: 0.5em;
+  background: LightGray;
+  color: black;
+  border: 2px black;
+  border-radius: 5px;"}
+::: {.center}
+**Quiz**
+:::
+
+What might be an event definition and time origin for _time to disease worsening_ in a clinical trial?
+::::
+
+
+# Three essential components
+
+ - Well-defined event
+ - Clear time origin
+ - Defined time scale
+ 
+<div class="notebox">
+**Quiz**
+
+What might be an event definition and time origin for _time to disease worsening_ in a clinical trial?
+</div>
+
+
+# What makes TTE data different?
+
+- For some subjects, we may not observe an event
+   - The time to event is **censored**
+
+- Show an example of enrollment into a trial vs analysis time and end-of-study censoring
+
+
+# Types of censoring
+
+- Right censoring
+  - We know the event didn't happen up to time $s$ (i.e., we know $T > s$)
+- Left censoring
+  - We know the event happened before time $a$ (i.e., we know $T < a$)
+- Interval censoring
+  - We know the event happened between times $a$ and $b$ but not the exact time 
+
+- In clinical trials, we most often deal with right and interval censoring
+  
+# A little notation
+
+* There are two time-to-event processes happening:
+
+   * $T$ = time to event of interest
+   * $C$ = time to censoring
+
+* With right censoring, we observe $T^* = \text{min}(T,C)$
+
+* Remember: we are trying to estimate the distribution of T, but we observe T*
+  * We'll return to this when discussing model diagnostics
+
+* Typical to assume that $T$ and $C$ are independent
+  
+
+# How does censoring introduce complexity?
+
+- If we observed even times for all subjects, we could use 'standard' methods
+
+- Hard to estimate probability density function when we don't see all events happening
+  - A type of missing data problem
+
+- Working with the **hazard function** alleviates some of the problems
+
+- Hazard function = instantaneous event rate, conditional on event happening on or after time $t$
+  - $h(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t |  T \geq t )$
+  - "conditional on event happening on or after time $t$" is what helps
+
+# Terminology
+
+- Cumulative hazard = total hazard accumulated to time $t$
+  - $H(t) = \int_0^t h(s) ds$
+- Probability density function = instantaneous event risk (aka *density*)
+  - $f(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t)$
+- Survival function = probability of an event happening after time $t$
+  - $S(t) = P(T > t)$
+
+# Connections
+
+Two important relationships to remember:
+
+* The relation between the survival function and the cumulative hazard
+$$
+\begin{align*}
+S(t) &= \exp\left\{-H(t)\right\}
+\end{align*}
+$$
+
+* We can derive the density function from the hazard and survival functions
+$$
+\begin{align*}
+f(t) &= h(t) S(t)
+\end{align*}
+$$
+
+- importance of survival function
+- When estimating S(t), we (almost) always assume censoring is independent of event time
+
+# Workbook
+
+Let's look at the relationship between the hazard, cumulative hazard, density, and survival functions for some parametric distributions.
+  
+  
+#  Non-parametric estimation of survival, cumulative hazard and hazard functions
+
+* We'll start with non-parametric estimates of $S(t)$ and $H(t)$
+
+* The most commonly used estimator of $S(t)$ is the `Kaplan-Meier` estimator
+  - aka the *product limit* estimate
+
+* The most common estimator of $H(t)$ is the `Nelson-Aalen` estimator
+  - Can also estimate $S(t)$ as $\widehat{S(t)} = \exp\left\{ \widehat{H(t)} \right\}
+  - This is known as the Flemming-Harrington estimate of $S(t)$
+  - Similar, but not identical, to K-M estimate
+
+# Basics of Kaplan-Meier estimate
+
+Suppose we have these 10 event times (in days): 
+```{r, echo=FALSE}
+lung %>% 
+  mutate(status=status-1) %>% 
+  arrange(time,status) %>%
+  filter(time > 80) %>% 
+  select(time,status) %>% 
+  slice(1:10) %>% 
+  mutate(event_time = if_else(status==0, paste0(time,'+'), as.character(time))) %>% 
+  pull(event_time)
+```
+where a "+" denotes a censored observation.
+
+How would you estimate 
+
+>- $P(T > 80)$ ?   
+>    - $P(T>80) = 1$ because all event times are after 80 days
+
+
+>- $P(T > 90)$?  
+>    - $P(T > 90) = 6/10$ because we know exactly 4 events happened before 90 days
+
+>- $P(T > 94)$?
+>    - $P(T > 94) = ?$  We know 6 event happened before 94 days, but what about the censored time at 92 days?
+
+
+# Kaplan-Meier and conditional probability
+
+It turns outs that we can use some basic probability calculations to estimate $S(t)$ in the presence of censoring.
+
+1. Divide time into distinct intervals (at each event time, $\tau_j$)
+2. For each interval $j$, 
+    - calculate the proportion of subjects with an event ($d_j$), among the subjects in the <grn>risk set</grn> for that interval ($r_j$)
+    - risk set at time $t$ = N - # events prior to $t$ - # censored prior to $t$
+    - Calculate the probability of an event after the $j^{th}$ interval, conditional on no event prior to the interval as $1 - \frac{d_j}{r_j}$
+3. Estimate $S(t)$ as the product of the conditional probabilities up to time $t$
+    - $\hat{S}_{KM}(t) = \prod_{\tau_j \leq t} 1 - \frac{d_j}{r_j}$
+
+
+# Workbook: survfit estimation and plotting vs categorical and continuous predictors
+  
+# Summary measures of S(t)
+  - Median
+  - Percent surviving to time t
+  - Restricted mean survival time
+
+# Workbook: summary measures from S(t)
+  
+# Comparing two survival curves
+
+  _ Measuring differences
+      - difference in medians
+      - difference in RMST
+      - hazard ratio
+      
+  - Testing
+      - log rank test
+         - Tests Ho: S_0(t) = S_1(t) vs not equal
+         - Equivalent to CMH test for binary data, where stratification is at unique event times
+         - A good test when the hazard ratio is constant (but applicable even if it is not)
+         - Most sensitive to late differences?
+      - May also hear about the generalized wilcoxan test
+         - most sensitive when early differences in survival
+         - good when true distribution is log-normal or log-logistic
+
+  
+# Modeling
+ - Semi-parametric: Cox PH model
+    - likelihood contributions for censored and observed events
+    - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
+    - We don't need to estimate h_0(t) !!
+    - assumptions
+ 
+# Workbook
+   - fitting model, extracting estimates, interpreting estimates, log-rank test, stratifying
+ 
+# Extensions to standard Cox model
+  - Stratified Cox model
+  - Time-varying covariates
+  - (Demonstrate using supplemental workbook but no explicit hands-on)
+
+
+#  Intro to Parametric models
+  
+  * Prop Haz
+  * AFT
+
+
+ 
+# Good reading
+ - Nick Holford's tutorial
+ 
+ 
+ 
+ 
+# Technical session
+ 
+ * muhaz
+ * Semi-parametric alternatives to K-M 
+ * Semi-parametric alternatives to Cox PH
+ * Bayes estimation
+ 
+# References
