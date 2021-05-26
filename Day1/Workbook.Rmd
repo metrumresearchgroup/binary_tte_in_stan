@@ -418,6 +418,19 @@ resplot <-
 
 resplot  
 resplot + facet_wrap(~ PTTYPE)
+
+# deviance residuals
+dat_plus$resd <- residuals(mod02, type = "deviance")
+dat_plus$pred <- fitted(mod02)
+
+resplot <-
+  ggplot(dat_plus, aes(x = CAVGSS, y = resd)) +
+  geom_point() +
+  geom_smooth()
+
+resplot  
+resplot + facet_wrap(~ PTTYPE)
+
 ```
 
 Suggestive of:
@@ -477,6 +490,15 @@ Exercise: make a version of the previous plot that smooths out the predicted val
 # DHARMa residuals
 
 TODO : Ramon to populate an example of DHARMa residual vs concentration
+
+```{r}
+
+simulationOutput = DHARMa::simulateResiduals(mod01, n = 1000)
+plot(simulationOutput)
+DHARMa::plotResiduals(simulationOutput)
+DHARMa::plotResiduals(simulationOutput,form=dat_mod$CAVGSS,xlab="CAVE")
+
+```
 
 
 ## interactions
