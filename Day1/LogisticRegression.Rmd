@@ -29,13 +29,14 @@ library(binom)
 library(texreg)
 set.seed(314159)
 
+theme_set(theme_bw())
+
 expit <- function(x) 1 / (1+exp(-x))
 ``` 
 
 # Outline
 
 * Encountering binary data
-
 * Groundwork
    * Notational conventions
    * Modeling from a probabalistic viewpoint
@@ -45,7 +46,6 @@ expit <- function(x) 1 / (1+exp(-x))
    * Maximum likelihood
 
 * Visualizing relationships
-
 * Models, model checking, and measures of effect
   
 # Key learning objectives
@@ -282,15 +282,21 @@ $$ L\left(\theta \,|\,y_{obs}, x\right) = p\left(y_{obs} \,|\, \theta,
 
 
 
-# The Bernoulli likelihood function
+# The Bernoulli likelihood for one observation
 
 <red>Likelihood</red> for a single Bernoulli observation
 
 $$
-l(p \, | \, Y_i = y_i) = P(Y_i=y_i) = p^{y_i}(1-p)^{(1-y_i)} 
+l(p \, | \, Y_i = y_i) = P(Y_i=y_i) = \left\{ \begin{array}{ll}p & y_i = 1 \\ 1-p & y_i = 0 \end{array} \right.
 $$
+We often see this written more compactly as
 
+$$
+l(p \, | \, Y_i = y_i) = p^{y_i}(1-p)^{(1-y_i)} 
+$$
 <br>
+
+# The Bernoulli joint likelihood function
 
 <red>Joint likelihood</red> for a sample of independent Bernoulli observations
 
@@ -302,14 +308,14 @@ l(p | \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i) \\
 \end{eqnarray*}
 $$
 
-<br>
 
 <red>Joint log likelihood:</red>
 
 $$
 \begin{eqnarray*}
-L(p \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = & (\# \, \text{of "ones"}) \log(p)  \\ 
-& + & (n-\# \, \text{of "ones"}) \log(1-p) 
+L(p \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = & l(p | \mathbf{Y}=\mathbf{y}) \\
+ & = & (\# \, \text{of "ones"}) \log(p)
+ + (n-\# \, \text{of "ones"}) \log(1-p) 
 \end{eqnarray*}
 $$
 
@@ -501,21 +507,34 @@ aedat %>% group_by(STUDYID) %>%
   geom_col()
 ```
 
-# Example plots: categorical with CI {.sourceCode.r.small}
+# Example plots: categorical with confidence interval {.sourceCode.r.small}
+::: columns
 
+:::: column
 ```{r}
-p <- aedat %>% group_by(STUDYID) %>% 
+p <- aedat %>% 
+  group_by(STUDYID) %>% 
   summarise(x = sum(AE01), n=n()) %>% 
   mutate(phat = x / n,
-         lcl = binom::binom.confint(x,n,methods = "wilson")$lower,
-         ucl = binom::binom.confint(x,n,methods = "wilson")$upper) %>% 
+         lcl = binom.confint(x,n,methods = "wilson")$lower,
+         ucl = binom.confint(x,n,methods = "wilson")$upper) %>% 
   ggplot(aes(x=STUDYID, y=phat)) + 
   geom_col() +
-  geom_errorbar(aes(ymin=lcl, ymax=ucl), width = 0.2)
+  geom_errorbar(aes(ymin=lcl, ymax=ucl), 
+                width = 0.2)
 ```
+
+Note: `binom.confint` is in the `binom` package
+::::
+
+:::: column
 ```{r, echo=FALSE, out.width="95%"}
 p
 ```
+::::
+
+:::
+
 
 
 <!-- <div class='right' style='float:right;width:48%'> -->
@@ -525,7 +544,52 @@ p
 <!-- </div> -->
 
 
-# Relationship with continuous variable
+# Relationship with a continuous variable
+
+```{r, echo=FALSE}
+dat_use <-
+  aedat %>% 
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4))))
+```
+
+```{r, echo=FALSE}
+dat_eda <- dat_use %>% group_by(Quartile) %>% mutate(MedConc = median(CAVGSS))
+p <- ggplot() +
+  geom_rug(data = filter(dat_eda, AE01 == 0),
+           aes(x = CAVGSS), sides = "b") +
+  geom_rug(data = filter(dat_eda, AE01 == 1),
+           aes(x = CAVGSS), sides = "t") +
+  # NB: default smoother is problematic for 0-1
+  # data. More on this later but live with it
+  # for now.
+  geom_smooth(data = dat_eda,
+              aes(x = CAVGSS, y = AE01),
+              method='gam', formula=y~s(x),
+              method.args = list(family='binomial')) +
+  stat_summary(
+    data = dat_eda,
+    aes(x = MedConc, y = AE01, group = MedConc),
+    fun = function(y) sum(y) / length(y),
+    geom = "point"
+  ) +
+  stat_summary(
+    data = dat_eda,
+    aes(x = MedConc, y = AE01),   
+    # Wilson CI recommended by Agresti and Coull (2000) review paper
+    fun.min = function(y) {
+      binom.confint(sum(y),length(y),
+                    methods = "wilson")$lower
+      },
+    fun.max = function(y) {
+      binom.confint(sum(y), length(y),
+                    methods = "wilson")$upper
+      },
+    geom = "errorbar"
+  )
+p
+```
 
 
 # Plotting tips
@@ -1021,6 +1085,11 @@ In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of
 <!-- * Probit models also arise from a different modeling framework: a latent variable determined by covariates with random gaussian noise with a threshold for a "true" outcome -->
 
 <!-- End day 1 here with workbook -->
+
+# Choice of exposure metric
+
+
+
 
 # Residual Diagnostics
 

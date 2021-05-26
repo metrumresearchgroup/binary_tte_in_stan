@@ -111,6 +111,8 @@ Exercise:
 * Re-fit the model using a probit link
 * Re-fit the model with STUDYID as an additional covariate
 
+TODO: Add priors explicitly: normal distributions
+
 ```{r}
 
 # * Re-fit the model using a probit link
@@ -154,6 +156,9 @@ Exercise:
 * Print out a table of estimated coefficients and their standard errors.
 * Print out 95% confidence intervals for the model parameters.
 * Print out 90% confidence intervals for the model parameters.
+
+* Modify model to use t-distirbutions with 3 degrees of freedom.  How do the estimates and CIs change?
+
 
 ```{r}
 fixef(mod01_stan)

@@ -7,12 +7,13 @@ output:
     fig_height: 5
     font_adjustment: 3
     transition: none
-    css: ../stylesheets/slidystyles.css
+    css: slidystyles.css
     duration: 45
     footer: Metrum Research Group &copy 2021
     mathjax: local
     self_contained: false
     df_print: kable
+    variant: markdown+fancy_lists
 #bibliography: alpha.bib
 #nocite: | 
 #    @2795, @2192, @3684
@@ -26,6 +27,7 @@ library(stringr)
 library(haven)
 library(survival)
 library(survminer)
+library(survMisc)
 library(texreg)
 
 set.seed(314159)
@@ -49,7 +51,7 @@ aedat <-
   ),
   # Time of severe event for those that had one
   TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE),
-  AE03 = ifelse(AETOXGR=="Severe", 1, 0)
+  AE_any = ifelse(AETOXGR!="None", 1, 0)
   )
 
 # Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
@@ -203,7 +205,7 @@ Let's look at the relationship between the hazard, cumulative hazard, density, a
   - aka the *product limit* estimate
 
 * The most common estimator of $H(t)$ is the `Nelson-Aalen` estimator
-  - Can also estimate $S(t)$ as $\widehat{S(t)} = \exp\left\{ \widehat{H(t)} \right\}
+  - Can also estimate $S(t)$ as $\widehat{S_{FH}(t)} = \exp\left\{ \widehat{H_{NA}(t)} \right\}$
   - This is known as the Flemming-Harrington estimate of $S(t)$
   - Similar, but not identical, to K-M estimate
 
@@ -237,23 +239,127 @@ How would you estimate
 
 # Kaplan-Meier and conditional probability
 
-It turns outs that we can use some basic probability calculations to estimate $S(t)$ in the presence of censoring.
+It turns outs that we can use some basic probability calculations to estimate $S(t)$ in the presence of censoring.  
 
-1. Divide time into distinct intervals (at each event time, $\tau_j$)
-2. For each interval $j$, 
-    - calculate the proportion of subjects with an event ($d_j$), among the subjects in the <grn>risk set</grn> for that interval ($r_j$)
-    - risk set at time $t$ = N - # events prior to $t$ - # censored prior to $t$
+1. Divide time into distinct intervals (at each event time, $\tau_j$)    
+
+2. For each interval $j$,    
+    - Calculate the proportion of subjects with an event ($d_j$), among the subjects in the risk set for that interval ($r_j$)  
+    - The ***risk set*** at time $t$ = N - # events prior to $t$ - # censored prior to $t$  
     - Calculate the probability of an event after the $j^{th}$ interval, conditional on no event prior to the interval as $1 - \frac{d_j}{r_j}$
+
 3. Estimate $S(t)$ as the product of the conditional probabilities up to time $t$
     - $\hat{S}_{KM}(t) = \prod_{\tau_j \leq t} 1 - \frac{d_j}{r_j}$
 
+# Kaplan-Meier estimation in R
 
-# Workbook: survfit estimation and plotting vs categorical and continuous predictors
-  
+Fortunately, we don't have to do that work by hand :)
+
+The `survfit` function in the R package `survival` does the work for us:
+
+:::{.center}
+```{r}
+fit0 <- survfit(Surv(TTE,AE_any) ~ 1, data=dat_use)
+```
+:::
+
+- The `Surv(time, event)` function creates a survival response object
+    - `time` = event or censoring time
+    - `event` = event indicator (1=event, 0 = right censored)
+    - More complex types of censoring can be handled
+
+- RHS of formula cannot include continuous variables (*Why?*)
+    - This is okay: `survfit(Surv(TTE, AE_any) ~ Quartile, data=dat_use)`
+    - This is not: `survfit(Surv(TTE, AE_any) ~ CAVGSS, data=dat_use)`
+
+# Basic Survfit output
+
+The `survfit` object gives us some basic information:
+
+```{r}
+print(fit0)
+```
+
+# More Survfit output
+
+We can get more detail and predicted values with `summmary`
+
+```{r}
+summary(fit0, times = seq(0,1,by=0.25))
+```
+
+We'll explore more in the hands-on section.
+
+
+# Plotting the estimated survival function
+
+The `survminer::ggsurvplot` function provides clean plots
+
+```{r}
+survminer::ggsurvplot(fit0, risk.table = TRUE)
+```
+
+
+# Workbook: survfit estimation and plotting vs categorical predictors
+
+Let's practice.
+
+
 # Summary measures of S(t)
-  - Median
-  - Percent surviving to time t
-  - Restricted mean survival time
+
+* Median time to event (black dashed line)
+* Event rate at time $t$ (blue dashed line)
+* Restricted mean survival time to $t^*$
+    * Average event-free time up to $t^*$
+    * Area under S(t) from 0 to $t^*$
+    
+```{r, echo=FALSE}
+p1 <- survminer::ggsurvplot(fit0, conf.int = FALSE)
+med <- quantile(fit0, probs=0.50)[['quantile']]
+yr1 <- summary(fit0, time=1)$surv
+
+p2 <- p1$plot +
+  geom_segment(aes(x=0, xend=med,y=0.5, yend=0.5), linetype='dashed') +
+  geom_segment(aes(x=med, xend=med,y=0.5, yend=0), 
+               arrow=arrow(length = unit(0.03, "npc")),
+               linetype='dashed') +
+  geom_segment(aes(x=1, xend=1,y=0, yend=yr1), linetype='dashed', color='blue') +
+  geom_segment(aes(x=1, xend=0,y=yr1, yend=yr1), 
+               arrow=arrow(length = unit(0.03, "npc")),
+                     linetype='dashed', color='blue') +
+  geom_area(mapping = aes(x = ifelse(time>=0 & time<=3 , time, 0)),
+          fill = "red", alpha = 0.1) 
+
+p2
+```
+
+  
+# Summary measures of S(t) in R: median
+  - Median time to event
+```{r}
+quantile(fit0, probs=0.50) %>% unlist()
+```
+
+# Summary measures of S(t) in R: percentile
+
+  - Percent surviving to time t  
+
+```{r}
+summary(fit0, time=c(0,1,2))
+```
+
+# Summary measures of S(t) in R: RMST
+  
+  - Restricted mean survival time  
+```{r}
+print(fit0, rmean = 2)
+```
+  
+```{r}
+print(fit0, rmean = 4)
+```
+
+
 
 # Workbook: summary measures from S(t)
   

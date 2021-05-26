@@ -38,9 +38,7 @@ expit <- function(x) 1 / (1+exp(-x))
 * Thinking causally
 * What are some solutions?
 
-# Important to understand exposure-response relationships
-
-A key componant of decision-making:
+# Understanding exposure-response relationships is a key componant of decision-making:
 
 * Sponsors: Dose-selection for Phase 3
 * Regulators: "Optimizing" benefit-risk in a population
@@ -49,14 +47,17 @@ A key componant of decision-making:
 # In some development programs, only one dose is studied extensively
 
 * Common practice in oncology
-   * Find MTD -> run expansion cohort (1b/2) -> Phase 3
+   * Find MTD -> run expansion cohort (Phase 1b/2) -> Phase 3 
+
 * Not uncommon in other disease areas
-   * Vedolizumab in UC
-   * __other examples__
+
    
 # With biologics this can cause a problem
 
-* Apparent exposure-response not confirmed in subesquent studies
+* Observe an apparent exposure-response 
+    * This may be real 
+    * May be due to other factors
+
 * __Give examples from Dai__
 
 
@@ -68,10 +69,10 @@ A key componant of decision-making:
 ToGA trial demonstrated benefit of trastuzumab in mGC, but possibly less effective in patients with low exposure
 
 * Phase 3, randomized, OL study
-* Fluoropyrimidine and cisplatin (FC) vs. trastuzumab + FC (T+FC)
-* Trastuzumab dosed with 'standard' regimen
-* Overall effect (top panel @Bang2010-lp)
-* By $C{\text{min},1}$ quartile (bottom panel @Yang2013-tr)
+    * Fluoropyrimidine and cisplatin (FC) vs. trastuzumab + FC (T+FC)
+    * Trastuzumab dosed with 'standard' regimen
+    * Overall effect (top panel @Bang2010-lp)
+    * By $C_{\text{min},1}$ quartile (bottom panel @Yang2013-tr)
 
 Led to a trial designed to compare a standard and high-dose trastuzumab regimens.
 
@@ -80,12 +81,12 @@ Led to a trial designed to compare a standard and high-dose trastuzumab regimens
 ::: {}
 
 
-```{r, echo=FALSE, out.width="60%", fig.cap="Overall OS effect"}
+```{r, echo=FALSE, out.width="60%"}
 knitr::include_graphics("graphics/ToGA-overall.png")
 ```
 
 
-```{r, echo=FALSE, out.width="60%", fig.cap="OS by exposure quartile"}
+```{r, echo=FALSE, out.width="60%"}
 knitr::include_graphics("graphics/Yang-Figure1A.png")
 ```
 
@@ -102,10 +103,10 @@ knitr::include_graphics("graphics/Yang-Figure1A.png")
 HELOISE trial demonstrated no additional benefit of high dose trastuzumab in mGC
 
 * Phase 3b, randomized, OL study in 1L mGC
-* Trastuzumab standard regimen vs high-dose regimen
-* Both regimens included cisplatin + capecitabine
-* Overall effect (top panel @Shah2017-yo)
-* By $C{\text{min},1}$ quartile (bottom panel @Shah2017-yo)
+  * Trastuzumab standard regimen vs high-dose regimen
+  * Both regimens included cisplatin + capecitabine
+* Top panel: overall effect (@Shah2017-yo)
+* Bottom panel: Effect in low $C_{\text{min},1}$ group (@Shah2017-yo)
 
 
 :::
@@ -129,17 +130,17 @@ knitr::include_graphics("graphics/HELOISE-subset.png")
 
 # What happened?
 
-* The apparent exposure-response in the ToGA trial was an artefact of `counfounding`
+* The apparent exposure-response in the ToGA trial was an artifact of `counfounding`
 
 * Subsequent analyses (@Yang2013-tr) confirmed the lack of an exposure-response relationship in the ToGA study.
 
 
-# This observation is common with large molecules which are studied at one dose
+<!-- # This observation is common with large molecules which are studied at one dose -->
 
-<< give other examples: T-DM1, tremi, vedo >>
+<!-- << give other examples: T-DM1, tremi, vedo >> -->
 
-* Why is this a particular problem for large molecules?
-* Why is that compounded when studying a single dose regimen?
+<!-- * Why is this a particular problem for large molecules? -->
+<!-- * Why is that compounded when studying a single dose regimen? -->
 
 
 # What is confounding?
@@ -149,9 +150,9 @@ knitr::include_graphics("graphics/HELOISE-subset.png")
 * `Confounding` is a bias in the estimate of the causal effect.
 * Occurs when there is a `common cause` of exposure and the outcome.
 
-```{example}
+:::{.notebox}
 Exposure-response confounding occurs when there is a common cause of exposure and the outcome of interest.
-```
+:::
 
 # How does a common cause introduce bias?
 
@@ -171,7 +172,7 @@ Exposure-response confounding occurs when there is a common cause of exposure an
 ```
 
 * This induces a relationship between exposure and outcome
-    * Yet, there is no causal effect of exposure on the outcome
+    * Even though there is no causal effect of exposure on the outcome
     * _Association is not causation_
 
 # Simulated data
@@ -188,15 +189,18 @@ simulated_data <- tibble(
 simulated_data %>% 
   ggplot(aes(x=E, y=O)) + 
   geom_point() +
-  geom_smooth(method='gam', mapping=aes(color='Association')) +
+  geom_smooth(method='gam', mapping=aes(color='Marginal association')) +
   geom_hline(yintercept = 10, color='red') +
   theme_bw() +
   labs(x='Exposure (E)', y="Outcome (O)") +
-  scale_color_manual(name="Effect", values=c('Association'="blue",'Causal'="red"))
+  scale_color_manual(name="Effect", values=c('Marginal association'="blue",'Causal effect'="red"))
 ```
 
 # The same type of problem can occur when there is an E-R relationship
 
+::: columns
+
+:::: column
 
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
@@ -211,6 +215,10 @@ simulated_data %>%
 ```
 
 * The apparant relationship will differ from the causal one
+
+::::
+
+:::: column
 
 ```{r}
 simulated_data <- tibble(
@@ -230,6 +238,10 @@ simulated_data %>%
   theme_bw() +
   labs(x='Exposure (E)', y="Outcome (O)")
 ```
+
+::::
+
+:::
 
 
 # Simple DAG for the trastuzumab example
@@ -256,16 +268,36 @@ __Weight:__ _baseline_ factor indirectly affecting exposure (through CL)
 
 __Disease severity:__ _baseline_ factor directly affecting outcome and indirectly affecting exposure 
 
-* Basline disease severity is counfounding the causal relationship between exposure and survival
+* If we're not careful, basline disease severity can counfound the causal relationship between exposure and survival
 
 
 # Why is this a problem?
 
-We want to know the __causal__ effect of exposure on the outcome.
+* We want to know the __causal__ effect of exposure on the outcome.  
+    - That is, if we change exposure how does the response change?
 
-That is, if we change exposure how does the response change?
+* The data going into these analyses are essentially observational.
 
-The data going into these analyses are essentially observational.
+* The common cause of exposure and outcome provides a <red>backdoor path</red> for information to flow.
+
+
+```{r,engine='tikz',echo=FALSE}
+\begin{tikzpicture}
+\tikzset{every node}=[font=\sffamily]
+\node (v0) at (0,0) {exposure};
+\node (v1) at (6,0)  {Alive at 1 year};
+\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
+\node (v3) at (-2,0) {CL};
+\node (v4) at (-2,2)  {Weight};
+\node (v5) at (0,2) {dose};
+\draw [->] (v0) edge (v1);
+\draw [->, red] (v2) edge (v1);
+\draw [->] (v4) edge (v3);
+\draw [->, red] (v2) edge (v3);
+\draw [->, red] (v3) edge (v0);
+\draw [->] (v5) edge (v0);
+\end{tikzpicture}
+```
 
 # Why is this a large molecule issue?
 
@@ -313,9 +345,29 @@ __Disease severity:__ _baseline_ factor directly affecting outcome
 \end{tikzpicture}
 ```
 
-Weight: baseline factor indirectly affecting exposure (through CL)
+Weight: baseline factor indirectly affecting exposure (through CL)  
 Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure 
 
+* All of the variability in exposure is due to variability in CL
+    * As a result, we can't block the backdoor path by controlling for CL
+* Adding additional dose levels to the design is one solution
+
+# Solutions when confounding is due to baseline factors
+
+* Thinking about your estimand and potential confounding ahead of time  
+    * Use DAGs to help think
+
+* Study design
+    * Include multiple dose levels / regimens to de-couple CL and dose
+    
+*  Adjusted analysis
+    * Regression models
+        * Include effects of common causes in the model (even if they are not statistically significant!)
+        * Be careful not to include common outcomes as a predictor
+    * Matched analysis
+        * Various methods for matching: propensity scores (PS), Mahalanobis distance
+        * Can use machine learning or other non-parametric methods for building PS model
+    
 
 # Causal model with PD marker
 
@@ -339,11 +391,18 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 \end{tikzpicture}
 ```
 
-Weight: baseline factor indirectly affecting exposure (through CL)
-Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure 
+* Weight: baseline factor indirectly affecting exposure (through CL)  
+* Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure 
+* Does the extra informantion help?
 
-# Causal model with PD marker and feedback
 
+# Causal model with time-dependent confounding
+
+* Much more complex and DAGs don't provide a simple solution
+* Need more sophisticated statistical tools
+    * Marginal structural models
+    * G-computation
+    
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
 \tikzset{every node}=[font=\sffamily]
@@ -365,7 +424,4 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 
 \end{tikzpicture}
 ```
-
-
-# Solutions
 

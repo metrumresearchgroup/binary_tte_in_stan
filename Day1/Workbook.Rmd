@@ -15,7 +15,6 @@ params:
 
 
 ```{r,echo=FALSE,message=FALSE}
-.libPaths("lib")
 knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
 ```
 
@@ -278,7 +277,9 @@ p <- ggplot() +
   # data. More on this later but live with it
   # for now.
   geom_smooth(data = dat_eda,
-              aes(x = CAVGSS, y = AE01)) +
+              aes(x = CAVGSS, y = AE01),
+              method='gam', formula=y~s(x),
+              method.args = list(family='binomial')) +
   stat_summary(
     data = dat_eda,
     aes(x = MedConc, y = AE01, group = MedConc),
@@ -403,6 +404,8 @@ Excercise:
 
 ## residual plot
 
+TODO: RIG to add deviance residual plot for comparison with response resids
+
 ```{r, "TRY resid", purl=TRUE, results = "hide"}
 dat_plus <- dat_mod
 dat_plus$res <- residuals(mod02, type = "response")
@@ -470,6 +473,10 @@ Exercise: make a version of the previous plot that smooths out the predicted val
 ```{r}
 
 ```
+
+# DHARMa residuals
+
+TODO : Ramon to populate an example of DHARMa residual vs concentration
 
 
 ## interactions

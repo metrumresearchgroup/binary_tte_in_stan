@@ -105,10 +105,11 @@ We want you to finish this course with:
 
 # Session 2
 `Basic concepts for time-to-event data` : 
-    * Time-to-event (TTE) data:: what makes it different?
-    * Visualizing TTE data - the Kaplan-Meier estimator
-    * Cox proportional hazards model
-    * Parametric regression models
+
+* Time-to-event (TTE) data:: what makes it different?
+* Visualizing TTE data - the Kaplan-Meier estimator
+* Cox proportional hazards model
+* Introduction to parametric regression models
 
 ----
 
