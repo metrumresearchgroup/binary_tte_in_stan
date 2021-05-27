@@ -27,6 +27,7 @@ library(survival)
 library(GGally)
 library(binom)
 library(texreg)
+library(brms)
 set.seed(314159)
 
 theme_set(theme_bw())
@@ -650,46 +651,6 @@ p
 <!-- </p> -->
 
 
-<!-- # A brief review of Bayesian inference -->
-<!-- ### Bayes Rule -->
-
-
-<!-- $\color{firebrick}{\text{Bayes Rule}}$ the basis for inference about model parameters ($\theta$) given data ($y$) and prior knowledge about model parameters ($p\left(\theta\right)$): -->
-<!-- \begin{eqnarray*} -->
-<!-- p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)} -->
-<!-- = \frac{p\left(\theta\right)p\left(y\,|\,\,\theta\right)}{\int{p\left(\theta\right)p\left(y\,|\,\theta\right) d\theta}} -->
-<!-- \\  -->
-<!-- &\propto& p\left(\theta\right)p\left(y\,|\,\theta\right) -->
-<!-- \end{eqnarray*} -->
-<!-- The $p$'s are probabilities or probability densities of the specified random variables. -->
-
-<!-- # Bayesian modeling/inference process -->
-
-<!-- <font size="6">   -->
-
-<!-- 1. Assess prior distribution $p\left(\theta\right)$ -->
-
-<!--     * $\theta$ viewed as random variables -->
-
-<!--     * Subjective -->
-
-<!--     * Ideally base on all available evidence/knowledge (or belief) -->
-
-<!--     * Or deliberately select a non-informative (or weakly informative) -->
-<!--   prior (e.g., reference, vague or improper prior) -->
-
-<!-- 2. Construct a model for the data $p\left(y \,|\, \theta\right)$, also known as the likelihood function when viewed as a function of $\theta$. -->
-
-<!-- 3.  Calculate posterior distribution $p\left(\theta \,|\, y\right)$. -->
-
-<!--     * Use for inferences regarding parameter values -->
-
-<!-- 4. Calculate posterior predictive distribution $p\left(y_\text{new} \,|\, y\right)$. -->
-
-<!--     * Use for inferences regarding future observations -->
-
-<!-- $$p\left(y_{new}\,|\,y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$$ -->
-<!-- </font> -->
 
 
 <!-- # Bayesian modeling of odd-type data -->
@@ -1147,5 +1108,119 @@ In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of
   * Receiver operating characteristic curve (ROC) and its AUC
     
     
+# Break
+
+# Approach to Bayesian modeling in this course
+
+* For this series of classes we are going to use Stan to do Bayesian modeling
+
+    * Stan is a probabalistic programming language for fitting Bayesian models.  
+    * By default it uses Hamiltonian Monte Carlo (HMC), specifically a variation called the no U-turn sampler (NUTS).
+    *We will go into more details about HMC/NUTS later in the course
+
+* Start with using `brms` as our gateway to Stan 
+    * brms is a package that enables simple fitting of many types models that you can fit using `glm`, `survreg`, `lme`, `nlme`, etc.
+    * Allows quick access to Bayesian inference
+
+* Later we will program our own Stan models and run them with `cmdstanr`
+    * Learn more about the Stan language
+    * Fit models that are not supported in `brms`
+
+
+# A brief review of Bayesian inference
+
+
+$\color{firebrick}{\text{Bayes Rule}}$ the basis for inference about model parameters ($\theta$) given data ($y$) and prior knowledge about model parameters ($p\left(\theta\right)$):
+\begin{eqnarray*}
+p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)}
+= \frac{p\left(\theta\right)p\left(y\,|\,\,\theta\right)}{\int{p\left(\theta\right)p\left(y\,|\,\theta\right) d\theta}}
+\\
+&\propto& p\left(\theta\right)p\left(y\,|\,\theta\right)
+\end{eqnarray*}
+The $p$'s are probabilities or probability densities of the specified random variables.
+
+# Bayesian modeling/inference process using MCMC
+
+<font size="6">
+
+1. Construct a model for the data $p\left(y \,|\, \theta\right)$, conditional on parameters $\theta$
+
+2. Assess prior distribution for $\theta$ -- $p\left(\theta\right)$
+
+    * $\theta$ viewed as random variables
+    * Ideally based on all available evidence/knowledge (or belief)
+    * Or deliberately select a non-informative (or weakly informative)
+  prior (e.g., reference, vague or improper prior)
+
+3.  Sample from the posterior distribution for $\theta$, $p\left(\theta \,|\, y\right)$.
+
+    * Convergence and sampler diagnostics
+    * Use for inferences regarding parameter values
+
+4. Sample from the posterior predictive distribution for $y$m  $p\left(y_\text{new} \,|\, y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$.
+
+    * Use for inferences regarding future observations
+
+<!-- $$p\left(y_{new}\,|\,y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$$ -->
+</font>
+
+# Bayesian ingredients for MCMC sampling from a posterior
+
+* Data
+* Model for the outcome(s) -- the likelihood
+* Models for the parameters -- the prior distribution
+* MCMC tool -- Stan (via `brms` or `cmdstanr`)
+
+# Ingredients for HMC/NUTS
+
+- A starting point in the parameter space (initial value, one per chain)
+- Number of MCMC samples used to tune the HMC/NUTS algorithm (`warmup`)
+    * This is not exactly the same as the burn-in in other MCMC algorithms
+    * NUTS uses these samples to [adaptively tune the sampler](https://mc-stan.org/docs/2_26/reference-manual/hmc-algorithm-parameters.html)
+    
+- Total number of samples to take, including the warmup (`iter`)
+- Parameters which inform how the sampler should adapt
+    * Defaults are usually good for 'simple' models
+    * Often need to modify for more complex, hierarchical models
+    * Return to these later in the course
+
+
+# Let's re-fit our AE model using `brms`
+
+```{r,echo=FALSE}
+load('../data/aedat.RDS')
+```
+
+
+```{r, eval=FALSE}
+mod01_glm <- glm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+                  data = aedat, 
+                  family = bernoulli(link = "logit")
+                 )
+```
+
+<br>
+
+```{r, eval=FALSE}
+mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+                  data = aedat, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123)
+```
+
+# What about the prior distributions?
+
+* By default, `brms` uses flat, non-informative prior distributions for regression coefficients
+
+* We can specify priors directly through the `prior` argument.
+  * More to come in a few slides
+
+      
+
 
 # References
