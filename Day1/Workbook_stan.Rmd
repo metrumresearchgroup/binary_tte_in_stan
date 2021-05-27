@@ -96,22 +96,54 @@ dat_use <-
 
 ```{r, "TRY firststan", purl=TRUE, results = "hide"}
 dat_mod <- dat_use
+
 mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
                   data=dat_mod, 
                   family = bernoulli(link = "logit"),
                   warmup = 500, 
                   iter = 2000, 
                   chains = 4, 
-                  inits = "0", 
+                  inits = "random", 
                   cores = 4,
                   seed = 123)
 ```
+
+Look at convergence diagnostics:
+  - Rhat
+  - Trace plots
+  - density plots
+Look at posterior summaries for parameters (summary(mod01_stan))
+
+Look at stan model
+
 
 Exercise:
 * Re-fit the model using a probit link
 * Re-fit the model with STUDYID as an additional covariate
 
+Check the default prior distributions using `prior_summary`
+
+```{r}
+prior_summary(mod01_stan)
+```
+
+
 TODO: Add priors explicitly: normal distributions
+
+
+```{r}
+mod01_normal_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+                         data=dat_mod, 
+                         family = bernoulli(link = "logit"),
+                         prior = set_prior("normal(0,3)",class="b"),
+                         warmup = 500, 
+                         iter = 2000, 
+                         chains = 4, 
+                         inits = "0", 
+                         cores = 4,
+                         seed = 123)
+```
+
 
 ```{r}
 
