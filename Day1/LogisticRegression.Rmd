@@ -11,7 +11,7 @@ output:
     footer: Metrum Research Group &copy 2021
     mathjax: local
     self_contained: false
-    df_print: kable
+    df_print: tibble
 #bibliography: alpha.bib
 #nocite: | 
 #    @2795, @2192, @3684
@@ -25,8 +25,10 @@ library(stringr)
 library(haven)
 library(survival)
 library(GGally)
+library(mgcv)
 library(binom)
 library(texreg)
+library(DHARMa)
 library(brms)
 set.seed(314159)
 
@@ -51,9 +53,13 @@ expit <- function(x) 1 / (1+exp(-x))
   
 # Key learning objectives
 
-* One
-* Two
-* Three
+At the end of today's session, I hope you will know:
+
+* How to make effective exploratory analysis plots for binary data
+* The basic concepts of maximum likelihood estimation for binary data models
+* How to fit and evaluate binary data models
+* How to interpret model terms
+
 
 # What do we mean by binary data?
 
@@ -62,18 +68,18 @@ expit <- function(x) 1 / (1+exp(-x))
 * Can be categorical by nature or created by discretizing a categorical or continuous variable
 
 * Examples
-   * Objective response / non-response per RECIST
+   * Objective response per RECIST (response / non-response)
    * Incident adverse event (yes / no)
    * Alive without disease progression vs. progressive disease or died
    * Coin flip (heads / tails)
 
 # What makes binary data interesting?
 
-> -  If you are coming from a Pop PK background, moving away from models with Normal (or log-Normal) residuals may force you to think at a new level of abstraction. 
+-  If you are coming from a Pop PK background, moving away from models with Normal (or log-Normal) residuals may force you to think at a new level of abstraction. 
 
-> -  The Bernoulli distribution for binary data is (in most respects) as simple a statistical distribution as there is. Good place to start for many basic statistical concepts.  
+-  The Bernoulli distribution for binary data is (in most respects) as simple a statistical distribution as there is. Good place to start for many basic statistical concepts.  
 
-> - There are fewer choices to make and fewer assumptions to check when dealing with binary data (e.g. as compared to time-to-event data). 
+- There are fewer choices to make and fewer assumptions to check when dealing with binary data (e.g. as compared to time-to-event data). 
 
 
 # Basic Notation
@@ -84,7 +90,7 @@ For now, we will use this high-level notation:
      * $\mu$  model parameter ("intercept")
      * $\beta$ model parameter (coefficient for effect of exposure or covariate)
 
-* Upper case Roman letters are <red>variables</red>
+* Upper case Roman letters are <red>random variables</red>
      * $C$, $D$, $T$ : exposure (think of a steady-state exposure metric for now, e.g. $\mathrm{CAVG}_\mathrm{ss}$), or dose, or just treatment indicator. 
      * $X$ : covariates
      * $Y$ : As-yet-unrealized / unobserved response ("DV")
@@ -141,11 +147,12 @@ We'll use expressions like:
 
 $$\text{Height} \sim \text{Normal}(\mu, \sigma)$$
 
-
-**Read as:** 
+:::{.notebox}
+**Read as:**
 
 > Height follows a normal distribution with mean $\mu$ and standard deviation $\sigma$
 
+:::
 If we know $\mu$ and $\sigma$ we can 
 
   * Make probabalistic statements about height in the population
@@ -164,20 +171,25 @@ Tall = \left\{ \begin{array}{ll}
 $$
 
 
-> NB: Binary random variables are usually defined in this 0/1 manner.
+> NB: From here on, we'll assume binary random variables are defined as 0 / 1
 
 Then our model might be
 
 $$\text{Tall} \sim \text{Bernoulli}(\pi)$$
 
+:::{.notebox}
+
 **Read as:**
 
 > Being tall follows a Bernoulli distribution with the probability of being tall equal to $\pi$
 
-If we know $\pi$
+:::
+
+If we know $\pi$, we can
 
   * Make probabalistic statements about the number of tall people in a random sample from the population
   * Simulate data
+
 
 # Probability density (mass) function
 
@@ -194,48 +206,6 @@ and the _Bernoulli_ pmf for Tall
 $$
     p( tall \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
 $$
-  
-
-<!-- # Modeling from a probabilistic point of view -->
-
-<!-- Start with the notion that the value of a potential future -->
-<!--   measurement $Y$ is a random variable -->
-
-<!-- * It is not predictable with certainty (even if we know all of -->
-<!--     the model parameters with certainty) -->
-
-<!-- * The probabilities of different values are described in terms -->
-<!--     of a probability distribution -->
-<!-- $$ Y \sim p\left(y \,|\,\theta, x\right) $$ -->
-<!-- where $\theta$ is a vector of model parameters and $x$ is a vector of -->
-<!-- covariates. -->
-
-<!-- * If $Y$ is a continuous random variable then $p\left(y \,|\,\theta,x\right)$ is a `probability density function.` -->
-
-<!-- * If $Y$ is a discrete random variable then $p\left(y \,|\, \theta,x\right)$ is a `probability mass function.` -->
-
-
-<!-- # Example using a pharmacokinetic model -->
-
-<!--   Suppose that $Y$ is a future plasma drug concentration at -->
-<!--   some time $t$ following an IV bolus of a drug where the -->
-<!--   pharmacokinetics can be described by a 1 compartment model with -->
-<!--   normally distributed residual variation. -->
-
-<!--   \begin{eqnarray*} -->
-<!--     Y &\sim& N\left(y \,|\, \widehat{c}\left(t, D, CL, -->
-<!--       V\right), \sigma \right) \\ -->
-<!--     p\left(y \,|\, \widehat{c}\left(t, D, CL, -->
-<!--       V\right), \sigma \right) &=& \frac{1}{\sqrt{2\pi} -->
-<!--       \sigma} e^{-\frac{1}{2\sigma^2} \left(y - \widehat{c}\left(t, D, CL, -->
-<!--           V\right)\right)^2} \\ -->
-<!--     \widehat{c}\left(t, D, CL, -->
-<!--       V\right) &=& \frac{D}{V} e^{-\frac{CL}{V} t} -->
-<!--   \end{eqnarray*} -->
-
-<!--   Even if you know the values of $CL$, $V$ and $\sigma$ you -->
-<!--   cannot say that $Y$ will be a particular value. However, you can say -->
-<!--   the probability that $Y$ will be within some specified interval. -->
 
 
 # The likelihood function
@@ -246,12 +216,12 @@ $$
     <!-- * That value is no longer a random variable since we know its -->
     <!-- value. -->
 
-* If we view the <grn>pdf</grn> or <grn>pmf</grn> as a function of the parameters, conditional on some observed data $y_{obs}$, we refer to the function as a <red>likelihood function</red>
+* If we view the pdf or pmf <grn>as a function of the parameters</grn>, conditional on some observed data $y_{obs}$, we refer to the function as a <red>likelihood function</red>
 <!-- * If we insert that observed value into our probability -->
 <!--     distribution function we now refer to that function as a -->
 <!--     ***likelihood function***. -->
 
-* It is the ***same function as before*** but we now view it as a
+* It is the ***same function*** as the PDF or pmf, but we now view it as a
     function of the parameters given the data instead of as a function
     of the data given the parameters.
  
@@ -288,12 +258,12 @@ $$ L\left(\theta \,|\,y_{obs}, x\right) = p\left(y_{obs} \,|\, \theta,
 <red>Likelihood</red> for a single Bernoulli observation
 
 $$
-l(p \, | \, Y_i = y_i) = P(Y_i=y_i) = \left\{ \begin{array}{ll}p & y_i = 1 \\ 1-p & y_i = 0 \end{array} \right.
+l(\pi \, | \, Y_i = y_i) = P(Y_i=y_i) = \left\{ \begin{array}{ll} \pi & y_i = 1 \\ 1-\pi & y_i = 0 \end{array} \right.
 $$
 We often see this written more compactly as
 
 $$
-l(p \, | \, Y_i = y_i) = p^{y_i}(1-p)^{(1-y_i)} 
+l(\pi \, | \, Y_i = y_i) = \pi^{y_i}(1-\pi)^{(1-y_i)} 
 $$
 <br>
 
@@ -303,9 +273,9 @@ $$
 
 $$
 \begin{eqnarray*}
-l(p | \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i) \\
-  & = &   \prod_{i=1}^{n}p^{y_i}(1-p)^{(1-y_i)} \\
-& = & p^{(\# \, \text{of "ones"})}(1-p)^{n - (\# \, \text{of "ones"})}
+l(\pi | \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i) \\
+  & = &   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \\
+& = & \pi^{(\# \, \text{of "ones"})}(1-\pi)^{n - (\# \, \text{of "ones"})}
 \end{eqnarray*}
 $$
 
@@ -314,13 +284,13 @@ $$
 
 $$
 \begin{eqnarray*}
-L(p \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = & l(p | \mathbf{Y}=\mathbf{y}) \\
- & = & (\# \, \text{of "ones"}) \log(p)
- + (n-\# \, \text{of "ones"}) \log(1-p) 
+L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = & l(\pi| \mathbf{Y}=\mathbf{y}) \\
+ & = & (\# \, \text{of "ones"}) \log(\pi)
+ + (n-\# \, \text{of "ones"}) \log(1-\pi) 
 \end{eqnarray*}
 $$
 
-# Maximum likelihood estimation
+# Maximum likelihood estimation for a simple model
 
 
 <red>Maximum likelihood estimates</red> are the values of the parameters ($p$) which maximize the likelihood.
@@ -329,124 +299,30 @@ $$
 
 $$
 \begin{align*}
-\frac{\mathrm{d}L}{\mathrm{d}p} &= \frac{(\# \, \text{of successes})}{p} - \frac{(n- \# \, \text{of successes})}{1-p}
+\frac{\mathrm{d}L}{\mathrm{d}\pi} &= \frac{(\# \, \text{of successes})}{\pi} - \frac{(n- \# \, \text{of successes})}{1-\pi}
 \end{align*}
 $$
 
 
 $$
-\frac{\mathrm{d}L}{\mathrm{d}p} = 0 \iff  p = \frac{(\# \, \text{of successes})}{n}
+\frac{\mathrm{d}L}{\mathrm{d}\pi} = 0 \iff  \pi = \frac{(\# \, \text{of successes})}{n}
 $$
 
-* Estimator for $\hat p$ is as expected from probability perspective
-* Note: common value of $p$ for all subjects
+* Estimator for $\hat \pi$ is as expected from probability perspective
+* Note: common value of $\pi$ for all subjects
 
 
-# Log likelihood
+# Maximum likelihood for regression models
 
 * When we have a full logistic regression model with covariates, there is no analytical solution to the likelihood equations. 
 * However there is a numerical root finder that is specially tailored to the structure of logistic (and all GLM) models: the `Newton-Raphson` method ([see @2795]).
 
 
+# Workbook: Exploring the binomial density
 
+* Biomial density
+* Likelihood function
 
-
-
-<!-- # Maximum likelihood for continuous data -->
-
-<!-- * Apply this idea to our one compartment model example. -->
-
-<!-- * Suppose we observed a plasma drug concentration on two occasions. -->
-
-<!-- * The resulting likelihood function is: -->
-
-<!--   \begin{eqnarray*} -->
-<!--     L\left(CL, V, \sigma^2 \,|\, y_{obs1}, y_{obs2}, t_1, t_2, D\right) -->
-<!--     &=& \prod_{i=1}^2  L\left(CL, V, \sigma^2 \,|\, y_{obsi}, -->
-<!--       t_i, D\right) \\ -->
-<!--     &=& \prod_{i=1}^2 \frac{1}{\sqrt{2\pi} -->
-<!--       \sigma} e^{-\frac{1}{2\sigma^2} \left(y_{obsi} - \widehat{c}\left(t_i, D, CL, -->
-<!--           V\right)\right)^2} \\ -->
-<!--     \widehat{c}\left(t, D, CL, -->
-<!--       V\right) &=& \frac{D}{V} e^{-\frac{CL}{V} t} -->
-<!--   \end{eqnarray*} -->
-
-
-<!-- # Maximum likelihood for continuous data -->
-
-
-<!-- *  The above equation generalizes to any number of observations. -->
-
-<!-- *  For $n$ observations described by a normal distribution where -->
-<!--     the mean is a function $f\left(x,\theta\right)$ of the parameters -->
-<!--     $\theta$ and covariates $x$: -->
-<!--     \begin{eqnarray*} -->
-<!--       L\left(\theta \,|\, y_{obs}, x\right) -->
-<!--       &=& \prod_{i=1}^n  L\left(\theta \,|\, y_{obsi}, x_i\right) \\ -->
-<!--       &=& \prod_{i=1}^n \frac{1}{\sqrt{2\pi} -->
-<!--         \sigma} e^{-\frac{1}{2\sigma^2} \left(y_{obsi} - f\left(x_i, \theta\right)\right)^2} \\ -->
-<!--     \end{eqnarray*} -->
-
-<!-- *  The maximum likelihood estimate of $\theta$ is the value of -->
-<!--     $\theta$ that maximizes this likelihood function. -->
-
-
-<!-- # Maximum likelihood for continuous data -->
-
-
-<!-- *  Rather than maximize the likelihood directly, many ML -->
-<!--     algorithms minimize the transformation $-2log\left(L\left(\theta -->
-<!--         \,|\,y_{obs},x\right)\right)$ -->
-
-<!-- *  For the above normally-distributed case this becomes: -->
-<!-- <font size="5">   -->
-<!-- \begin{eqnarray*} -->
-<!--       -2\log\left(L\left(\theta \,|\, y_{obs}, x\right)\right) -->
-<!--       &=& \sum_{i=1}^n  -2\log\left(L\left(\theta \,|\, y_{obsi}, x_i\right)\right) \\ -->
-<!--       &=& \sum_{i=1}^n -2\log\left(\frac{1}{\sqrt{2\pi} -->
-<!--           \sigma} e^{-\frac{1}{2\sigma^2} \left(y_{obsi} - f\left(x_i, -->
-<!--               \theta\right)\right)^2}\right) \\ -->
-<!--       &=& \sum_{i=1}^n \left(\log\left(2\pi\right) + -->
-<!--         \log\left(\sigma^2\right) + \frac{\left(y_{obsi} - f\left(x_i, -->
-<!--               \theta\right)\right)^2}{\sigma^2}\right) \\ -->
-<!--       &=& n\log\left(2\pi\right) + -->
-<!--       n\log\left(\sigma^2\right) + \sum_{i=1}^n \frac{\left(y_{obsi} - f\left(x_i, -->
-<!--             \theta\right)\right)^2}{\sigma^2}  -->
-<!-- \end{eqnarray*} -->
-<!-- </font> -->
-
-<!-- *  This shows that the least-squares estimates of $\theta$ are -->
-<!--     also the ML estimates for this case. -->
-
-
-<!-- # Extending ML to "odd-type" data -->
-
-<!-- Binary data -->
-
-<!-- *  Most often binary data is used to represent the occurrence or -->
-<!--     non-occurrence of an event. -->
-
-<!-- *  We often use numerical values such as 1 and 0 to represent -->
-<!--     those two possible outcomes, e.g., 1 for "it happened" and 0 for -->
-<!--     "it didn't happen". -->
-
-<!-- *  Suppose we want to model the occurrence of a particular -->
-<!--     adverse event. Let's start with one patient. The random variable -->
-<!--     $Y$ representing the possible AE occurrence is 1 if the AE occurs -->
-<!--     and 0 if it doesn't. This is just a Bernoulli trial that is -->
-<!--     modeled as: -->
-<!--     \begin{eqnarray*} -->
-<!--       Y \sim p\left(y \,|\,\theta, x\right) &=& \left\{\begin{array}{ll} -->
-<!--           p_{AE}\left(\theta, x\right), & y = 1 \\ -->
-<!--           1 - p_{AE}\left(\theta, x\right), & y = 0  -->
-<!--         \end{array}\right. \\ -->
-<!--       &=& p_{AE}\left(\theta, x\right)^y \left(1 - p_{AE}\left(\theta, -->
-<!--           x\right)\right)^{1 - y} -->
-<!--     \end{eqnarray*} -->
-<!--     where $p_{AE}\left(\theta, x\right)$ is the probability that the -->
-<!--     AE occurs shown as a function of one or more parameters $\theta$ -->
-<!--     and covariates $x$. -->
-   
 
 # Binary Data Example
 
@@ -457,7 +333,7 @@ $$
 
 * Suppose further that a dose level under consideration for a phase 2 study in `PT2` would have typical value exposures near 2.5 ug/mL.
 
-* The objective of *this* anlaysis is to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
+* The objective of *this* anlaysis will be to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
 
 # Data snapshot
 
@@ -475,16 +351,12 @@ aedat %>%
 * `USUBJID`: unique subject id
 * `AE01`: adverse event of grade 3 or higher
 
-# Workbook
-
-* Biomial density
-* Likelihood function
 
 # Visualizing relationships
 
 Objective:
 
-> Plot the probability of a 'success' vs predictor(s0) 
+> Plot the probability of a grade 3 or higher AE vs predictor 
 
 Types of plots will depend on the predictor variable:
 
@@ -497,23 +369,23 @@ Types of plots will depend on the predictor variable:
 * y-axis: Probability of Grade 3+ AE (`AE01`)
 * geom: `bar`, `point`
 
-# Example plots: categorical
+<!-- # Example plots: categorical -->
 
-What else might be nice to add to this plot?
+<!-- What else might be nice to add to this plot? -->
 
-```{r}
-aedat %>% group_by(STUDYID) %>% 
-  summarise(phat = sum(AE01) / n()) %>% 
-  ggplot(aes(x=STUDYID, y=phat)) + 
-  geom_col()
-```
+<!-- ```{r} -->
+<!-- aedat %>% group_by(STUDYID) %>%  -->
+<!--   summarise(phat = sum(AE01) / n()) %>%  -->
+<!--   ggplot(aes(x=STUDYID, y=phat)) +  -->
+<!--   geom_col() -->
+<!-- ``` -->
 
-# Example plots: categorical with confidence interval {.sourceCode.r.small}
+# Probability vs categorical variable {.sourceCode.r.small}
 ::: columns
 
 :::: column
-```{r}
-p <- aedat %>% 
+```{r, 'cat-plot', fig.show='hide'}
+aedat %>% 
   group_by(STUDYID) %>% 
   summarise(x = sum(AE01), n=n()) %>% 
   mutate(phat = x / n,
@@ -522,15 +394,48 @@ p <- aedat %>%
   ggplot(aes(x=STUDYID, y=phat)) + 
   geom_col() +
   geom_errorbar(aes(ymin=lcl, ymax=ucl), 
-                width = 0.2)
+                width = 0.2) +
+  labs(x='Study', y='Probability of severe AE')
 ```
 
 Note: `binom.confint` is in the `binom` package
+
 ::::
 
 :::: column
-```{r, echo=FALSE, out.width="95%"}
-p
+```{r, ref.label='cat-plot', echo=FALSE, out.width="95%"}
+
+```
+::::
+
+:::
+
+
+# Alternative to bar plot {.sourceCode.r.small}
+::: columns
+
+:::: column
+```{r, 'cat-plot2', fig.show='hide'}
+aedat %>% 
+  group_by(STUDYID) %>% 
+  summarise(x = sum(AE01), n=n()) %>% 
+  mutate(phat = x / n,
+         lcl = binom.confint(x,n,methods = "wilson")$lower,
+         ucl = binom.confint(x,n,methods = "wilson")$upper) %>% 
+  ggplot(aes(x=STUDYID, y=phat)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin=lcl, ymax=ucl), 
+                width = 0.2) +
+  labs(x='Study', y='Probability of severe AE')
+```
+
+Note: `binom.confint` is in the `binom` package
+
+::::
+
+:::: column
+```{r, ref.label='cat-plot2', echo=FALSE, out.width="95%"}
+
 ```
 ::::
 
@@ -538,37 +443,33 @@ p
 
 
 
-<!-- <div class='right' style='float:right;width:48%'> -->
-<!-- ```{r, echo=FALSE, out.width="95%"} -->
-<!-- p + geom_point() -->
-<!-- ``` -->
-<!-- </div> -->
+# Probability vs a continuous variable {.sourceCode.r.small}
 
+:::{.columns}
 
-# Relationship with a continuous variable
-
+::::{.column}
 ```{r, echo=FALSE}
 dat_use <-
   aedat %>% 
   group_by(PBO) %>%
   mutate(Quartile = ifelse(PBO == "PBO", "PBO",
                            paste0("Q", ntile(CAVGSS, n = 4))))
+dat_eda <- dat_use %>% group_by(Quartile) %>% mutate(MedConc = median(CAVGSS))
 ```
 
-```{r, echo=FALSE}
-dat_eda <- dat_use %>% group_by(Quartile) %>% mutate(MedConc = median(CAVGSS))
-p <- ggplot() +
+```{r, 'cont-er', fig.show='hide'}
+ggplot() +
+  # Add tick marks at top and bottom
   geom_rug(data = filter(dat_eda, AE01 == 0),
            aes(x = CAVGSS), sides = "b") +
   geom_rug(data = filter(dat_eda, AE01 == 1),
            aes(x = CAVGSS), sides = "t") +
-  # NB: default smoother is problematic for 0-1
-  # data. More on this later but live with it
-  # for now.
+  # Add snooth mean function
   geom_smooth(data = dat_eda,
               aes(x = CAVGSS, y = AE01),
               method='gam', formula=y~s(x),
               method.args = list(family='binomial')) +
+  # Add points and CIs
   stat_summary(
     data = dat_eda,
     aes(x = MedConc, y = AE01, group = MedConc),
@@ -588,9 +489,19 @@ p <- ggplot() +
                     methods = "wilson")$upper
       },
     geom = "errorbar"
-  )
-p
+  ) +
+  labs(x='Steady-state Cavg', y='Probability of severe AE')
 ```
+::::
+
+::::{.column}
+```{r, ref.label='cont-er', echo=FALSE}
+
+```
+
+::::
+
+:::
 
 
 # Plotting tips
@@ -602,192 +513,11 @@ p
 * Stratify by other covariates of interest
 
 
-
-
-<!-- # ML modeling of binary data -->
-
-<!-- Let's try modeling the probability of an AE in the $i^{th}$ patient -->
-<!--   as a function of $C_{avg,ss}$ according to a linear logistic model: -->
-<!-- $$ \text{logit}\left(p_{AE}\left(\theta, C_{avg,ss} \right)\right) = \theta_0 -->
-<!-- + \theta_1 C_{avg,ss} $$  -->
-<!-- The logit transformation is commonly used to -->
-<!-- transform between the range of probability (0,1) and the entire real -->
-<!-- line: -->
-<!-- \begin{eqnarray*} -->
-<!--   \text{logit}\left(p\right) &=& \log\left(\frac{p}{1 - p}\right), \ \ 0 < p -->
-<!--   < 1 \\ -->
-<!--   \text{logit}^{-1}\left(x\right) &=& \frac{e^x}{1 + e^x} = -->
-<!--   \frac{1}{e^{-x} + 1}, \ \ -\infty < x < \infty -->
-<!-- \end{eqnarray*} -->
-<!-- The inverse logit is also sometimes referred to as the expit -->
-<!--   function. -->
-
-<!-- # ML modeling of binary data -->
-
-<!--   So the likelihood for that patient is: -->
-<!-- $$ L\left(\theta \,|\,y_{obsi}, D_i\right) = p\left(y_{obsi} \,|\,\theta, -->
-<!--   D_i\right) = p_{AE}\left(\theta, D_i\right)^{y_{obsi}} \left(1 - -->
-<!--   p_{AE}\left(\theta, D_i\right)\right)^{1 - y_{obsi}} $$  -->
-<!-- The overall -->
-<!-- likelihood for the study results is: -->
-<!-- \begin{eqnarray*} L\left(\theta \,|\,y_{obs}, D\right) &=& -->
-<!--   \prod_{i=1}^{100} p\left(y_{obsi} \,|\,\theta, D_i\right) \\ -->
-<!--   &=& \prod_{i=1}^{100} p_{AE}\left(\theta, D_i\right)^{y_{obsi}} -->
-<!--   \left(1 - p_{AE}\left(\theta, D_i\right)\right)^{1 - y_{obsi}}  -->
-<!-- \end{eqnarray*} -->
-<!-- where yobs -->
-<!-- and D are vectors of the individual patient values. \newline -->
-
-<!-- The value of $\theta$ that maximizes the likelihood value is the ML -->
-<!-- estimate. -->
+# Workbook: Visualizing binary data
 
 
 
 
-<!-- # Likelihood function for binary data example -->
-
-<!-- <p align="center"> -->
-<!--   <img width="1400" height="750" src="graphics/binaryExampleLikelihood.png" type="application/pdf"> -->
-<!-- </p> -->
-
-
-
-
-<!-- # Bayesian modeling of odd-type data -->
-
-<!-- *  Return to the linear logistic regression example where we observe whether or not an AE -->
-<!--     occurs in each of 100 patients and the probability of an AE is -->
-<!--     given by -->
-
-<!-- $$ \text{logit}\left(p_{AE}\left(\theta, D_I\right)\right) = \theta_1 + \theta_2 D_i $$  -->
-
-<!-- *  The likelihood function is the same as before. -->
-
-<!-- *  Now we must also specify a prior distribution for the model -->
-<!--     parameters $\theta$. The resulting expression for the posterior -->
-<!--     distribution of $\theta$ is: -->
-
-<!--   \begin{eqnarray*} -->
-<!--     p\left(\theta \,|\, y_{obs}, D\right) &\propto& p\left(y_{obs} \,|\, \theta, -->
-<!--       D\right) p\left(\theta\right) = L\left(\theta \,|\, y_{obs}, D\right) -->
-<!--     p\left(\theta\right) \\ -->
-<!--     &\propto& -->
-<!--     \prod_{i=1}^{100} p\left(y_{obsi} \,|\, \theta, D_i\right) -->
-<!--     p\left(\theta\right) \\ -->
-<!--     &\propto& \prod_{i=1}^{100} p_{AE}\left(\theta, D_i\right)^{y_{obsi}} -->
-<!--     \left(1 - p_{AE}\left(\theta, D_i\right)\right)^{1 - y_{obsi}} p\left(\theta\right) -->
-<!--   \end{eqnarray*} -->
-
-<!-- # Bayesian modeling of odd-type data -->
-
-<!-- Now suppose we have a little prior information about the value of $\theta$ -->
-<!-- and choose to represent that knowledge as a bivariate normal -->
-<!-- distribution with relatively large variances and no correlation, i.e.,  -->
-<!-- $$ \theta \propto N\left(\mu, \Sigma\right) $$ -->
-<!-- where  -->
-<!-- $$ \mu = \left(-1, 0.2\right) \ \ \ \ \Sigma = \left[\begin{array}{cc} -->
-<!-- 1^2 & 0 \\ -->
-<!-- 0 & 0.2^2 -->
-<!-- \end{array}\right] $$ -->
-
-<!-- # Joint prior and posterior distributions -->
-
-<!-- \vspace{-9pt} -->
-<!-- \begin{center} -->
-<!-- \includegraphics[height=0.95\textheight]{graphics/binaryExampleJointPosterior.pdf} -->
-<!-- \end{center} -->
-
-<!-- <p align="center"> -->
-<!--   <img width="775" height="750" src="graphics/binaryExampleJointPosterior.png"> -->
-<!-- </p> -->
-
-<!-- # Marginal prior and posterior distributions -->
-
-<!-- \vspace{-9pt} -->
-<!-- \begin{center} -->
-<!-- \includegraphics[height=0.95\textheight]{graphics/binaryExampleMarginalPosterior.pdf} -->
-<!-- \end{center} -->
-
-<!-- <p align="center"> -->
-<!--   <img width="775" height="750" src="graphics/binaryExampleMarginalPosterior.png"> -->
-<!-- </p> -->
-
-<!-- # Modeling binary data: Logistic regression -->
-
-<!--   Logistic regression refers to the fitting of binary data with models -->
-<!--   of the form: -->
-<!-- $$ \text{logit}\left(p\right) = f\left(x, \theta\right) $$ -->
-<!-- where $p$ is the probability that some event (e.g., an AE) occurs and -->
-<!-- $x$ is a vector of covariates. -->
-
-
-
-<!-- # Stats notation for the Bernoulli distribution -->
-
-
-<!-- $$ -->
-<!-- Y_i \sim \mathrm{Ber}(p) \,\,\, \mathrm{independently} \text{ for} \,\, i = 1, \ldots, n -->
-<!-- $$ -->
-<!-- Or equivalently, we could specify the probability mass function: -->
-
-<!-- $$ -->
-<!-- \begin{eqnarray*} -->
-<!-- P(Y_i=y_i \, | \, p) = p^{y_i}(1-p)^{(1-y_i)} \,\, \text{for} \,\, i = 1, \ldots, n  \\ (\text{where each} \,\, y_i = 0 \,\, \text{or} \,\, 1). -->
-<!-- \end{eqnarray*} -->
-<!-- $$ -->
-
-<!-- # Workbook  -->
-
-<!-- * rbinom -->
-<!-- * dbinom -->
-
-<!-- # The Likelihood function -->
-
-<!-- __Likelihood__ for a single Bernoulli observation -->
-
-<!-- $$ -->
-<!-- l(p \, | \, Y_i = y_i) = P(Y_i=y_i) = p^{y_i}(1-p)^{(1-y_i)}  -->
-<!-- $$ -->
-
-<!-- __Joint likelihood__ for a sample for independent Bernoulli observations -->
-
-<!-- $$ -->
-<!-- \begin{eqnarray*} -->
-<!-- l(p \,|\, \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i)  =   \prod_{i=1}^{n}p^{y_i}(1-p)^{(1-y_i)} \\ -->
-<!-- & = & p^{(\# \, \text{of "ones"})}(1-p)^{n - (\# \, \text{of "ones"})} -->
-<!-- \end{eqnarray*} -->
-<!-- $$ -->
-
-<!-- # Log likelihood -->
-
-<!-- Joint __log__ likelihood: -->
-
-<!-- $$ -->
-<!-- \begin{eqnarray*} -->
-<!-- L(p \,|\, \mathbf{Y}=\mathbf{y}) & = & (\# \, \text{of successes}) \log(p)  \\  -->
-<!-- & + & (n-\# \, \text{of successes}) \log(1-p)  -->
-<!-- \end{eqnarray*} -->
-<!-- $$ -->
-
-<!-- Derivative of joint log likelihood:  -->
-
-<!-- $$ -->
-<!-- \frac{\mathrm{d}L}{\mathrm{d}p} = 0 \iff  p = \frac{(\# \, \text{of successes})}{n} -->
-<!-- $$ -->
-
-<!-- * When we have a full GLM with covariates, there is no analytical solution to the likelihood equations.  -->
-<!-- * However there is a numerical root finder that is specially tailored to the structure of GLM models: the `Newton-Raphson` method ([see @2795]).  -->
-
-<!-- # Likelihood maximization -->
-
-<!-- * As in the workbook exercises, an generic numerical optimization algorithm (e.g. `optim()`) *can* be used to maximize the likelihood for a full GLM.   -->
-<!-- * In fact, in (rare) special cases, it makes sense to do exactly that. (E.g. if there are constraints on some parameters: [see @3625], p. 269]).  -->
-<!-- * Again, more typically, Newton-Raphson is used.  -->
-
-<!-- # Workbook  -->
-
-<!-- * likelihood computation  -->
-<!-- * likelihood maximization -->
 
 # Measures of effect: odds ratio
 
@@ -822,10 +552,6 @@ Difference in probability of events, for treatment "1" versus treatment "0":
 $$ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) $$
 Often undesirable: do you want to treat the difference between 3% and 5% the same way that you treat the difference between 23% and 25% ? 
 
-# Workbook
-
-* odds ratios
-
 
 # The logit transform
 
@@ -835,33 +561,36 @@ $$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)$$
 
 * The standard logistic function (also called the "expit") is the inverse of the logit:
 
-$$p = \mathrm{expit}(x)=1/(1+\exp(-x))$$ 
+$$\begin{align*}
+p &= \mathrm{expit}(x) \\[1em]
+  & = \frac{1}{1+\exp(-x)} \\[1em]
+  & = \frac{\exp(x)}{1 + \exp(x)}
+  \end{align*}$$ 
 
-# Workbook
-
-* logistic function
 
 # Other "link functions"
 
-* logit function takes us from the unit interval to the full Real line: 
+* The `logit` function takes us from the unit interval to the full Real line: 
 
 $$ (0, 1) \stackrel{\mathrm{expit}}{\longrightarrow} \mathbb{R} $$
 
-* Another alternative "link" function is the `probit` : 
+* An alternative "link" function is the `probit` : 
 
 $$ \mathrm{probit}(p) = \Phi^{-1}(p)$$ 
-Where $\Phi$ is the Normal Cumulative Density Function (CDF): 
+where $\Phi$ is the Normal Cumulative Density Function (CDF): 
 
 $$ \Phi(x) = P(\mbox{Std. Normal Variate} < x)  $$
 
+* An alternative "link" function is the `complementary log-log` : 
+    * $\text{cloglog}(p) = \log( - \log(1 - p)$ 
+    * Used much less frequently than logit or probit
+    * Its an asymmetrical link function
+    * Shows up when transforming other models to binary outcomes, e.g. Poisson model to binary model
+
 # More About Link Functions
 
-* Complementary log-log link ( $\log( - \log(1 - p)$) is much less common
-  * Its an asymmetrical link function
-  * Shows up when transforming other models to binary outcomes, e.g. Poisson model to binary model
-  
-
-```{r, echo=FALSE, message=FALSE, width=4*1.6, height=4}
+```{r, echo=FALSE, message=FALSE, out.width="80%", fig.align='center'}  
+#, width=4*1.6, height=4}
 
 data.frame(x = c(-5, 5)) %>%
   ggplot(aes(x = x), ) +
@@ -875,27 +604,30 @@ data.frame(x = c(-5, 5)) %>%
 ```
 
 
+# Workbook: Exploring odds ratios, relative risks, and the logit transformation
+
+
 # A logit-link GLM
 
 A GLM with a logit link and Bernoulli (or more generally, Binomial) distribution is referred to as a <red>logistic regression</red>. 
 
 A logistic regression with exposure ($C_i$) as the sole predictor would be expressed as: 
 
-$$ Y_i \sim \mathrm{Ber}(p_i) \,\,\, \text{where} \,\,\, p_i = \mathrm{expit}(\mu + \beta C_i) \,\, ; \,\,i = 1,\ldots, n$$
+$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \pi_i = \mathrm{expit}(\mu + \beta C_i) \,\, ; \,\,i = 1,\ldots, n$$
 
 Or equivalently:
 
-$$ Y_i \sim \mathrm{Ber}(p_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(p_i) = \mu + \beta C_i \,\, ; \,\,i = 1,\ldots, n$$
+$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C_i \,\, ; \,\,i = 1,\ldots, n$$
 
 
 # Logistic regression is a type of GLM
 
-* The `generalized` in `generalized linear model` refers to the non-Normal residuals (in this case, Bernoulli residuals). 
+* The `generalized` in ***generalized linear model*** refers to the non-Normal residuals (in this case, Bernoulli residuals). 
 
-* The `linear` in `generalized linear model` refers to the fact that the right hand side of, e.g. 
+* The `linear` in ***generalized linear model*** refers to the fact that the right hand side of, e.g. 
     
-$$ \mathrm{logit}(p_i) = \mu + \beta C_i $$
-is linear <red>in the parameters</red> (i.e. it is a linear function of $\mu$ and $\beta$).
+$$ \mathrm{logit}(\pi_i) = \mu + \beta C_i $$
+is <red>linear in the parameters</red> (i.e. it is a linear function of $\mu$ and $\beta$).
 
 
 # Quiz 
@@ -909,12 +641,12 @@ $$\mu + \beta \log(C)  \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta}{C} \,\,\,\,\,\,
 
 Taking the following model as an example: 
 
-$$ Y_i \sim \mathrm{Ber}(p_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(p_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
+$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
 
 Standard terminology to refer to the model components is:
 
-* <grn>$Y_i \sim \mathrm{Ber}(p_i)$</grn> is the <red>distribution</red> component of the model. (Sometimes also called the `random` component of the model, but we avoid that terminology is it becomes ambiguous in a `GLMM` context that includes random effects).
-* The <grnlogit</grn> transformation is the <red>link</red> function. 
+* <grn>$Y_i \sim \mathrm{Ber}(\pi_i)$</grn> is the <red>distribution</red> component of the model. (Sometimes also called the `random` component of the model, but we avoid that terminology is it becomes ambiguous in a `GLMM` context that includes random effects).
+* The <grn>logit</grn> transformation is the <red>link</red> function. 
 * <grn>$\mu + \beta C^*_i$</grn> is the <red>linear predictor</red>.
 
 
@@ -932,6 +664,19 @@ Standard terminology to refer to the model components is:
     * "Plays nicely" with link function. 
 * Missing data assumptions. 
 
+# Fitting a logistic regression in R
+
+```
+mod01_glm <- glm(AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
+                 data = aedat,
+                 family = binomial(link='logit'))
+```
+
+* <red>`AE01`</red>: binary outcome variable
+* <red>`CAVGSS + BWT + PTTYPE + SEXTXT`</red>: linear predictor
+* <red>`family = binomial(link='logit')`</red>: distribution and link function.  
+    * `logit` is the default link
+    * other link functions include `probit` and `cloglog`  
 
 # General R model syntax
 
@@ -952,7 +697,7 @@ $$
 \end{eqnarray*}
 $$ 
 
-NB: formula syntax gets interpreted differently in R depending on the type of model being fit. E.g. models are specified differently in `nls`, `nlme`, `gnlm`, to name a few. 
+<!-- NB: formula syntax gets interpreted differently in R depending on the type of model being fit. E.g. models are specified differently in `nls`, `nlme`, `gnlm`, to name a few.  -->
 
 # Factor variables in R models
 
@@ -964,24 +709,50 @@ with some categorical variables that have numerical values...
     * Remember to "factorize" your categorical variables!
     * `as.factor(SEX)` can even be used directly in model formula!
 
-# Fitting a logistic regression in R
 
+# Output of fitted model
+
+```{r, echo=FALSE}
+mod01_glm <- glm(AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
+                 data = aedat,
+                 family = binomial(link='logit'))
 ```
-mod1 <- glm(AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
-            data = aedat,
-            family = binomial(link='logit'))
+
+```{r}
+summary(mod01_glm)
 ```
 
-* <red>`AE01`</red>: binary outcome variable
-* <red>`CAVGSS + BWT + PTTYPE + SEXTXT`</red>: linear predictor
-* <red>`family = binomial(link='logit')`</red>: distribution and link function.  
-* other link functions include `probit` and `cloglog`  
 
+# Interpreting coefficients in logit-link models: Intercept
 
-# Interpreting coefficients in logit-link models
+* The logistic or expit function can be applied to the intercept or linear predictor to transform it to a probability. 
+    * $\textit{expit}(\beta_0) = \frac{1}{1 + exp(-\beta_0)}$ 
+    * The probability of an AE when all predictors are 0
+    
 
-* The logistic or expit $\textit{expit}(x) = \frac{1}{1 + exp(-x)}$ function can be applied to the intercept or linear predictor to transform it to a probability. 
-* The covariate coefficients can be exponentiated to correspond to odds ratios. 
+# Interpretation of effects for categorical covariates
+
+* Let $p_1$ refer to probability of AE for a `PT1` patient and 
+* Let $p_0$ refer to probability of AE for `HV` with exactly the same exposure and covariate values. 
+* Then:
+
+$$ 
+\mathrm{logit}(p_{1}) - \mathrm{logit}(p_{0}) = \beta_{\mathrm{PT1}}
+$$ 
+And since the logit function is the log-odds function, that implies: 
+
+$$
+\frac{p_{1}/(1-p_{1})}{p_{0}/(1-p_0)} = \exp(\beta_{\mathrm{PT1}})
+$$
+In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of being type `PT1` versus `HV`. 
+
+# Interpretation of effects for continuous covariates
+
+* For continuous covariates, the odds ratio adjustments are exponential "per unit"
+    *  For example, the coefficient for body weight is $\beta_{WT}$ = `r pmtables::sig(mod01_glm$coefficients['BWT'])` 
+    * So, a 10 kg difference in weight corresponds to an odds increase of exp(10 $\times$ `r pmtables::sig(mod01_glm$coefficients['BWT'])`  ) =  `r pmtables::sig(exp(10*mod01_glm$coefficients['BWT']))` 
+* May be advantageous to scale exposure (e.g. divide by 1000) in order to avoid exponentiated coefficients like $1.000123$, which might indicate a consequential effect despite being very close to 1
+    * try $1.000123^{1000}$.
 
 # Interpreting covariate effects on the probability scale
 
@@ -1012,44 +783,44 @@ data.frame(
 
 ```
 
-# Interpretation of covariate effects
 
-* Let $p_1$ refer to probability of AE for a `PT1` patient and 
-* Let $p_0$ refer to probability of AE for `HV` with exactly the same exposure and covariate values. 
-* Then:
+# Interpretation of covariate effects for probit-link models
 
-$$ 
-\mathrm{logit}(p_{1}) - \mathrm{logit}(p_{0}) = \beta_{\mathrm{PT1}}
-$$ 
-And since the logit function is the log-odds function, that implies: 
-
-$$
-\frac{p_{1}/(1-p_{1})}{p_{0}/(1-p_0)} = \exp(\beta_{\mathrm{PT1}})
-$$
-In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of being type `PT1` versus `HV`. 
-
-# Interpretation of effects for continuous predictors
-
-* For continuous covariates, the odds ratio adjustments are exponential "per unit", e.g. with $\beta_{WT} = log(1.008) = 0.00797$, a 10 kg difference in weight corresponds to an odds increase of $1.008^{10} \sim 1.08$, i.e. an 8\% increase.
-* May be advantageous to scale exposure (e.g. divide by 1000) in order to avoid exponentiated coefficients like $1.000123$. (Which might indicate a consequential effect despite being very close to 1: try $1.000123^{1000}$.)
+* You really can't.
+* That's part of the reason for the popularity of logit-link models.
+* How much does that really matter?
+    * It's certainly nice to have directly interpretable coefficients.
+    * But in many cases, the predictive inferences matter more than the direct inferences on parameters.
+    * Recommendation: choose link function based on what fits the data better, not based on mathematical convenience. Probit link handles models where tails are more "certain"
+* Probit models also arise from a different modeling framework: a latent variable determined by covariates with random gaussian noise with a threshold for a "true" outcome
 
 
+# Aside: Choice of exposure metric
 
-<!-- # Interpretation of covariate effects for probit-link models -->
+* Observed vs **<red>model-predicted</red>**
+* Which summary measure?
+    * Cmin, Cmax, Cavg, AUC, \dots
+    * Depends on the endpoint and substantive knowledge
+* What time horizon? Depends on the context \dots
+    * When dose 'holidays' or reductions are rare
+        * "Early" (e.g., cycle 1)
+        * Steady-state
+    * When dose holidays or reductions are common
+        * Average to the end of the study
+        * Average up to the event (or end of study)
+        * I tend to avoid cumulative measures due to confounding with time
+        * Adds another layer of variability to exposures which should be modeled
 
-<!-- * You really can't.  -->
-<!-- * That's part of the reason for the popularity of logit-link models.  -->
-<!-- * How much does that really matter? -->
-<!--     * It's certainly nice to have directly interpretable coefficients.  -->
-<!--     * But in many cases, the predictive inferences matter more than the direct inferences on parameters.  -->
-<!--     * Recommendation: choose link function based on what fits the data better, not based on mathematical convenience. Probit link handles models where tails are more "certain" -->
-<!-- * Probit models also arise from a different modeling framework: a latent variable determined by covariates with random gaussian noise with a threshold for a "true" outcome -->
 
-<!-- End day 1 here with workbook -->
+# Workbook: Fitting a logistic regression model
 
-# Choice of exposure metric
+# Model diagnostics and comparison
 
+* We'll look at two main types of diagnostics for assessing model fit
+    * Residual-based
+    * Simulation-based
 
+* Our main method for comparing models will be the quality of out-of-sample predictions
 
 
 # Residual Diagnostics
@@ -1074,6 +845,10 @@ In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of
     * Response residuals range from -1 to 1. 
     * Plot appearance can depend on distribution of covariates apart from the model 
     
+# Example of response residuals
+
+TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid
+
 # Other residuals  (Pearson, Deviance)  
 
 * Pearson residuals are like standardizing residuals in linear models 
@@ -1087,140 +862,203 @@ In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of
     * Don't spend too much time trying to get any residual plots to look "good". They won't. Use them to suggest model refinements and then move on. 
 * The total residual deviance should be "close" to the residaul degrees of freedom
 
+# Example of deviance residuals
+
+TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid
+
 # Simulation-based Diagnostics
 
 * Quantile Residuals
     * Use model to simulate data and calculate quantile of observed values against simulated data
     * Smooths out discrete residual values
-    * DHARMa Package in R does this nicely
+    * DHARMa Package in R makes this easy (`simulateResiduals`)
     
-* VPCs
-  * Problem dependent
+* Visual Predictive Checks (VPCs)
+  * Recipe
+    * Simulate many replicates of the DV using the estimated model and observed predictors
+    * Summarize each simulated replicate
+    * Plot distribution(s) of summary statistics
+    * Overlay observed values
+  * The choice of summary statistics is problem dependent
   * A place to start is bucketing covariates and assessing overall trends
+  * Will see more examples in the next hands-on portion
+
+
+# Quantile residuals
+
+::::{.columns}
+
+:::{.column width=47.5%}
+
+```{r}
+dharma_resids = simulateResiduals(mod01_glm,
+                                  n = 1000,
+                                  integerResponse = TRUE)
+
+plot(dharma_resids)
+```
+
+:::
+
+:::{.column width=5%}
+:::
+
+:::{.column width=47.5%}
+
+```{r}
+aedat %>% ungroup() %>% 
+  mutate(quantile_residual = dharma_resids$scaledResiduals) %>% 
+  ggplot(aes(x=BWT, y=quantile_residual)) +
+  geom_point() +
+  geom_smooth()
+```
+
+:::
+::::
+
+# Simulate data for a VPC
+
+```{r}
+# Create exposure quartile variabe
+aedat01 <- aedat %>%  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4))))
+
+# Simulate using the simulate function in stats
+aedat_pp = bind_cols(aedat01,
+                     stats::simulate(mod01_glm, nsim=500)) %>% 
+  pivot_longer(cols=sim_1:sim_500)
+
+aedat_pp %>% ungroup() %>% 
+  select(USUBJID, PTTYPE, AE01, Quartile, name, value) %>% 
+  slice_tail(n=4)
+```
+
+
+# Generate VPC for categorical predictor
+
+::::{.columns}
+
+:::{.column}
+
+```{r, 'bayes-vpc', fig.show = 'hide'}
+# Observed data summary
+obs_summary <- aedat01 %>% 
+  group_by(Quartile) %>% 
+  summarise(phat_obs = mean(AE01))
+
+#Simulated data summary
+sim_summary <- aedat_pp %>% 
+  group_by(name,Quartile) %>% 
+  summarise(phat_sim = mean(value))
+
+# VPC
+sim_summary %>% 
+  ggplot(aes(x=Quartile, y=phat_sim)) +
+  geom_violin() +
+  geom_point(data=obs_summary, aes(y=phat_obs), col='red',shape=3) +
+  labs(x='', y='Proportion with AE') +
+  coord_flip()
+```
+:::
+
+:::{.column}
+```{r, ref.label='bayes-vpc', echo=FALSE}
+
+```
+
+:::
+
+::::
+
+
+
+# VPC for continuous variable: define summary statistic
+
+* Fit generalized additive model (smoother) to each simulated dataset
+* Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
+
+```{r}
+summary_function <- function(.data, .x_name, .y_name='value') {
+  .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
+  x_grid <- with(.data, seq(from = min(xvar),
+                           to = quantile(xvar,probs = 0.95), 
+                           length = 100))
+  fit <- gam(yvar ~ s(xvar), family=binomial(link='logit'), data=.data)
+  predictions <- predict(fit, newdata = data.frame(xvar=x_grid), type='response')
+  return( data.frame(xvar=x_grid, prediction = predictions))
+}
+```
+
+# Compute summary statistics for observed data
+
+```{r}
+obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
+  mutate(type='Observed')
+
+head(obs_summary)
+```
+
+# Compute summary on each simulated study
+
+```{r}
+sim_summary <- aedat_pp %>% 
+  # Nest everying except the simulation name
+  nest(cols=-name) %>% 
+  # Use 200 sims for demonstration
+  slice(1:200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, .x_name='CAVGSS'))) %>% 
+  select(name,predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+```
+
+# Plot VPC
+
+```{r, 'cont-vpc', fig.show='hide'}
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='Steady-state Cavg', y='Probability of severe AE')
+
+```
+
+```{r, ref.label='cont-vpc', echo=FALSE, out.width="90%"}
+
+```
+
 
 
 # Model Comparison
 
-* Like all likelihood models, the objective function (residual deviance), AIC, BIC, etc. can be computed for each model with the same caveats
-* In predictive models, take advantage of ideas from machine learning:
-  * Cross-validation 
-  * Classification accuracy scores (e.g. precision, recall, F score) 
+* Likelihood and information criteria
+    * Likelihood (or -2 log-likelihood) measures <red>in-sample</red> model fit
+    * Cross-validation to approximmate <red>out-of-sample</red> deviance
+    * IC approximate <red>out-of-sample</red> deviance
+        * AIC = -2*Log-likelihood + 2*k
+        * BIC = -2*Log-likelihood + log(N)*k
+        * Lower is better
+
+
+* Classification accuracy
+  * Classification accuracy scores (e.g. sensitivity, specificity, Kappa)
   * Receiver operating characteristic curve (ROC) and its AUC
-    
-    
+
+# Workbook: Model evaluation and comparison
+
 # Break
 
-# Approach to Bayesian modeling in this course
+\large
 
-* For this series of classes we are going to use Stan to do Bayesian modeling
-
-    * Stan is a probabalistic programming language for fitting Bayesian models.  
-    * By default it uses Hamiltonian Monte Carlo (HMC), specifically a variation called the no U-turn sampler (NUTS).
-    *We will go into more details about HMC/NUTS later in the course
-
-* Start with using `brms` as our gateway to Stan 
-    * brms is a package that enables simple fitting of many types models that you can fit using `glm`, `survreg`, `lme`, `nlme`, etc.
-    * Allows quick access to Bayesian inference
-
-* Later we will program our own Stan models and run them with `cmdstanr`
-    * Learn more about the Stan language
-    * Fit models that are not supported in `brms`
-
-
-# A brief review of Bayesian inference
-
-
-$\color{firebrick}{\text{Bayes Rule}}$ the basis for inference about model parameters ($\theta$) given data ($y$) and prior knowledge about model parameters ($p\left(\theta\right)$):
-\begin{eqnarray*}
-p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)}
-= \frac{p\left(\theta\right)p\left(y\,|\,\,\theta\right)}{\int{p\left(\theta\right)p\left(y\,|\,\theta\right) d\theta}}
-\\
-&\propto& p\left(\theta\right)p\left(y\,|\,\theta\right)
-\end{eqnarray*}
-The $p$'s are probabilities or probability densities of the specified random variables.
-
-# Bayesian modeling/inference process using MCMC
-
-<font size="6">
-
-1. Construct a model for the data $p\left(y \,|\, \theta\right)$, conditional on parameters $\theta$
-
-2. Assess prior distribution for $\theta$ -- $p\left(\theta\right)$
-
-    * $\theta$ viewed as random variables
-    * Ideally based on all available evidence/knowledge (or belief)
-    * Or deliberately select a non-informative (or weakly informative)
-  prior (e.g., reference, vague or improper prior)
-
-3.  Sample from the posterior distribution for $\theta$, $p\left(\theta \,|\, y\right)$.
-
-    * Convergence and sampler diagnostics
-    * Use for inferences regarding parameter values
-
-4. Sample from the posterior predictive distribution for $y$m  $p\left(y_\text{new} \,|\, y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$.
-
-    * Use for inferences regarding future observations
-
-<!-- $$p\left(y_{new}\,|\,y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$$ -->
-</font>
-
-# Bayesian ingredients for MCMC sampling from a posterior
-
-* Data
-* Model for the outcome(s) -- the likelihood
-* Models for the parameters -- the prior distribution
-* MCMC tool -- Stan (via `brms` or `cmdstanr`)
-
-# Ingredients for HMC/NUTS
-
-- A starting point in the parameter space (initial value, one per chain)
-- Number of MCMC samples used to tune the HMC/NUTS algorithm (`warmup`)
-    * This is not exactly the same as the burn-in in other MCMC algorithms
-    * NUTS uses these samples to [adaptively tune the sampler](https://mc-stan.org/docs/2_26/reference-manual/hmc-algorithm-parameters.html)
-    
-- Total number of samples to take, including the warmup (`iter`)
-- Parameters which inform how the sampler should adapt
-    * Defaults are usually good for 'simple' models
-    * Often need to modify for more complex, hierarchical models
-    * Return to these later in the course
-
-
-# Let's re-fit our AE model using `brms`
-
-```{r,echo=FALSE}
-load('../data/aedat.RDS')
-```
-
-
-```{r, eval=FALSE}
-mod01_glm <- glm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
-                  data = aedat, 
-                  family = bernoulli(link = "logit")
-                 )
-```
-
-<br>
-
-```{r, eval=FALSE}
-mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
-                  data = aedat, 
-                  family = bernoulli(link = "logit"),
-                  warmup = 500, 
-                  iter = 2000, 
-                  chains = 4, 
-                  inits = "random", 
-                  cores = 4,
-                  seed = 123)
-```
-
-# What about the prior distributions?
-
-* By default, `brms` uses flat, non-informative prior distributions for regression coefficients
-
-* We can specify priors directly through the `prior` argument.
-  * More to come in a few slides
-
-      
+Next up: Bayesain analysis of binary data
 
 
 # References

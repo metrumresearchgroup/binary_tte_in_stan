@@ -25,16 +25,16 @@ knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
 library(tidyverse)
 library(stringr)
 library(haven)
-library(survival)
 library(GGally)
 library(binom)
 library(texreg)
 library(mgcv)
+library(DHARMa)
 
 expit <- function(x) 1 / (1+exp(-x))
 ```
 
-# Slides01
+# Exploring the binomial density
 
 ## rbinom
 
@@ -57,7 +57,7 @@ Exercise:
 
 ```{r, "dbinom", purl=TRUE, results = "hide"}
 set.seed(1)
-pp <- 0.7 # probability that evetn happens
+pp <- 0.7 # probability that event happens
 y <- 1 # indicates event occured.
 nn <- 1 # number of "attempts"
 pp^y*(1-pp)^(nn-y)
@@ -95,80 +95,8 @@ Advanced exercise: look up `?optim` and use that to maximize the joint likelihoo
 ```
 
 
-## odds ratios
 
-A function to compute the relative risk, given two conditional probabilities for the same event:
-
-```{r, "TRY efficacy", purl=TRUE, results = "hide"}
-relative_risk <- function(p0, p1) {
-  return( p1 / p0 )
-}
-relative_risk(0.05, 0.15)
-```
-
-* Write a similar function to compute the odds ratio.
-* Compare odds ratios to relative risks under a variety of scenarios
-
-```{r}
-
-```
-
-
-## logistic function
-
-```{r, "datashell", purl=TRUE, results = "hide"}
-nsubj <- 160
-dat <- data.frame(
-  BWT = rnorm(nsubj, 75, 5),
-  CAVGSS = exp(rnorm(nsubj, log(1), 1)),
-  AE01 = NA # AE indicator: 1 signifies AE ; 0 signifies no AE
-)
-head(dat)
-```
-
-```{r, "TRY logistic", purl=TRUE, results = "hide"}
-expit <- function(x) 1 / (1+exp(-x))
-ggplot(dat) +
-  geom_line(aes(x = CAVGSS, y = expit(CAVGSS))) +
-  geom_line(aes(x = CAVGSS, y = expit(-2 + 3 * CAVGSS)), colour = "red", linetype = 2)
-```
-
-Exercise: Apply linear transformations to `CAVGSS` to:
-
-* Make the intercept lower
-* Make the E-R relationship shallower
-
-```{r}
-
-```
-
-
-## simulating a GLM
-
-```{r, "TRY link", purl=TRUE, results = "hide"}
-dat$Pred <- expit(-2 + 3 * dat$CAVGSS)
-dat$AE01 <- rbinom(nrow(dat), 1, dat$Pred)
-ggplot(dat) +
-  geom_line(aes(x = CAVGSS, y = Pred)) +
-  geom_rug(data = filter(dat, AE01 == 0), aes(x = CAVGSS), sides = "b") +
-  geom_rug(data = filter(dat, AE01 == 1), aes(x = CAVGSS), sides = "t")
-```
-
-
-Generate values for `AE01` so that they conform to a probit-link, rather than a logit-link model.
-
-Hints:
-
-* The probit function $\Phi^{-1}$ is implemented in R as `qnorm()`.
-* The inverse-probit function $\Phi$ is implemented in R as `pnorm()`.
-
-```{r}
-
-```
-
-# Slides02
-
-## Toy data
+# Workbook: Visualizing binary data
 
 ```{r, "TRY toydata", purl=TRUE, results = "hide"}
 load('../data/aedat.RDS')
@@ -213,12 +141,8 @@ Exercise: evaluate the preceding code and based on that answer the following:
 * How can we assess whether the differing durations are likely to be problematic?
 
 
-```{r}
 
-```
-
-
-## derived variables
+## Derived variables
 
 Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
 
@@ -231,7 +155,7 @@ dat_use <-
 ```
 
 
-## EDA: covariates
+## EDA: Pairs plots
 
 ```{r, "TRY covplot", purl=TRUE, results = "hide", width=10, height=10}
 dat_eda <- dat_use %>% ungroup() %>%
@@ -262,6 +186,23 @@ Suppose we were planning to fit a model that included all of the following covar
 * (as well as Cavg)
 
 Should we expect this to be problematic?
+
+
+## EDA: Categorical covariate plot
+
+```{r}
+aedat %>% 
+  group_by(SEXTXT) %>% 
+  summarise(x = sum(AE01), n=n()) %>% 
+  mutate(phat = x / n,
+         lcl = binom.confint(x,n,methods = "wilson")$lower,
+         ucl = binom.confint(x,n,methods = "wilson")$upper) %>% 
+  ggplot(aes(x=SEXTXT, y=phat)) + 
+  geom_col() +
+  geom_errorbar(aes(ymin=lcl, ymax=ucl), 
+                width = 0.2) +
+  labs(x='', y='Probability of a severe AE')
+```
 
 
 ## EDA: E-R relationship
@@ -313,19 +254,107 @@ Exercise: list several key findings based on the EDA, and note any implications 
 ```
 
 
-## my first GLM
+
+
+
+# Workbook: Exploring odds ratios, relative risks, and the logit transformation
+
+## odds ratios
+
+A function to compute the relative risk, given two conditional probabilities for the same event:
+
+```{r, "TRY efficacy", purl=TRUE, results = "hide"}
+relative_risk <- function(p0, p1) {
+  return( p1 / p0 )
+}
+relative_risk(0.05, 0.15)
+```
+
+* Write a similar function to compute the odds ratio.
+* Compare odds ratios to relative risks under a variety of scenarios
+
+```{r}
+
+```
+
+
+## logistic function
+
+Suppose we have the following data
+
+```{r, "datashell", purl=TRUE, results = "hide"}
+nsubj <- 160
+dat <- data.frame(
+  BWT = rnorm(nsubj, 75, 5),
+  CAVGSS = exp(rnorm(nsubj, log(1), 1)),
+  AE01 = NA # AE indicator: 1 signifies AE ; 0 signifies no AE
+)
+head(dat)
+```
+
+Let's plot the probability of an AE for two linear predictors
+ - logit(p) = 0 + CAVGSS
+ - logit(p) = -2 + 3*CAVGSS
+
+```{r, "TRY logistic", purl=TRUE, results = "hide"}
+expit <- function(x) 1 / (1+exp(-x))
+ggplot(dat) +
+  geom_line(aes(x = CAVGSS, y = expit(CAVGSS))) +
+  geom_line(aes(x = CAVGSS, y = expit(-2 + 3 * CAVGSS)), colour = "red", linetype = 2)
+```
+
+Exercise: Modify the linear predictor as a function of `CAVGSS` to:
+
+* Make the intercept lower
+* Make the E-R relationship shallower
+
+```{r}
+
+```
+
+
+Now, suppose we've observed these data
+
+```{r, "TRY link", purl=TRUE, results = "hide"}
+dat$Pred <- expit(-2 + 0.75 * dat$CAVGSS)
+dat$AE01 <- rbinom(nrow(dat), 1, dat$Pred)
+ggplot(dat) +
+  geom_line(aes(x = CAVGSS, y = Pred)) +
+  geom_rug(data = filter(dat, AE01 == 0), aes(x = CAVGSS), sides = "b") +
+  geom_rug(data = filter(dat, AE01 == 1), aes(x = CAVGSS), sides = "t")
+```
+
+
+Exercise: Generate values for `AE01` so that they conform to a probit-link, rather than a logit-link model.
+
+Hints:
+
+* The probit function $\Phi^{-1}$ is implemented in R as `qnorm()`.
+* The inverse-probit function $\Phi$ is implemented in R as `pnorm()`.
+
+```{r}
+
+```
+
+
+
+
+
+
+
+# Workbook: Fitting a logistic regression model
 
 ```{r, "TRY firstglm", purl=TRUE, results = "hide"}
 dat_mod <- dat_use
-mod01 <- glm(AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
+mod01 <- glm(AE01 ~ CAVGSS + PTTYPE,
              family = binomial(link = "logit"),
              data = dat_mod,
              )
 ```
 
 Exercise:
-* Re-fit the model using a probit link
-* Re-fit the model with STUDYID as an additional covariate
+* Re-fit the model using a probit link (mod01_probit)
+* Re-fit the model with STUDYID as an additional covariate (mod02)
 
 ```{r}
 
@@ -334,7 +363,7 @@ Exercise:
 
 ## reading R help
 
-R help pages can be overwhelming ... but you have to learn to read them:  
+R help pages can be overwhelming.  Nonetheless, take a look at the following help files.
 
 ```{r, "TRY extractors", purl=TRUE, results = "hide"}
 ?glm # See especially the "See Also" section
@@ -383,18 +412,13 @@ dat_mod <- dat_use %>% mutate(
 ?relevel
 ```
 
-Exercise: re-fit the model so that the intercept corresponds to a `PT1` type patient with typical bodyweight.
+Exercise: 
+* Re-fit model `mod01` adding the effects of PTTYPE and normalize body weight.  What exposure and covariate settings does the intercept corresponds to?
 
 ```{r}
 
 ```
 
-
-## covariate effects
-
-Excercise:
-
-* Transform the covariate coefficients to be more interpretable.
 * How many fold higher are the odds of an AE for `PT1` versus `HV`?
 
 ```{r}
@@ -402,14 +426,20 @@ Excercise:
 ```
 
 
+
+
+
+
+# Workbook: Model evaluation and comparison
+
+
 ## residual plot
 
-TODO: RIG to add deviance residual plot for comparison with response resids
 
 ```{r, "TRY resid", purl=TRUE, results = "hide"}
 dat_plus <- dat_mod
-dat_plus$res <- residuals(mod02, type = "response")
-dat_plus$pred <- fitted(mod02)
+dat_plus$res <- residuals(mod01, type = "response")
+dat_plus$pred <- fitted(mod01)
 
 resplot <-
   ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
@@ -420,8 +450,8 @@ resplot
 resplot + facet_wrap(~ PTTYPE)
 
 # deviance residuals
-dat_plus$resd <- residuals(mod02, type = "deviance")
-dat_plus$pred <- fitted(mod02)
+dat_plus$resd <- residuals(mod01, type = "deviance")
+dat_plus$pred <- fitted(mod01)
 
 resplot <-
   ggplot(dat_plus, aes(x = CAVGSS, y = resd)) +
@@ -489,7 +519,6 @@ Exercise: make a version of the previous plot that smooths out the predicted val
 
 # DHARMa residuals
 
-TODO : Ramon to populate an example of DHARMa residual vs concentration
 
 ```{r}
 
@@ -500,45 +529,7 @@ DHARMa::plotResiduals(simulationOutput,form=dat_mod$CAVGSS,xlab="CAVE")
 
 ```
 
-
-## interactions
-
-Extended Exercise:
-
-* Re-fit the model to allow a different slope of exposure-response relationship for each level of `PTTYPE`.
-* Re-generate the residual and pred v. conc plots and compare the results.
-* Read `?aic` and compare the models with and without interaction in terms of AIC.
-
-```{r}
-
-```
-
-
-## summarizing interaction parameters
-
-```{r, "TRY lincombo", purl=TRUE, results = "hide"}
-lin_combo <- function(fit, k.lin) {
-  est <- coef(fit) %*% k.lin  
-  V <- t(k.lin) %*% vcov(fit) %*% k.lin
-  se <- sqrt(V)
-  out <- c(est, se)
-  out
-}
-names(coef(mod03))
-which.pars <- names(coef(mod03)) %in% c("CAVGSS", "CAVGSS:PTTYPEHV")
-as.numeric(which.pars)
-lin_combo(mod03, as.numeric(which.pars))
-```
-
-Compare the above result with what you get when you re-fit the model with `HV` as the reference level.
-
-```{r}
-
-```
-
-# Slides03
-
-## my first GLM VPC
+## VPC vs a categorical covariate
 
 ```{r, "TRY glmvpc", purl=TRUE, results = "hide"}
 prop <- function(x) sum(x, na.rm = TRUE) / sum(!is.na(x))
@@ -649,6 +640,40 @@ Exercise: Our model includes an interacation term, make a VPC of CAVGSS by PTTYP
 ```{r}
 
 ```
+
+
+Extended Exercise:
+
+* Re-fit the first model (mod01) to allow a different slope of exposure-response relationship for each level of `PTTYPE`. 
+(Hint: the formula will be AE01 ~ CAVGSS*PTTYPE)
+* Re-generate the residual and pred v. conc plots and compare the results.
+* Read `?aic` and compare the models with and without interaction in terms of AIC.
+
+```{r}
+
+```
+
+
+```{r, "TRY lincombo", purl=TRUE, results = "hide"}
+lin_combo <- function(fit, k.lin) {
+  est <- coef(fit) %*% k.lin  
+  V <- t(k.lin) %*% vcov(fit) %*% k.lin
+  se <- sqrt(V)
+  out <- c(est, se)
+  out
+}
+names(coef(mod03))
+which.pars <- names(coef(mod03)) %in% c("CAVGSS", "CAVGSS:PTTYPEHV")
+as.numeric(which.pars)
+lin_combo(mod03, as.numeric(which.pars))
+```
+
+Compare the above result with what you get when you re-fit the model with `HV` as the reference level.
+
+```{r}
+
+```
+
 
 
 ## Conditional predictions

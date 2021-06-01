@@ -86,7 +86,7 @@ Both for EDA and for model-checking, it's generally helpful to have quartiles of
 
 ```{r, "TRY varderive", purl=TRUE, results = "hide"}
 dat_use <-
-  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  aedat %>% 
   group_by(PBO) %>%
   mutate(Quartile = ifelse(PBO == "PBO", "PBO",
                            paste0("Q", ntile(CAVGSS, n = 4))))
@@ -97,7 +97,7 @@ dat_use <-
 ```{r, "TRY firststan", purl=TRUE, results = "hide"}
 dat_mod <- dat_use
 
-mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+mod01_stan <- brm(formula = AE01 ~ CAVGSS + PTTYPE,  
                   data=dat_mod, 
                   family = bernoulli(link = "logit"),
                   warmup = 500, 
@@ -108,72 +108,62 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                   seed = 123)
 ```
 
-Look at convergence diagnostics:
-  - Rhat
-  - Trace plots
-  - density plots
-Look at posterior summaries for parameters (summary(mod01_stan))
 
-Look at stan model
+***Exercise:***  
 
+* Look at convergence diagnostics:
+    - Rhat and n_eff (`mcmc_plot(mod01_stan, type='rhat')`, `mcmc_plot(mod01_stan, type='neff')`)
+    - Trace plots (`mcmc_plot(mod01_stan, type='trace')`)
+    - density plots (`mcmc_plot(mod01_stan, type='dens_overlay')`)
+    
+* Look at the posterior summaries for parameters (`summary(mod01_stan)`).  Is there an effect of exposure?
+    *  Think: How might you want to plot this effect?  We'll work on this later.
 
-Exercise:
-* Re-fit the model using a probit link
-* Re-fit the model with STUDYID as an additional covariate
+***Exercise:***
 
-Check the default prior distributions using `prior_summary`
+* Run a new model (mod02_stan) which adds `STUDYID`  to mod01_stan.
+  That is, the new model will use `formula = AE01 ~ CAVGSS + PTTYPE + STUDYID` 
+
+* Look at the convergence diagnostics.  How do these compare to mod01?
+    * What do you think is causing this?
+    * Try looking at a pairs plot (`mcmc_plot(mod02_stan, type='pairs)`)
 
 ```{r}
-prior_summary(mod01_stan)
+mod2_stan <- brm(formula = ,  
+                  data=dat_mod, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123)
 ```
 
 
-TODO: Add priors explicitly: normal distributions
+***Exercise:***
 
-
-```{r}
-mod01_normal_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
-                         data=dat_mod, 
-                         family = bernoulli(link = "logit"),
-                         prior = set_prior("normal(0,3)",class="b"),
-                         warmup = 500, 
-                         iter = 2000, 
-                         chains = 4, 
-                         inits = "0", 
-                         cores = 4,
-                         seed = 123)
-```
-
+* Run a new model (mod03_stan) which modifies mod02_stan by adding normal prior distributions for the regression coefficients (i.e., class='b').
+* Look at the convergence diagnostics.  How do these compare to mod02?
+    * What do you think is causing this?
+    * Try looking at a pairs plot (`mcmc_plot(mod02_stan, type='pairs)`)
 
 ```{r}
-
-# * Re-fit the model using a probit link
-brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT ,
-    data=dat_mod,
-    family = bernoulli(link = "probit"),
-    warmup = 500,
-    iter = 2000,
-    chains = 4,
-    inits = "0",
-    cores = 4,
-    seed = 123)
-
-# * Re-fit the model with STUDYID as an additional covariate
-# brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT + STUDYID,  
-#     data=dat_mod, 
-#     family = bernoulli(link = "logit"),
-#     warmup = 500, 
-#     iter = 2000, 
-#     chains = 4, 
-#     inits = "0", 
-#     cores = 4,
-#     seed = 123)
-
+mod03_stan <- brm(formula = ,  
+                  data=dat_mod, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123)
 ```
+
 
 ## reading R help
 
-R help pages can be overwhelming ... but you have to learn to read them:  
+R help pages can be .... helpful :)
 
 ```{r, "TRY extractors", purl=TRUE, results = "hide"}
 ?brm # See especially the "See Also" section
@@ -189,13 +179,68 @@ Exercise:
 * Print out 95% confidence intervals for the model parameters.
 * Print out 90% confidence intervals for the model parameters.
 
-* Modify model to use t-distirbutions with 3 degrees of freedom.  How do the estimates and CIs change?
-
-
 ```{r}
 fixef(mod01_stan)
 fixef(mod01_stan,probs = c(0.05, 0.95))
 ```
+
+
+
+# Residuals
+
+
+To use the quantile residuals, we'll need a sample from the posterior predictive distribution.  We can get this with the `posterior_predict` function.
+
+```{r}
+postpred_sample_mod01 = posterior_predict(mod01_stan)
+dim(postpred_sample_mod01)
+```
+
+This yields a matrix with one row per posterior sample and one column per observation (subject).  Let's look at the first 5 samples for the first 10 subjects:
+
+```{r}
+postpred_sample_mod01[1:5,1:10]
+```
+
+
+# # Quantile residuals 
+
+Now we can use the `DHARMa::createDHARMa` function to calculate the quantile residuals
+
+```{r}
+dharma_resids = createDHARMa(simulatedResponse = t(postpred_sample_mod01),
+                             observedResponse = dat_mod$AE01,
+                             integerResponse = TRUE)
+```
+
+```{r}
+plot(dharma_resids)
+```
+
+Let's look at the residuals vs exposure. Ideally, the residuals should have a mean of 0.5 for all values of exposure.  How does this look to you?
+
+```{r}
+dat_mod <- dat_mod %>% ungroup() %>% 
+  mutate(quantile_residual = dharma_resids$scaledResiduals)
+```
+
+```{r}
+dat_mod %>% 
+  ggplot(aes(x=CAVGSS, y=quantile_residual)) +
+  geom_point() +
+  geom_smooth()
+```
+
+
+
+## Posterior predictive checks
+
+```{r}
+
+```
+
+
+
 
 ## re-coding predictors
 
@@ -232,58 +277,14 @@ exp(fixef(mod02_stan)[,c("Estimate","Q2.5","Q97.5")])
 # odds of an AE for HV versus PT1 are .21 lower
 ```
 
-## residual plot
-
-```{r, "TRY resid", purl=TRUE, results = "hide"}
-dat_plus <- dat_mod
-dat_plus$res <- residuals(mod02_stan)[,"Estimate"]
-dat_plus$pred <- predict(mod02_stan)[,"Estimate"]
-
-resplot <-
-  ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
-  geom_point() +
-  geom_smooth()
-
-resplot  
-resplot + facet_wrap(~ PTTYPE)
-```
 
 
 Extended Exercise:
-
-* Re-fit the model to allow a different slope of exposure-response relationship for each level of `PTTYPE`.
-* Re-generate the residual and pred v. conc plots and compare the results.
-* Read `?aic` and compare the models with and without interaction in terms of AIC.
-
-```{r}
-
-mod03_stan <- brm(formula = AE01 ~ CAVGSS + BWT_norm + PTTYPE + SEXTXT + CAVGSS*PTTYPE,  
-                  data=dat_mod, 
-                  family = bernoulli(link = "logit"),
-                  warmup = 500, 
-                  iter = 2000, 
-                  chains = 4, 
-                  inits = "0", 
-                  cores = 4,
-                  seed = 123)
-
-dat_plus <- dat_mod
-dat_plus$res <- residuals(mod03_stan)[,"Estimate"]
-dat_plus$pred <- predict(mod03_stan)[,"Estimate"]
-
-resplot <-
-  ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
-  geom_point() +
-  geom_smooth()
-
-resplot  
-resplot + facet_wrap(~ PTTYPE)
 
 waic1 <- waic(mod02_stan)
 waic2 <- waic(mod03_stan)
 loo_compare(waic1,waic2)
 
-```
 
 ## summarizing interaction parameters
 
@@ -302,27 +303,27 @@ posterior_samples(mod03_stan) %>%
 ## my first BRMS/STAN VPC
 
 ```{r, "TRY glmvpc", purl=TRUE, results = "hide"}
-prop <- function(x) sum(x, na.rm = TRUE) / sum(!is.na(x))
+prop <- function(x) sum(x) / sum(!is.na(x))
+
 obs_stat <-
   dat_mod %>%
   group_by(PTTYPE, Quartile) %>%
   summarise(pAE = prop(AE01))
+
 ggplot(obs_stat) +
   geom_point(aes(x = Quartile, y = pAE)) +
   facet_wrap(~ PTTYPE)
 
 nsim = 1000
-sim_dat = posterior_predict(mod03_stan, nsamples = nsim)
-sim_dat_long <- tibble(
-  sim = rep(1:nrow(sim_dat), times = ncol(sim_dat)),
-  id = rep(1:ncol(sim_dat), each = nrow(sim_dat)),
-  value = c(sim_dat)
-) %>% 
-  left_join(mod03_stan$data %>% mutate(id=1:n()))
+sim_dat = add_predicted_draws(model=mod01_stan, 
+                              newdata = dat_use)
 
-sim_dat_long %>% 
-  group_by(PTTYPE,sim) %>% 
-  summarise(phat=mean(value)) %>% 
+head(sim_dat %>% as.data.frame())
+
+
+sim_dat %>% 
+  group_by(PTTYPE,Quartile,.draw) %>% 
+  summarise(phat=mean(.prediction)) %>% 
   ggplot() + 
   geom_density(aes(x=phat, col=PTTYPE))
 
@@ -798,27 +799,4 @@ pred_frame2 %>%
 
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
