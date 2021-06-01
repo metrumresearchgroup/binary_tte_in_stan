@@ -1,0 +1,147 @@
+---
+title: "Workbook"
+author: "Model Fitting"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    # css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(DHARMa)
+
+expit <- function(x) 1 / (1+exp(-x))
+```
+
+
+
+# Workbook: Fitting a logistic regression model
+
+```{r, purl=TRUE, results = "hide"}
+# Preamble of data assembly done in previous workbooks
+
+load('../data/aedat.RDS')
+aedat <-
+  aedat %>% group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
+  )
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4))))
+```
+
+```{r, "TRY firstglm", purl=TRUE, results = "hide"}
+dat_mod <- dat_use
+mod01 <- glm(AE01 ~ CAVGSS + PTTYPE,
+             family = binomial(link = "logit"),
+             data = dat_mod,
+             )
+```
+
+Exercise:
+
+* Re-fit the model using a probit link (mod01_probit)
+* Re-fit the model with STUDYID as an additional covariate (mod02)
+
+```{r}
+
+```
+
+
+## Reading R help
+
+R help pages can be overwhelming.  Nonetheless, take a look at the following help files.
+
+```{r, "TRY extractors", purl=TRUE, results = "hide"}
+?glm # See especially the "See Also" section
+?summary.glm # See expecially the "Value" section
+?confint
+?predict
+?predict.glm
+```
+
+Exercise:
+
+* Print out a table of estimated coefficients and their standard errors.
+* Print out 95% confidence intervals for the model parameters.
+* Print out 90% confidence intervals for the model parameters.
+
+```{r}
+
+```
+
+
+## Model intercept
+
+```{r, "TRY intercept", purl=TRUE, results = "hide"}
+partab01 <- cbind(coef(mod01), confint(mod01))
+partab01
+```
+
+Exercise:
+
+* Make the intercept more interpretable by applying the inverse of the link function.
+* What exposure and covariate settings does the intercept correspond to?
+
+```{r}
+
+```
+
+
+## Re-coding predictors
+
+```{r, "TRY recoding", purl=TRUE, results = "hide"}
+ref_bwt <- median(dat_use$BWT) # will want reference value later, so save as variable!
+dat_mod <- dat_use %>% mutate(
+  BWT_norm = BWT - ref_bwt,
+  PTTYPE = factor(PTTYPE, levels = c("PT1", "PT2", "HV"))
+  )
+?relevel
+```
+
+Exercise: 
+
+* Re-fit model `mod01` adding the effects of PTTYPE and normalize body weight.  What exposure and covariate settings does the intercept corresponds to?
+
+```{r}
+
+```
+
+* How many fold higher are the odds of an AE for `PT1` versus `HV`?
+
+```{r}
+
+```
+
+
+
+

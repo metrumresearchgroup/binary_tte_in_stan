@@ -834,7 +834,35 @@ data.frame(
     
 # Example of response residuals
 
-TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid
+<!-- TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid -->
+
+::::{.columns}
+
+:::{.column}
+
+```{r, 'response-resid', fig.show = 'hide'}
+dat_plus <- dat_mod
+dat_plus$res <- residuals(mod01_glm, type = "response")
+dat_plus$pred <- fitted(mod01_glm)
+
+ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(x='Steady-state Cavg', y='Response residuals')
+
+```
+:::
+
+:::{.column}
+```{r, ref.label='response-resid', echo=FALSE, out.width="95%"}
+
+```
+
+:::
+
+::::
+
+
 
 # Other residuals  (Pearson, Deviance)  
 
@@ -851,7 +879,34 @@ TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid
 
 # Example of deviance residuals
 
-TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid
+<!-- TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid -->
+
+::::{.columns}
+
+:::{.column}
+
+```{r, 'deviance-resid', fig.show = 'hide'}
+dat_plus <- dat_mod
+dat_plus$res <- residuals(mod01_glm, type = "deviance")
+dat_plus$pred <- fitted(mod01_glm)
+
+ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(x='Steady-state Cavg', y='Deviance residuals')
+
+```
+:::
+
+:::{.column}
+```{r, ref.label='deviance-resid', echo=FALSE, out.width="95%"}
+
+```
+
+:::
+
+::::
+
 
 # Simulation-based Diagnostics
 
@@ -877,13 +932,18 @@ TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid
 
 :::{.column width=47.5%}
 
-```{r}
+```{r, 'dharma-resid', fig.show = 'hide'}
 dharma_resids = simulateResiduals(mod01_glm,
                                   n = 1000,
                                   integerResponse = TRUE)
 
 plot(dharma_resids)
 ```
+
+```{r, ref.label='dharma-resid', echo=FALSE, out.width="95%"}
+
+```
+
 
 :::
 
@@ -892,13 +952,19 @@ plot(dharma_resids)
 
 :::{.column width=47.5%}
 
-```{r}
+```{r, 'quantile-resid', fig.show = 'hide'}
 aedat %>% ungroup() %>% 
   mutate(quantile_residual = dharma_resids$scaledResiduals) %>% 
   ggplot(aes(x=BWT, y=quantile_residual)) +
   geom_point() +
-  geom_smooth()
+  geom_smooth() + 
+  labs(y='Quantile residuals', x='Body Weight (kg)')
 ```
+
+```{r, ref.label='quantile-resid', echo=FALSE, out.width="95%"}
+
+```
+
 
 :::
 ::::

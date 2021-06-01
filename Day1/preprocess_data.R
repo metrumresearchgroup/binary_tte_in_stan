@@ -15,3 +15,10 @@ aedat <- aedat %>%
   group_by(PBO) %>%
   mutate(Quartile = ifelse(PBO == "PBO", "PBO",
                            paste0("Q", ntile(CAVGSS, n = 4))))
+
+ref_bwt <- median(aedat$BWT) # will want reference value later, so save as variable!
+
+dat_mod <- aedat %>% mutate(
+  BWT_norm = BWT - ref_bwt,
+  PTTYPE = factor(PTTYPE, levels = c("PT1", "PT2", "HV"))
+)

@@ -1,0 +1,123 @@
+---
+title: "Workbook"
+author: "Odds ratios, relative risks, and the logit transformation"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    # css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(DHARMa)
+
+expit <- function(x) 1 / (1+exp(-x))
+```
+
+
+
+
+# Workbook: Exploring odds ratios, relative risks, and the logit transformation
+
+## odds ratios
+
+A function to compute the relative risk, given two conditional probabilities for the same event:
+
+```{r, "TRY efficacy", purl=TRUE, results = "hide"}
+relative_risk <- function(p0, p1) {
+  return( p1 / p0 )
+}
+relative_risk(0.05, 0.15)
+```
+
+* Write a similar function to compute the odds ratio.
+* Compare odds ratios to relative risks under a variety of scenarios
+
+```{r}
+
+```
+
+
+## logistic function
+
+Suppose we have the following data
+
+```{r, "datashell", purl=TRUE, results = "hide"}
+nsubj <- 160
+dat <- data.frame(
+  BWT = rnorm(nsubj, 75, 5),
+  CAVGSS = exp(rnorm(nsubj, log(1), 1)),
+  AE01 = NA # AE indicator: 1 signifies AE ; 0 signifies no AE
+)
+head(dat)
+```
+
+Let's plot the probability of an AE for two linear predictors
+
+ - logit(p) = 0 + CAVGSS
+ - logit(p) = -2 + 3*CAVGSS
+
+```{r, "TRY logistic", purl=TRUE, results = "hide"}
+expit <- function(x) 1 / (1+exp(-x))
+ggplot(dat) +
+  geom_line(aes(x = CAVGSS, y = expit(CAVGSS))) +
+  geom_line(aes(x = CAVGSS, y = expit(-2 + 3 * CAVGSS)), colour = "red", linetype = 2)
+```
+
+Exercise: Modify the linear predictor as a function of `CAVGSS` to:
+
+* Make the intercept lower
+* Make the E-R relationship shallower
+
+```{r}
+
+```
+
+
+Now, suppose we've observed these data
+
+```{r, "TRY link", purl=TRUE, results = "hide"}
+dat$Pred <- expit(-2 + 0.75 * dat$CAVGSS)
+dat$AE01 <- rbinom(nrow(dat), 1, dat$Pred)
+ggplot(dat) +
+  geom_line(aes(x = CAVGSS, y = Pred)) +
+  geom_rug(data = filter(dat, AE01 == 0), aes(x = CAVGSS), sides = "b") +
+  geom_rug(data = filter(dat, AE01 == 1), aes(x = CAVGSS), sides = "t")
+```
+
+
+Exercise: Generate values for `AE01` so that they conform to a probit-link, rather than a logit-link model.
+
+Hints:
+
+* The probit function $\Phi^{-1}$ is implemented in R as `qnorm()`.
+* The inverse-probit function $\Phi$ is implemented in R as `pnorm()`.
+
+```{r}
+
+```
+
+
+
+
+

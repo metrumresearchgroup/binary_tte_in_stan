@@ -1,0 +1,1162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="copyright" content="Metrum Research Group &copy 2021"/>
+  <meta name="font-size-adjustment" content="3"/>
+  <title>Exposure-response modeling for binary data</title>
+  <style type="text/css">
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+            a.sourceLine { display: inline-block; line-height: 1.25; }
+    a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+    a.sourceLine:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode { white-space: pre; position: relative; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    code.sourceCode { white-space: pre-wrap; }
+    a.sourceLine { text-indent: -1em; padding-left: 1em; }
+    }
+    pre.numberSource a.sourceLine
+      { position: relative; left: -4em; }
+    pre.numberSource a.sourceLine::before
+      { content: attr(data-line-number);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; pointer-events: all; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {  }
+    @media screen {
+    a.sourceLine::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+          </style>
+  <style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link href="LogisticRegression_files/slidy-2/styles/slidy.css" rel="stylesheet" />
+  <script src="LogisticRegression_files/slidy-2/scripts/slidy.js"></script>
+  <script src="LogisticRegression_files/slidy_shiny-1/slidy_shiny.js"></script>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+   href="slidystyles.css" />
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Exposure-response modeling for binary data</h1>
+  <p class="author">
+
+  </p>
+</div>
+<div id="outline" class="slide section level1">
+<h1>Outline</h1>
+<ul>
+<li>Encountering binary data</li>
+<li>Groundwork
+<ul>
+<li>Notational conventions</li>
+<li>Modeling from a probabalistic viewpoint</li>
+</ul></li>
+<li>Bernoulli distribution
+<ul>
+<li>Defining models</li>
+<li>Maximum likelihood</li>
+</ul></li>
+<li>Visualizing relationships</li>
+<li>Models, model checking, and measures of effect</li>
+</ul>
+</div>
+<div id="key-learning-objectives" class="slide section level1">
+<h1>Key learning objectives</h1>
+<p>At the end of today’s session, I hope you will know:</p>
+<ul>
+<li>How to make effective exploratory analysis plots for binary data</li>
+<li>The basic concepts of maximum likelihood estimation for binary data models</li>
+<li>How to fit and evaluate binary data models</li>
+<li>How to interpret model terms</li>
+</ul>
+</div>
+<div id="what-do-we-mean-by-binary-data" class="slide section level1">
+<h1>What do we mean by binary data?</h1>
+<ul>
+<li><p>Outcomes that have two possible values</p></li>
+<li><p>Can be categorical by nature or created by discretizing a categorical or continuous variable</p></li>
+<li>Examples
+<ul>
+<li>Objective response per RECIST (response / non-response)</li>
+<li>Incident adverse event (yes / no)</li>
+<li>Alive without disease progression vs. progressive disease or died</li>
+<li>Coin flip (heads / tails)</li>
+</ul></li>
+</ul>
+</div>
+<div id="what-makes-binary-data-interesting" class="slide section level1">
+<h1>What makes binary data interesting?</h1>
+<ul>
+<li><p>If you are coming from a Pop PK background, moving away from models with Normal (or log-Normal) residuals may force you to think at a new level of abstraction.</p></li>
+<li><p>The Bernoulli distribution for binary data is (in most respects) as simple a statistical distribution as there is. Good place to start for many basic statistical concepts.</p></li>
+<li><p>There are fewer choices to make and fewer assumptions to check when dealing with binary data (e.g. as compared to time-to-event data).</p></li>
+</ul>
+</div>
+<div id="basic-notation" class="slide section level1">
+<h1>Basic Notation</h1>
+<p>For now, we will use this high-level notation:</p>
+<ul>
+<li>Greek letters are <red>model parameters</red>
+<ul>
+<li><span class="math inline">\(\mu\)</span> model parameter (“intercept”)</li>
+<li><span class="math inline">\(\beta\)</span> model parameter (coefficient for effect of exposure or covariate)</li>
+</ul></li>
+<li>Upper case Roman letters are <red>random variables</red>
+<ul>
+<li><span class="math inline">\(C\)</span>, <span class="math inline">\(D\)</span>, <span class="math inline">\(T\)</span> : exposure (think of a steady-state exposure metric for now, e.g. <span class="math inline">\(\mathrm{CAVG}_\mathrm{ss}\)</span>), or dose, or just treatment indicator.</li>
+<li><span class="math inline">\(X\)</span> : covariates</li>
+<li><span class="math inline">\(Y\)</span> : As-yet-unrealized / unobserved response (“DV”)</li>
+</ul></li>
+<li>Lower case Roman letters are <red>observed values</red>
+<ul>
+<li><span class="math inline">\(y\)</span> : Observed value for <span class="math inline">\(Y\)</span></li>
+</ul></li>
+</ul>
+</div>
+<div id="probability-versus-statistics" class="slide section level1">
+<h1>Probability versus statistics</h1>
+<p>In some cases (e.g., when setting up a model) we will be thinking in the data generating / probability direction:</p>
+<p><span class="math display">\[
+\begin{eqnarray*} 
+\mu,\, \beta,\, C,\, X &amp; \stackrel{\mathrm{Probability}}{\longrightarrow} &amp; Y 
+\end{eqnarray*}
+\]</span></p>
+<p>In other cases we will be thinking in the model estimating / statistics direction:</p>
+<p><span class="math display">\[
+\begin{eqnarray*} 
+\mu,\, \beta &amp; \stackrel{\mathrm{Statistics}}{\longleftarrow} &amp;  C,\, X,\, y 
+\end{eqnarray*}
+\]</span></p>
+<!-- # Modeling from a probabilistic point of view -->
+<!-- * Those of you who were initially trained in a physical or biological science may have started with a deterministic view of modeling. -->
+<!--   * Variability and uncertainty and the statistical tools to -->
+<!--       deal with them were obligatory nuisances to deal with "noise" -->
+<!--       but not the focus of the modeling. -->
+<!--   *  This began to turn around for many of us with the increasing -->
+<!--       use of mixed effects modeling in which probability distributions -->
+<!--       are used to describe the "unexplained" portion of -->
+<!--       inter-individual variability. -->
+<!--   * Even then you may have continued to view residual -->
+<!--       variability as more of a nuisance than as an integral component -->
+<!--       of the model. -->
+<!-- * What we will see in this course is that such notions of modeling do not -->
+<!--     translate well to modeling of categorical, count or time-to-event -->
+<!--     data. A probabilistic perspective is far more useful. -->
+</div>
+<div id="probability-models-continuous-variable" class="slide section level1">
+<h1>Probability models: continuous variable</h1>
+<p>Throughout the course we will conceptualize models from a probabalistic or <code>data generating</code> viewpoint.</p>
+<p>We’ll use expressions like:</p>
+<p><span class="math display">\[\text{Height} \sim \text{Normal}(\mu, \sigma)\]</span></p>
+<div class="notebox">
+<p><strong>Read as:</strong></p>
+<blockquote>
+<p>Height follows a normal distribution with mean <span class="math inline">\(\mu\)</span> and standard deviation <span class="math inline">\(\sigma\)</span></p>
+</blockquote>
+</div>
+<p>If we know <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> we can</p>
+<ul>
+<li>Make probabalistic statements about height in the population</li>
+<li>Simulate heights</li>
+</ul>
+</div>
+<div id="probability-models-binary-variable" class="slide section level1">
+<h1>Probability models: binary variable</h1>
+<p>Suppose we define a binary variable as</p>
+<p><span class="math display">\[
+Tall = \left\{ \begin{array}{ll}
+               1 &amp; Height &gt; 200 cm \\
+               0 &amp; Height \leq 200 cm
+               \end{array}
+       \right.
+\]</span></p>
+<blockquote>
+<p>NB: From here on, we’ll assume binary random variables are defined as 0 / 1</p>
+</blockquote>
+<p>Then our model might be</p>
+<p><span class="math display">\[\text{Tall} \sim \text{Bernoulli}(\pi)\]</span></p>
+<div class="notebox">
+<p><strong>Read as:</strong></p>
+<blockquote>
+<p>Being tall follows a Bernoulli distribution with the probability of being tall equal to <span class="math inline">\(\pi\)</span></p>
+</blockquote>
+</div>
+<p>If we know <span class="math inline">\(\pi\)</span>, we can</p>
+<ul>
+<li>Make probabalistic statements about the number of tall people in a random sample from the population</li>
+<li>Simulate data</li>
+</ul>
+</div>
+<div id="probability-density-mass-function" class="slide section level1">
+<h1>Probability density (mass) function</h1>
+<p>Both of these link to specific probability density or probability mass functions:</p>
+<p>The <em>normal</em> (or <em>Gaussian</em>) pdf for height <span class="math display">\[
+    p(height \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
+      \sigma} e^{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2}
+\]</span></p>
+<p>and the <em>Bernoulli</em> pmf for Tall</p>
+<p><span class="math display">\[
+    p( tall \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
+\]</span></p>
+</div>
+<div id="the-likelihood-function" class="slide section level1">
+<h1>The likelihood function</h1>
+<ul>
+<li><p>Suppose you observed a measured value <span class="math inline">\(Y = y_{obs}\)</span>.</p>
+<p><!-- * That value is no longer a random variable since we know its --> <!-- value. --></p></li>
+<li><p>If we view the pdf or pmf <grn>as a function of the parameters</grn>, conditional on some observed data <span class="math inline">\(y_{obs}\)</span>, we refer to the function as a <red>likelihood function</red> <!-- * If we insert that observed value into our probability --> <!--     distribution function we now refer to that function as a --> <!--     ***likelihood function***. --></p></li>
+<li><p>It is the <strong><em>same function</em></strong> as the PDF or pmf, but we now view it as a function of the parameters given the data instead of as a function of the data given the parameters.</p></li>
+</ul>
+<p align="center">
+<red><span class="math inline">\(L\left(\theta \,|\,y_{obs}, x\right)\)</span></red> <span class="math inline">\(=\)</span> <grn><span class="math inline">\(p\left(y_{obs} \,|\,\theta,  x\right)\)</span></grn>
+</p>
+</div>
+<div id="modeling-from-a-probabilistic-point-of-view-the-likelihood-function" class="slide section level1">
+<h1>Modeling from a probabilistic point of view: The likelihood function</h1>
+<p><span class="math display">\[ L\left(\theta \,|\,y_{obs}, x\right) = p\left(y_{obs} \,|\, \theta,
+  x\right) \]</span></p>
+<ul>
+<li><p>During model development we generally do not know the values of the parameters <span class="math inline">\(\theta\)</span> and use the observed data to estimate those parameters.</p></li>
+<li><p>The likelihood function contains information about what those parameter values might be.</p></li>
+<li><p>We will talk about two different approaches that exploit the likelihood function to estimate <span class="math inline">\(\theta\)</span>:</p>
+<ul>
+<li>Maximum likelihood estimation</li>
+<li>Bayesian statistical analysis</li>
+</ul></li>
+</ul>
+</div>
+<div id="the-bernoulli-likelihood-for-one-observation" class="slide section level1">
+<h1>The Bernoulli likelihood for one observation</h1>
+<p><red>Likelihood</red> for a single Bernoulli observation</p>
+<p><span class="math display">\[
+l(\pi \, | \, Y_i = y_i) = P(Y_i=y_i) = \left\{ \begin{array}{ll} \pi &amp; y_i = 1 \\ 1-\pi &amp; y_i = 0 \end{array} \right.
+\]</span> We often see this written more compactly as</p>
+<p><span class="math display">\[
+l(\pi \, | \, Y_i = y_i) = \pi^{y_i}(1-\pi)^{(1-y_i)} 
+\]</span> <br></p>
+</div>
+<div id="the-bernoulli-joint-likelihood-function" class="slide section level1">
+<h1>The Bernoulli joint likelihood function</h1>
+<p><red>Joint likelihood</red> for a sample of independent Bernoulli observations</p>
+<p><span class="math display">\[
+\begin{eqnarray*}
+l(\pi | \mathbf{Y}=\mathbf{y}) &amp; = &amp; \prod_{i=1}^{n} P(Y_i=y_i) \\
+  &amp; = &amp;   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \\
+&amp; = &amp; \pi^{(\# \, \text{of &quot;ones&quot;})}(1-\pi)^{n - (\# \, \text{of &quot;ones&quot;})}
+\end{eqnarray*}
+\]</span></p>
+<p><red>Joint log likelihood:</red></p>
+<p><span class="math display">\[
+\begin{eqnarray*}
+L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) &amp; = &amp; l(\pi| \mathbf{Y}=\mathbf{y}) \\
+ &amp; = &amp; (\# \, \text{of &quot;ones&quot;}) \log(\pi)
+ + (n-\# \, \text{of &quot;ones&quot;}) \log(1-\pi) 
+\end{eqnarray*}
+\]</span></p>
+</div>
+<div id="maximum-likelihood-estimation-for-a-simple-model" class="slide section level1">
+<h1>Maximum likelihood estimation for a simple model</h1>
+<p><red>Maximum likelihood estimates</red> are the values of the parameters (<span class="math inline">\(p\)</span>) which maximize the likelihood.</p>
+<blockquote>
+<p>Derivative of joint log likelihood:</p>
+</blockquote>
+<p><span class="math display">\[
+\begin{align*}
+\frac{\mathrm{d}L}{\mathrm{d}\pi} &amp;= \frac{(\# \, \text{of successes})}{\pi} - \frac{(n- \# \, \text{of successes})}{1-\pi}
+\end{align*}
+\]</span></p>
+<p><span class="math display">\[
+\frac{\mathrm{d}L}{\mathrm{d}\pi} = 0 \iff  \pi = \frac{(\# \, \text{of successes})}{n}
+\]</span></p>
+<ul>
+<li>Estimator for <span class="math inline">\(\hat \pi\)</span> is as expected from probability perspective</li>
+<li>Note: common value of <span class="math inline">\(\pi\)</span> for all subjects</li>
+</ul>
+</div>
+<div id="maximum-likelihood-for-regression-models" class="slide section level1">
+<h1>Maximum likelihood for regression models</h1>
+<ul>
+<li>When we have a full logistic regression model with covariates, there is no analytical solution to the likelihood equations.</li>
+<li>However there is a numerical root finder that is specially tailored to the structure of logistic (and all GLM) models: the <code>Newton-Raphson</code> method (<span class="citation">[see @2795]</span>).</li>
+</ul>
+</div>
+<div id="workbook-exploring-the-binomial-density" class="slide section level1">
+<h1>Workbook: Exploring the binomial density</h1>
+<ul>
+<li>Biomial density</li>
+<li>Likelihood function</li>
+</ul>
+</div>
+<div id="binary-data-example" class="slide section level1">
+<h1>Binary Data Example</h1>
+<ul>
+<li><p>This data set is comprised of a two-week study (protocol A) and a six-week study (protocol B)</p></li>
+<li><p>The data set includes patients of type <code>PT2</code>, a patient type that (let’s say) has not been studied at higher dose levels.</p></li>
+<li><p>Suppose further that a dose level under consideration for a phase 2 study in <code>PT2</code> would have typical value exposures near 2.5 ug/mL.</p></li>
+<li><p>The objective of <em>this</em> anlaysis will be to determine whether the AE rate will be “sufficiently low” in <code>PT2</code> at that exposure.</p></li>
+</ul>
+</div>
+<div id="data-snapshot" class="slide section level1">
+<h1>Data snapshot</h1>
+
+<pre><code>. # A tibble: 5 x 6
+.   STUDYID USUBJID PBO   CAVGSS  AE01 AETOXGR
+.   &lt;fct&gt;   &lt;fct&gt;   &lt;chr&gt; &lt;chr&gt;  &lt;int&gt; &lt;fct&gt;  
+. 1 PROTA   UID-001 PBO   0.00       0 Mild   
+. 2 PROTA   UID-002 PBO   0.00       0 Mild   
+. 3 PROTA   UID-003 PBO   0.00       0 Mild   
+. 4 PROTA   UID-004 TRT   1.98       0 Mild   
+. 5 PROTA   UID-005 TRT   1.37       0 Mild</code></pre>
+<ul>
+<li><code>STUDYID</code>: protocol</li>
+<li><code>USUBJID</code>: unique subject id</li>
+<li><code>AE01</code>: adverse event of grade 3 or higher</li>
+</ul>
+</div>
+<div id="visualizing-relationships" class="slide section level1">
+<h1>Visualizing relationships</h1>
+<p>Objective:</p>
+<blockquote>
+<p>Plot the probability of a grade 3 or higher AE vs predictor</p>
+</blockquote>
+<p>Types of plots will depend on the predictor variable:</p>
+<ul>
+<li>Categorical variable</li>
+<li>Continuous variable</li>
+</ul>
+</div>
+<div id="relationship-with-categorical-variable" class="slide section level1">
+<h1>Relationship with categorical variable</h1>
+<ul>
+<li>x-axis: Categorical variable (<code>STUDYID</code>)</li>
+<li>y-axis: Probability of Grade 3+ AE (<code>AE01</code>)</li>
+<li>geom: <code>bar</code>, <code>point</code></li>
+</ul>
+</div>
+<div id="probability-vs-categorical-variable" class="slide section level1 sourceCode.r.small">
+<h1>Probability vs categorical variable</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">aedat <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">  </span><span class="kw">group_by</span>(STUDYID) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">x =</span> <span class="kw">sum</span>(AE01), <span class="dt">n=</span><span class="kw">n</span>()) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">phat =</span> x <span class="op">/</span><span class="st"> </span>n,</a>
+<a class="sourceLine" id="cb2-5" data-line-number="5">         <span class="dt">lcl =</span> <span class="kw">binom.confint</span>(x,n,<span class="dt">methods =</span> <span class="st">&quot;wilson&quot;</span>)<span class="op">$</span>lower,</a>
+<a class="sourceLine" id="cb2-6" data-line-number="6">         <span class="dt">ucl =</span> <span class="kw">binom.confint</span>(x,n,<span class="dt">methods =</span> <span class="st">&quot;wilson&quot;</span>)<span class="op">$</span>upper) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>STUDYID, <span class="dt">y=</span>phat)) <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="st">  </span><span class="kw">geom_col</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="st">  </span><span class="kw">geom_errorbar</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>lcl, <span class="dt">ymax=</span>ucl), </a>
+<a class="sourceLine" id="cb2-10" data-line-number="10">                <span class="dt">width =</span> <span class="fl">0.2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Study&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
+<p>Note: <code>binom.confint</code> is in the <code>binom</code> package</p>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-3-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="alternative-to-bar-plot" class="slide section level1 sourceCode.r.small">
+<h1>Alternative to bar plot</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">aedat <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="st">  </span><span class="kw">group_by</span>(STUDYID) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-3" data-line-number="3"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">x =</span> <span class="kw">sum</span>(AE01), <span class="dt">n=</span><span class="kw">n</span>()) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-4" data-line-number="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">phat =</span> x <span class="op">/</span><span class="st"> </span>n,</a>
+<a class="sourceLine" id="cb3-5" data-line-number="5">         <span class="dt">lcl =</span> <span class="kw">binom.confint</span>(x,n,<span class="dt">methods =</span> <span class="st">&quot;wilson&quot;</span>)<span class="op">$</span>lower,</a>
+<a class="sourceLine" id="cb3-6" data-line-number="6">         <span class="dt">ucl =</span> <span class="kw">binom.confint</span>(x,n,<span class="dt">methods =</span> <span class="st">&quot;wilson&quot;</span>)<span class="op">$</span>upper) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-7" data-line-number="7"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>STUDYID, <span class="dt">y=</span>phat)) <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-8" data-line-number="8"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-9" data-line-number="9"><span class="st">  </span><span class="kw">geom_errorbar</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>lcl, <span class="dt">ymax=</span>ucl), </a>
+<a class="sourceLine" id="cb3-10" data-line-number="10">                <span class="dt">width =</span> <span class="fl">0.2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-11" data-line-number="11"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Study&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
+<p>Note: <code>binom.confint</code> is in the <code>binom</code> package</p>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-4-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="probability-vs-a-continuous-variable" class="slide section level1 sourceCode.r.small">
+<h1>Probability vs a continuous variable</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">ggplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="st">  </span><span class="co"># Add tick marks at top and bottom</span></a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="st">  </span><span class="kw">geom_rug</span>(<span class="dt">data =</span> <span class="kw">filter</span>(dat_eda, AE01 <span class="op">==</span><span class="st"> </span><span class="dv">0</span>),</a>
+<a class="sourceLine" id="cb4-4" data-line-number="4">           <span class="kw">aes</span>(<span class="dt">x =</span> CAVGSS), <span class="dt">sides =</span> <span class="st">&quot;b&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-5" data-line-number="5"><span class="st">  </span><span class="kw">geom_rug</span>(<span class="dt">data =</span> <span class="kw">filter</span>(dat_eda, AE01 <span class="op">==</span><span class="st"> </span><span class="dv">1</span>),</a>
+<a class="sourceLine" id="cb4-6" data-line-number="6">           <span class="kw">aes</span>(<span class="dt">x =</span> CAVGSS), <span class="dt">sides =</span> <span class="st">&quot;t&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-7" data-line-number="7"><span class="st">  </span><span class="co"># Add snooth mean function</span></a>
+<a class="sourceLine" id="cb4-8" data-line-number="8"><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">data =</span> dat_eda,</a>
+<a class="sourceLine" id="cb4-9" data-line-number="9">              <span class="kw">aes</span>(<span class="dt">x =</span> CAVGSS, <span class="dt">y =</span> AE01),</a>
+<a class="sourceLine" id="cb4-10" data-line-number="10">              <span class="dt">method=</span><span class="st">&#39;gam&#39;</span>, <span class="dt">formula=</span>y<span class="op">~</span><span class="kw">s</span>(x),</a>
+<a class="sourceLine" id="cb4-11" data-line-number="11">              <span class="dt">method.args =</span> <span class="kw">list</span>(<span class="dt">family=</span><span class="st">&#39;binomial&#39;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-12" data-line-number="12"><span class="st">  </span><span class="co"># Add points and CIs</span></a>
+<a class="sourceLine" id="cb4-13" data-line-number="13"><span class="st">  </span><span class="kw">stat_summary</span>(</a>
+<a class="sourceLine" id="cb4-14" data-line-number="14">    <span class="dt">data =</span> dat_eda,</a>
+<a class="sourceLine" id="cb4-15" data-line-number="15">    <span class="kw">aes</span>(<span class="dt">x =</span> MedConc, <span class="dt">y =</span> AE01, <span class="dt">group =</span> MedConc),</a>
+<a class="sourceLine" id="cb4-16" data-line-number="16">    <span class="dt">fun =</span> <span class="cf">function</span>(y) <span class="kw">sum</span>(y) <span class="op">/</span><span class="st"> </span><span class="kw">length</span>(y),</a>
+<a class="sourceLine" id="cb4-17" data-line-number="17">    <span class="dt">geom =</span> <span class="st">&quot;point&quot;</span></a>
+<a class="sourceLine" id="cb4-18" data-line-number="18">  ) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-19" data-line-number="19"><span class="st">  </span><span class="kw">stat_summary</span>(</a>
+<a class="sourceLine" id="cb4-20" data-line-number="20">    <span class="dt">data =</span> dat_eda,</a>
+<a class="sourceLine" id="cb4-21" data-line-number="21">    <span class="kw">aes</span>(<span class="dt">x =</span> MedConc, <span class="dt">y =</span> AE01),   </a>
+<a class="sourceLine" id="cb4-22" data-line-number="22">    <span class="co"># Wilson CI recommended by Agresti and Coull (2000) review paper</span></a>
+<a class="sourceLine" id="cb4-23" data-line-number="23">    <span class="dt">fun.min =</span> <span class="cf">function</span>(y) {</a>
+<a class="sourceLine" id="cb4-24" data-line-number="24">      <span class="kw">binom.confint</span>(<span class="kw">sum</span>(y),<span class="kw">length</span>(y),</a>
+<a class="sourceLine" id="cb4-25" data-line-number="25">                    <span class="dt">methods =</span> <span class="st">&quot;wilson&quot;</span>)<span class="op">$</span>lower</a>
+<a class="sourceLine" id="cb4-26" data-line-number="26">      },</a>
+<a class="sourceLine" id="cb4-27" data-line-number="27">    <span class="dt">fun.max =</span> <span class="cf">function</span>(y) {</a>
+<a class="sourceLine" id="cb4-28" data-line-number="28">      <span class="kw">binom.confint</span>(<span class="kw">sum</span>(y), <span class="kw">length</span>(y),</a>
+<a class="sourceLine" id="cb4-29" data-line-number="29">                    <span class="dt">methods =</span> <span class="st">&quot;wilson&quot;</span>)<span class="op">$</span>upper</a>
+<a class="sourceLine" id="cb4-30" data-line-number="30">      },</a>
+<a class="sourceLine" id="cb4-31" data-line-number="31">    <span class="dt">geom =</span> <span class="st">&quot;errorbar&quot;</span></a>
+<a class="sourceLine" id="cb4-32" data-line-number="32">  ) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-33" data-line-number="33"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-6-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="plotting-tips" class="slide section level1">
+<h1>Plotting tips</h1>
+<ul>
+<li>Break exposure into quartiles, compare incidence rate across quartiles
+<ul>
+<li>Textbook variance formula <span class="math inline">\(\frac{p(1-p)}{n}\)</span> isn’t the best choice with small sample sizes and probabilities near zero or one</li>
+<li>Recommendation: Use Wilson interval (implemented in <code>binom.confint</code>)</li>
+</ul></li>
+<li>Rug plots (<code>geom_rug</code>)</li>
+<li>Stratify by other covariates of interest</li>
+</ul>
+</div>
+<div id="workbook-visualizing-binary-data" class="slide section level1">
+<h1>Workbook: Visualizing binary data</h1>
+</div>
+<div id="measures-of-effect-odds-ratio" class="slide section level1">
+<h1>Measures of effect: odds ratio</h1>
+<ul>
+<li><code>Conditional probability</code> of an event, conditional on treatment “1”.</li>
+</ul>
+<p><span class="math display">\[ P(Y=1 \, | \, T = 1) \]</span></p>
+<ul>
+<li><code>Odds</code> of an event, conditional on treatment “1”:</li>
+</ul>
+<p><span class="math display">\[ \frac{P(Y=1 \, | \, T = 1)}{P(Y=0 \, | \, T = 1)} = \frac{P(Y=1 \, | \, T = 1)}{1 - P(Y=1 \, | \, T = 1)}\]</span></p>
+<ul>
+<li><code>Odds ratio</code> of an event, for treatment “1” versus treatment “0”:</li>
+</ul>
+<p><span class="math display">\[ \frac{\left.P(Y=1 \, | \, T = 1)\, \right/ P(Y=0 \, | \, T = 1)}{\left.P(Y=1 \, | \, T = 0) \, \right/ P(Y=0 \, | \, T = 0) }\]</span></p>
+</div>
+<div id="measures-of-effect-relative-risk" class="slide section level1">
+<h1>Measures of effect: relative risk</h1>
+<p>Relative risk of an event, for treatment “1” versus treatment “0”:</p>
+<p><span class="math display">\[ \frac{P(Y=1 \, | \, T = 1)}{P(Y=1 \, | \, T = 0)}\]</span> Anecdotally, this is often the preferred / most interpretable way to quantify efficacy.</p>
+<p>NB: Odds ratio and relative risk are sometimes confused with each other. Note the difference.</p>
+</div>
+<div id="other-measures-of-effect-for-binary-data" class="slide section level1">
+<h1>Other measures of effect for binary data</h1>
+<p>Difference in probability of events, for treatment “1” versus treatment “0”:</p>
+<p><span class="math display">\[ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) \]</span> Often undesirable: do you want to treat the difference between 3% and 5% the same way that you treat the difference between 23% and 25% ?</p>
+</div>
+<div id="the-logit-transform" class="slide section level1">
+<h1>The logit transform</h1>
+<ul>
+<li>The logit, or “log odds” function</li>
+</ul>
+<p><span class="math display">\[\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)\]</span></p>
+<ul>
+<li>The standard logistic function (also called the “expit”) is the inverse of the logit:</li>
+</ul>
+<p><span class="math display">\[\begin{align*}
+p &amp;= \mathrm{expit}(x) \\[1em]
+  &amp; = \frac{1}{1+\exp(-x)} \\[1em]
+  &amp; = \frac{\exp(x)}{1 + \exp(x)}
+  \end{align*}\]</span></p>
+</div>
+<div id="other-link-functions" class="slide section level1">
+<h1>Other “link functions”</h1>
+<ul>
+<li>The <code>logit</code> function takes us from the unit interval to the full Real line:</li>
+</ul>
+<p><span class="math display">\[ (0, 1) \stackrel{\mathrm{expit}}{\longrightarrow} \mathbb{R} \]</span></p>
+<ul>
+<li>An alternative “link” function is the <code>probit</code> :</li>
+</ul>
+<p><span class="math display">\[ \mathrm{probit}(p) = \Phi^{-1}(p)\]</span> where <span class="math inline">\(\Phi\)</span> is the Normal Cumulative Density Function (CDF):</p>
+<p><span class="math display">\[ \Phi(x) = P(\mbox{Std. Normal Variate} &lt; x)  \]</span></p>
+<ul>
+<li>An alternative “link” function is the <code>complementary log-log</code> :
+<ul>
+<li><span class="math inline">\(\text{cloglog}(p) = \log( - \log(1 - p)\)</span></li>
+<li>Used much less frequently than logit or probit</li>
+<li>Its an asymmetrical link function</li>
+<li>Shows up when transforming other models to binary outcomes, e.g. Poisson model to binary model</li>
+</ul></li>
+</ul>
+</div>
+<div id="more-about-link-functions" class="slide section level1">
+<h1>More About Link Functions</h1>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-7-1.png" width="80%" style="display: block; margin: auto;" /></p>
+</div>
+<div id="workbook-exploring-odds-ratios-relative-risks-and-the-logit-transformation" class="slide section level1">
+<h1>Workbook: Exploring odds ratios, relative risks, and the logit transformation</h1>
+</div>
+<div id="a-logit-link-glm" class="slide section level1">
+<h1>A logit-link GLM</h1>
+<p>A GLM with a logit link and Bernoulli (or more generally, Binomial) distribution is referred to as a <red>logistic regression</red>.</p>
+<p>A logistic regression with exposure (<span class="math inline">\(C_i\)</span>) as the sole predictor would be expressed as:</p>
+<p><span class="math display">\[ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \pi_i = \mathrm{expit}(\mu + \beta C_i) \,\, ; \,\,i = 1,\ldots, n\]</span></p>
+<p>Or equivalently:</p>
+<p><span class="math display">\[ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C_i \,\, ; \,\,i = 1,\ldots, n\]</span></p>
+</div>
+<div id="logistic-regression-is-a-type-of-glm" class="slide section level1">
+<h1>Logistic regression is a type of GLM</h1>
+<ul>
+<li><p>The <code>generalized</code> in <strong><em>generalized linear model</em></strong> refers to the non-Normal residuals (in this case, Bernoulli residuals).</p></li>
+<li><p>The <code>linear</code> in <strong><em>generalized linear model</em></strong> refers to the fact that the right hand side of, e.g.</p></li>
+</ul>
+<p><span class="math display">\[ \mathrm{logit}(\pi_i) = \mu + \beta C_i \]</span> is <red>linear in the parameters</red> (i.e. it is a linear function of <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\beta\)</span>).</p>
+</div>
+<div id="quiz" class="slide section level1">
+<h1>Quiz</h1>
+<p>Which (if any) of the following is linear in the parameters?</p>
+<p><span class="math display">\[\mu + \beta \log(C)  \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta}{C} \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta_1 C}{(\beta_2 + C)}\]</span></p>
+</div>
+<div id="anatomy-of-a-glm" class="slide section level1">
+<h1>Anatomy of a GLM</h1>
+<p>Taking the following model as an example:</p>
+<p><span class="math display">\[ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n\]</span></p>
+<p>Standard terminology to refer to the model components is:</p>
+<ul>
+<li><grn><span class="math inline">\(Y_i \sim \mathrm{Ber}(\pi_i)\)</span></grn> is the <red>distribution</red> component of the model. (Sometimes also called the <code>random</code> component of the model, but we avoid that terminology is it becomes ambiguous in a <code>GLMM</code> context that includes random effects).</li>
+<li>The <grn>logit</grn> transformation is the <red>link</red> function.</li>
+<li><grn><span class="math inline">\(\mu + \beta C^*_i\)</span></grn> is the <red>linear predictor</red>.</li>
+</ul>
+</div>
+<div id="key-assumptions-for-logistic-regression" class="slide section level1">
+<h1>Key Assumptions for Logistic Regression</h1>
+<ul>
+<li>Residual distribution assumptions:
+<ul>
+<li>Observations are independent (conditional on covariates and exposure).</li>
+<li>Observations associated with identical covariate values are identically distributed.</li>
+<li>For Bernoulli residuals, the only remaining distributional “assumption” is that the data are binary (pretty easy to check!).</li>
+</ul></li>
+<li>Linear predictor:
+<ul>
+<li>All relevant predictors are in the model and suitably transformed.</li>
+<li>Interaction terms included where necessary.</li>
+<li>“Plays nicely” with link function.</li>
+</ul></li>
+<li>Missing data assumptions.</li>
+</ul>
+</div>
+<div id="fitting-a-logistic-regression-in-r" class="slide section level1">
+<h1>Fitting a logistic regression in R</h1>
+<pre><code>mod01_glm &lt;- glm(AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
+                 data = aedat,
+                 family = binomial(link=&#39;logit&#39;))</code></pre>
+<ul>
+<li><red><code>AE01</code></red>: binary outcome variable</li>
+<li><red><code>CAVGSS + BWT + PTTYPE + SEXTXT</code></red>: linear predictor</li>
+<li><red><code>family = binomial(link='logit')</code></red>: distribution and link function.
+<ul>
+<li><code>logit</code> is the default link</li>
+<li>other link functions include <code>probit</code> and <code>cloglog</code></li>
+</ul></li>
+</ul>
+</div>
+<div id="general-r-model-syntax" class="slide section level1">
+<h1>General R model syntax</h1>
+<p>The right-hand side of the formula syntax:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="op">~</span><span class="st"> </span>CAVGSS <span class="op">+</span><span class="st"> </span>BWT <span class="op">+</span><span class="st"> </span>PTTYPE <span class="op">+</span><span class="st"> </span>SEXTXT</a></code></pre></div>
+<p>specifies that the linear predictor is</p>
+<p><span class="math display">\[ 
+\begin{eqnarray*}
+\beta_0 &amp; + &amp; \beta_\mathrm{C} \mathrm{C} + \beta_\mathrm{W} \mathrm{W} + \\
+&amp;&amp; \beta_\mathrm{PT1} \mathrm{I}_{\mathrm{PT}=\mathrm{PT1}} + 
+\beta_\mathrm{PT2} \mathrm{I}_{\mathrm{PT}=\mathrm{PT2}} + 
+\beta_\mathrm{M} \mathrm{I}_{\mathrm{SEX}=\mathrm{M}} 
+\end{eqnarray*}
+\]</span></p>
+<!-- NB: formula syntax gets interpreted differently in R depending on the type of model being fit. E.g. models are specified differently in `nls`, `nlme`, `gnlm`, to name a few.  -->
+</div>
+<div id="factor-variables-in-r-models" class="slide section level1">
+<h1>Factor variables in R models</h1>
+<ul>
+<li>Most modeling and plotting functions in R treat factor variables differently from numerical variables.</li>
+<li>For modeling functions, the first factor level is treated as the “reference level”.</li>
+<li>Choice of reference level determines the interpretation of the model intercept.</li>
+<li>As our field uses <em>another tool</em> that doesn’t allow character variables, you will probably end up with some categorical variables that have numerical values…
+<ul>
+<li>Remember to “factorize” your categorical variables!</li>
+<li><code>as.factor(SEX)</code> can even be used directly in model formula!</li>
+</ul></li>
+</ul>
+</div>
+<div id="output-of-fitted-model" class="slide section level1">
+<h1>Output of fitted model</h1>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="kw">summary</span>(mod01_glm)</a></code></pre></div>
+<pre><code>. 
+. Call:
+. glm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT, family = binomial(link = &quot;logit&quot;), 
+.     data = aedat)
+. 
+. Deviance Residuals: 
+.     Min       1Q   Median       3Q      Max  
+. -1.7355  -0.4204  -0.3190  -0.2171   2.8643  
+. 
+. Coefficients:
+.             Estimate Std. Error z value Pr(&gt;|z|)    
+. (Intercept) -7.23479    4.15562  -1.741   0.0817 .  
+. CAVGSS       0.78711    0.16434   4.790 1.67e-06 ***
+. BWT          0.04048    0.05792   0.699   0.4846    
+. PTTYPEPT1    1.32711    0.68083   1.949   0.0513 .  
+. PTTYPEPT2    0.81219    0.88587   0.917   0.3592    
+. SEXTXTMALE  -0.05737    0.83663  -0.069   0.9453    
+. ---
+. Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+. 
+. (Dispersion parameter for binomial family taken to be 1)
+. 
+.     Null deviance: 149.26  on 209  degrees of freedom
+. Residual deviance: 113.60  on 204  degrees of freedom
+. AIC: 125.6
+. 
+. Number of Fisher Scoring iterations: 6</code></pre>
+</div>
+<div id="interpreting-coefficients-in-logit-link-models-intercept" class="slide section level1">
+<h1>Interpreting coefficients in logit-link models: Intercept</h1>
+<ul>
+<li>The logistic or expit function can be applied to the intercept or linear predictor to transform it to a probability.
+<ul>
+<li><span class="math inline">\(\textit{expit}(\beta_0) = \frac{1}{1 + exp(-\beta_0)}\)</span></li>
+<li>The probability of an AE when all predictors are 0</li>
+</ul></li>
+</ul>
+</div>
+<div id="interpretation-of-effects-for-categorical-covariates" class="slide section level1">
+<h1>Interpretation of effects for categorical covariates</h1>
+<ul>
+<li>Let <span class="math inline">\(p_1\)</span> refer to probability of AE for a <code>PT1</code> patient and</li>
+<li>Let <span class="math inline">\(p_0\)</span> refer to probability of AE for <code>HV</code> with exactly the same exposure and covariate values.</li>
+<li>Then:</li>
+</ul>
+<p><span class="math display">\[ 
+\mathrm{logit}(p_{1}) - \mathrm{logit}(p_{0}) = \beta_{\mathrm{PT1}}
+\]</span> And since the logit function is the log-odds function, that implies:</p>
+<p><span class="math display">\[
+\frac{p_{1}/(1-p_{1})}{p_{0}/(1-p_0)} = \exp(\beta_{\mathrm{PT1}})
+\]</span> In other words, <span class="math inline">\(\exp(\beta_{\mathrm{PT1}})\)</span> is the odds ratio for the effect of being type <code>PT1</code> versus <code>HV</code>.</p>
+</div>
+<div id="interpretation-of-effects-for-continuous-covariates" class="slide section level1">
+<h1>Interpretation of effects for continuous covariates</h1>
+<ul>
+<li>For continuous covariates, the odds ratio adjustments are exponential “per unit”
+<ul>
+<li>For example, the coefficient for body weight is <span class="math inline">\(\beta_{WT}\)</span> = 0.0405</li>
+<li>So, a 10 kg difference in weight corresponds to an odds increase of exp(10 <span class="math inline">\(\times\)</span> 0.0405 ) = 1.50</li>
+</ul></li>
+<li>May be advantageous to scale exposure (e.g. divide by 1000) in order to avoid exponentiated coefficients like <span class="math inline">\(1.000123\)</span>, which might indicate a consequential effect despite being very close to 1
+<ul>
+<li>try <span class="math inline">\(1.000123^{1000}\)</span>.</li>
+</ul></li>
+</ul>
+</div>
+<div id="interpreting-covariate-effects-on-the-probability-scale" class="slide section level1">
+<h1>Interpreting covariate effects on the probability scale</h1>
+<ul>
+<li>A unit of improvement in <span class="math inline">\(x\)</span> means different things depending upon the reference <span class="math inline">\(x\)</span></li>
+<li>Largest change always occurs at the inflection point
+<ul>
+<li>The derivative of the logistic function is maximized at <span class="math inline">\(p=0.5\)</span> and is maximized by <span class="math inline">\(\beta/4\)</span></li>
+</ul></li>
+</ul>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-11-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="interpretation-of-covariate-effects-for-probit-link-models" class="slide section level1">
+<h1>Interpretation of covariate effects for probit-link models</h1>
+<ul>
+<li>You really can’t.</li>
+<li>That’s part of the reason for the popularity of logit-link models.</li>
+<li>How much does that really matter?
+<ul>
+<li>It’s certainly nice to have directly interpretable coefficients.</li>
+<li>But in many cases, the predictive inferences matter more than the direct inferences on parameters.</li>
+<li>Recommendation: choose link function based on what fits the data better, not based on mathematical convenience. Probit link handles models where tails are more “certain”</li>
+</ul></li>
+<li>Probit models also arise from a different modeling framework: a latent variable determined by covariates with random gaussian noise with a threshold for a “true” outcome</li>
+</ul>
+</div>
+<div id="aside-choice-of-exposure-metric" class="slide section level1">
+<h1>Aside: Choice of exposure metric</h1>
+<ul>
+<li>Observed vs <strong><red>model-predicted</red></strong></li>
+<li>Which summary measure?
+<ul>
+<li>Cmin, Cmax, Cavg, AUC, </li>
+<li>Depends on the endpoint and substantive knowledge</li>
+</ul></li>
+<li>What time horizon? Depends on the context 
+<ul>
+<li>When dose ‘holidays’ or reductions are rare
+<ul>
+<li>“Early” (e.g., cycle 1)</li>
+<li>Steady-state</li>
+</ul></li>
+<li>When dose holidays or reductions are common
+<ul>
+<li>Average to the end of the study</li>
+<li>Average up to the event (or end of study)</li>
+<li>I tend to avoid cumulative measures due to confounding with time</li>
+<li>Adds another layer of variability to exposures which should be modeled</li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<div id="workbook-fitting-a-logistic-regression-model" class="slide section level1">
+<h1>Workbook: Fitting a logistic regression model</h1>
+</div>
+<div id="model-diagnostics-and-comparison" class="slide section level1">
+<h1>Model diagnostics and comparison</h1>
+<ul>
+<li>We’ll look at two main types of diagnostics for assessing model fit
+<ul>
+<li>Residual-based</li>
+<li>Simulation-based</li>
+</ul></li>
+<li>Our main method for comparing models will be the quality of out-of-sample predictions</li>
+</ul>
+</div>
+<div id="residual-diagnostics" class="slide section level1">
+<h1>Residual Diagnostics</h1>
+<ul>
+<li>Common types of residuals:
+<ul>
+<li>“Response” residuals (the usual <code>DV-PRED</code>).</li>
+<li>Deviance residuals.</li>
+<li>Pearson residuals.</li>
+</ul></li>
+<li>For <strong>all</strong> of these, lower your expectations:
+<ul>
+<li>Plots usually look “chunky”.</li>
+<li>Natural consequence of binary data.</li>
+<li>Some sort of smoother needed to aid the eye.</li>
+</ul></li>
+</ul>
+</div>
+<div id="response-residuals" class="slide section level1">
+<h1>Response residuals</h1>
+<ul>
+<li>Easiest residuals to conceptualize.</li>
+<li>Not expected to be “homoscedastic” or even symmetric around the <span class="math inline">\(y=0\)</span> line.</li>
+<li>Still expected to be at the <span class="math inline">\(y=0\)</span> line “on average”.</li>
+<li>Advantage: departures from <span class="math inline">\(y=0\)</span> are on the probability scale.</li>
+<li>Don’t be fooled:
+<ul>
+<li>Consequential departures from the <span class="math inline">\(y=0\)</span> line can be obscured by the plotting scale.</li>
+<li>Response residuals range from -1 to 1.</li>
+<li>Plot appearance can depend on distribution of covariates apart from the model</li>
+</ul></li>
+</ul>
+</div>
+<div id="example-of-response-residuals" class="slide section level1">
+<h1>Example of response residuals</h1>
+<!-- TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid -->
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1">dat_plus &lt;-<span class="st"> </span>dat_mod</a>
+<a class="sourceLine" id="cb9-2" data-line-number="2">dat_plus<span class="op">$</span>res &lt;-<span class="st"> </span><span class="kw">residuals</span>(mod01_glm, <span class="dt">type =</span> <span class="st">&quot;response&quot;</span>)</a>
+<a class="sourceLine" id="cb9-3" data-line-number="3">dat_plus<span class="op">$</span>pred &lt;-<span class="st"> </span><span class="kw">fitted</span>(mod01_glm)</a>
+<a class="sourceLine" id="cb9-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb9-5" data-line-number="5"><span class="kw">ggplot</span>(dat_plus, <span class="kw">aes</span>(<span class="dt">x =</span> CAVGSS, <span class="dt">y =</span> res)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-6" data-line-number="6"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-7" data-line-number="7"><span class="st">  </span><span class="kw">geom_smooth</span>() <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Response residuals&#39;</span>)</a></code></pre></div>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-12-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="other-residuals-pearson-deviance" class="slide section level1">
+<h1>Other residuals (Pearson, Deviance)</h1>
+<ul>
+<li>Pearson residuals are like standardizing residuals in linear models</li>
+<li>Deviance residuals are the contributions to the log-likelihood of each data point</li>
+<li>Benefits:
+<ul>
+<li>More nearly symmetric and homoscedastic (if model is correct).</li>
+<li>Deviance residuals should be asymptotically normally distributed</li>
+</ul></li>
+<li>Suggestions:
+<ul>
+<li>Start with response residuals. You know what these mean.</li>
+<li>Compare with deviance residuals. If the deviance residual plots look better, take comfort.</li>
+<li>Don’t spend too much time trying to get any residual plots to look “good”. They won’t. Use them to suggest model refinements and then move on.</li>
+</ul></li>
+<li>The total residual deviance should be “close” to the residaul degrees of freedom</li>
+</ul>
+</div>
+<div id="example-of-deviance-residuals" class="slide section level1">
+<h1>Example of deviance residuals</h1>
+<!-- TO-DO add plot of residuals vs CAVGss from mod01 with smoother overlaid -->
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">dat_plus &lt;-<span class="st"> </span>dat_mod</a>
+<a class="sourceLine" id="cb10-2" data-line-number="2">dat_plus<span class="op">$</span>res &lt;-<span class="st"> </span><span class="kw">residuals</span>(mod01_glm, <span class="dt">type =</span> <span class="st">&quot;deviance&quot;</span>)</a>
+<a class="sourceLine" id="cb10-3" data-line-number="3">dat_plus<span class="op">$</span>pred &lt;-<span class="st"> </span><span class="kw">fitted</span>(mod01_glm)</a>
+<a class="sourceLine" id="cb10-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb10-5" data-line-number="5"><span class="kw">ggplot</span>(dat_plus, <span class="kw">aes</span>(<span class="dt">x =</span> CAVGSS, <span class="dt">y =</span> res)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-6" data-line-number="6"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb10-7" data-line-number="7"><span class="st">  </span><span class="kw">geom_smooth</span>() <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb10-8" data-line-number="8"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Deviance residuals&#39;</span>)</a></code></pre></div>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-13-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="simulation-based-diagnostics" class="slide section level1">
+<h1>Simulation-based Diagnostics</h1>
+<ul>
+<li>Quantile Residuals
+<ul>
+<li>Use model to simulate data and calculate quantile of observed values against simulated data</li>
+<li>Smooths out discrete residual values</li>
+<li>DHARMa Package in R makes this easy (<code>simulateResiduals</code>)</li>
+</ul></li>
+<li>Visual Predictive Checks (VPCs)
+<ul>
+<li>Recipe
+<ul>
+<li>Simulate many replicates of the DV using the estimated model and observed predictors</li>
+<li>Summarize each simulated replicate</li>
+<li>Plot distribution(s) of summary statistics</li>
+<li>Overlay observed values</li>
+</ul></li>
+<li>The choice of summary statistics is problem dependent</li>
+<li>A place to start is bucketing covariates and assessing overall trends</li>
+<li>Will see more examples in the next hands-on portion</li>
+</ul></li>
+</ul>
+</div>
+<div id="quantile-residuals" class="slide section level1">
+<h1>Quantile residuals</h1>
+<div class="columns">
+<div class="column" style="width:47.5%;">
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" data-line-number="1">dharma_resids =<span class="st"> </span><span class="kw">simulateResiduals</span>(mod01_glm,</a>
+<a class="sourceLine" id="cb11-2" data-line-number="2">                                  <span class="dt">n =</span> <span class="dv">1000</span>,</a>
+<a class="sourceLine" id="cb11-3" data-line-number="3">                                  <span class="dt">integerResponse =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb11-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb11-5" data-line-number="5"><span class="kw">plot</span>(dharma_resids)</a></code></pre></div>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-14-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div><div class="column" style="width:5%;">
+
+</div><div class="column" style="width:47.5%;">
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" data-line-number="1">aedat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">quantile_residual =</span> dharma_resids<span class="op">$</span>scaledResiduals) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-3" data-line-number="3"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>BWT, <span class="dt">y=</span>quantile_residual)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb12-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb12-5" data-line-number="5"><span class="st">  </span><span class="kw">geom_smooth</span>() <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-6" data-line-number="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y=</span><span class="st">&#39;Quantile residuals&#39;</span>, <span class="dt">x=</span><span class="st">&#39;Body Weight (kg)&#39;</span>)</a></code></pre></div>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-15-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="simulate-data-for-a-vpc" class="slide section level1">
+<h1>Simulate data for a VPC</h1>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" data-line-number="1"><span class="co"># Simulate using the simulate function in stats</span></a>
+<a class="sourceLine" id="cb13-2" data-line-number="2">aedat_pp =<span class="st"> </span><span class="kw">bind_cols</span>(aedat,</a>
+<a class="sourceLine" id="cb13-3" data-line-number="3">                     stats<span class="op">::</span><span class="kw">simulate</span>(mod01_glm, <span class="dt">nsim=</span><span class="dv">500</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb13-4" data-line-number="4"><span class="st">  </span><span class="kw">pivot_longer</span>(<span class="dt">cols=</span>sim_<span class="dv">1</span><span class="op">:</span>sim_<span class="dv">500</span>)</a>
+<a class="sourceLine" id="cb13-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb13-6" data-line-number="6">aedat_pp <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb13-7" data-line-number="7"><span class="st">  </span><span class="kw">select</span>(USUBJID, PTTYPE, AE01, Quartile, name, value) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb13-8" data-line-number="8"><span class="st">  </span><span class="kw">slice_tail</span>(<span class="dt">n=</span><span class="dv">4</span>)</a></code></pre></div>
+<pre><code>. # A tibble: 4 x 6
+.   USUBJID PTTYPE  AE01 Quartile name    value
+.   &lt;fct&gt;   &lt;fct&gt;  &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;   &lt;dbl&gt;
+. 1 UID-179 PT1        0 Q3       sim_497     0
+. 2 UID-179 PT1        0 Q3       sim_498     0
+. 3 UID-179 PT1        0 Q3       sim_499     1
+. 4 UID-179 PT1        0 Q3       sim_500     0</code></pre>
+</div>
+<div id="generate-vpc-for-categorical-predictor" class="slide section level1">
+<h1>Generate VPC for categorical predictor</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" data-line-number="1"><span class="co"># Observed data summary</span></a>
+<a class="sourceLine" id="cb15-2" data-line-number="2">obs_summary &lt;-<span class="st"> </span>aedat <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-3" data-line-number="3"><span class="st">  </span><span class="kw">group_by</span>(Quartile) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-4" data-line-number="4"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">phat_obs =</span> <span class="kw">mean</span>(AE01))</a>
+<a class="sourceLine" id="cb15-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb15-6" data-line-number="6"><span class="co">#Simulated data summary</span></a>
+<a class="sourceLine" id="cb15-7" data-line-number="7">sim_summary &lt;-<span class="st"> </span>aedat_pp <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-8" data-line-number="8"><span class="st">  </span><span class="kw">group_by</span>(name,Quartile) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-9" data-line-number="9"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">phat_sim =</span> <span class="kw">mean</span>(value))</a>
+<a class="sourceLine" id="cb15-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb15-11" data-line-number="11"><span class="co"># VPC</span></a>
+<a class="sourceLine" id="cb15-12" data-line-number="12">sim_summary <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb15-13" data-line-number="13"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>Quartile, <span class="dt">y=</span>phat_sim)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-14" data-line-number="14"><span class="st">  </span><span class="kw">geom_violin</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-15" data-line-number="15"><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">data=</span>obs_summary, <span class="kw">aes</span>(<span class="dt">y=</span>phat_obs), <span class="dt">col=</span><span class="st">&#39;red&#39;</span>,<span class="dt">shape=</span><span class="dv">3</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-16" data-line-number="16"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Proportion with AE&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb15-17" data-line-number="17"><span class="st">  </span><span class="kw">coord_flip</span>()</a></code></pre></div>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-17-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="vpc-for-continuous-variable-define-summary-statistic" class="slide section level1">
+<h1>VPC for continuous variable: define summary statistic</h1>
+<ul>
+<li>Fit generalized additive model (smoother) to each simulated dataset</li>
+<li>Predict at a fixed grid of values (0 to 95<span class="math inline">\(^{th}\)</span> percentile)</li>
+</ul>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">summary_function &lt;-<span class="st"> </span><span class="cf">function</span>(.data, .x_name, <span class="dt">.y_name=</span><span class="st">&#39;value&#39;</span>) {</a>
+<a class="sourceLine" id="cb16-2" data-line-number="2">  .data &lt;-<span class="st"> </span>.data <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rename</span>(<span class="st">&#39;xvar&#39;</span> =<span class="st"> </span>.x_name, <span class="st">&#39;yvar&#39;</span>=.y_name)</a>
+<a class="sourceLine" id="cb16-3" data-line-number="3">  x_grid &lt;-<span class="st"> </span><span class="kw">with</span>(.data, <span class="kw">seq</span>(<span class="dt">from =</span> <span class="kw">min</span>(xvar),</a>
+<a class="sourceLine" id="cb16-4" data-line-number="4">                           <span class="dt">to =</span> <span class="kw">quantile</span>(xvar,<span class="dt">probs =</span> <span class="fl">0.95</span>), </a>
+<a class="sourceLine" id="cb16-5" data-line-number="5">                           <span class="dt">length =</span> <span class="dv">100</span>))</a>
+<a class="sourceLine" id="cb16-6" data-line-number="6">  fit &lt;-<span class="st"> </span><span class="kw">gam</span>(yvar <span class="op">~</span><span class="st"> </span><span class="kw">s</span>(xvar), <span class="dt">family=</span><span class="kw">binomial</span>(<span class="dt">link=</span><span class="st">&#39;logit&#39;</span>), <span class="dt">data=</span>.data)</a>
+<a class="sourceLine" id="cb16-7" data-line-number="7">  predictions &lt;-<span class="st"> </span><span class="kw">predict</span>(fit, <span class="dt">newdata =</span> <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid), <span class="dt">type=</span><span class="st">&#39;response&#39;</span>)</a>
+<a class="sourceLine" id="cb16-8" data-line-number="8">  <span class="kw">return</span>( <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid, <span class="dt">prediction =</span> predictions))</a>
+<a class="sourceLine" id="cb16-9" data-line-number="9">}</a></code></pre></div>
+</div>
+<div id="compute-summary-statistics-for-observed-data" class="slide section level1">
+<h1>Compute summary statistics for observed data</h1>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" data-line-number="1">obs_summary &lt;-<span class="st"> </span><span class="kw">summary_function</span>(aedat, <span class="dt">.x_name =</span> <span class="st">&#39;CAVGSS&#39;</span>, <span class="dt">.y_name=</span><span class="st">&#39;AE01&#39;</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb17-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">type=</span><span class="st">&#39;Observed&#39;</span>)</a>
+<a class="sourceLine" id="cb17-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb17-4" data-line-number="4"><span class="kw">head</span>(obs_summary)</a></code></pre></div>
+<pre><code>. # A tibble: 6 x 3
+.     xvar prediction type    
+.    &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;   
+. 1 0          0.0285 Observed
+. 2 0.0367     0.0295 Observed
+. 3 0.0734     0.0305 Observed
+. 4 0.110      0.0316 Observed
+. 5 0.147      0.0327 Observed
+. 6 0.184      0.0338 Observed</code></pre>
+</div>
+<div id="compute-summary-on-each-simulated-study" class="slide section level1">
+<h1>Compute summary on each simulated study</h1>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" data-line-number="1">sim_summary &lt;-<span class="st"> </span>aedat_pp <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-2" data-line-number="2"><span class="st">  </span><span class="co"># Nest everying except the simulation name</span></a>
+<a class="sourceLine" id="cb19-3" data-line-number="3"><span class="st">  </span><span class="kw">nest</span>(<span class="dt">cols=</span><span class="op">-</span>name) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-4" data-line-number="4"><span class="st">  </span><span class="co"># Use 200 sims for demonstration</span></a>
+<a class="sourceLine" id="cb19-5" data-line-number="5"><span class="st">  </span><span class="kw">slice</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">200</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-6" data-line-number="6"><span class="st">  </span><span class="co"># Compute summary stats for each simulated dataset</span></a>
+<a class="sourceLine" id="cb19-7" data-line-number="7"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">predictions =</span> <span class="kw">map</span>(cols, <span class="op">~</span><span class="kw">summary_function</span>(.x, <span class="dt">.x_name=</span><span class="st">&#39;CAVGSS&#39;</span>))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-8" data-line-number="8"><span class="st">  </span><span class="kw">select</span>(name,predictions) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-9" data-line-number="9"><span class="st">  </span><span class="kw">unnest</span>(<span class="dt">cols=</span>predictions) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-10" data-line-number="10"><span class="st">  </span><span class="co"># Summarise across simulated data sets</span></a>
+<a class="sourceLine" id="cb19-11" data-line-number="11"><span class="st">  </span><span class="kw">group_by</span>(xvar) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-12" data-line-number="12"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">qlo =</span> <span class="kw">quantile</span>(prediction, <span class="dt">probs =</span> <span class="fl">0.05</span>),</a>
+<a class="sourceLine" id="cb19-13" data-line-number="13">            <span class="dt">qhi =</span> <span class="kw">quantile</span>(prediction, <span class="dt">probs =</span> <span class="fl">0.95</span>),</a>
+<a class="sourceLine" id="cb19-14" data-line-number="14">            <span class="dt">prediction=</span><span class="kw">median</span>(prediction)</a>
+<a class="sourceLine" id="cb19-15" data-line-number="15">            ) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-16" data-line-number="16"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">type =</span> <span class="st">&#39;Simulated&#39;</span>)</a></code></pre></div>
+</div>
+<div id="plot-vpc" class="slide section level1">
+<h1>Plot VPC</h1>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" data-line-number="1">sim_summary <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">bind_rows</span>(obs_summary) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb20-2" data-line-number="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>xvar, <span class="dt">y=</span>prediction)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-3" data-line-number="3"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">col=</span>type, <span class="dt">group=</span>type)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_ribbon</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>qlo, <span class="dt">ymax=</span>qhi, <span class="dt">fill=</span>type), <span class="dt">alpha=</span><span class="fl">0.2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-5" data-line-number="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-21-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="model-comparison" class="slide section level1">
+<h1>Model Comparison</h1>
+<ul>
+<li>Likelihood and information criteria
+<ul>
+<li>Likelihood (or -2 log-likelihood) measures <red>in-sample</red> model fit</li>
+<li>Cross-validation to approximmate <red>out-of-sample</red> deviance</li>
+<li>IC approximate <red>out-of-sample</red> deviance
+<ul>
+<li>AIC = -2<em>Log-likelihood + 2</em>k</li>
+<li>BIC = -2<em>Log-likelihood + log(N)</em>k</li>
+<li>Lower is better</li>
+</ul></li>
+</ul></li>
+<li>Classification accuracy
+<ul>
+<li>Classification accuracy scores (e.g. sensitivity, specificity, Kappa)</li>
+<li>Receiver operating characteristic curve (ROC) and its AUC</li>
+</ul></li>
+</ul>
+</div>
+<div id="workbook-model-evaluation-and-comparison" class="slide section level1">
+<h1>Workbook: Model evaluation and comparison</h1>
+</div>
+<div id="what-we-havent-covered" class="slide section level1">
+<h1>What we haven’t covered</h1>
+<ul>
+<li>Interactions
+<ul>
+<li>Does the exposure-response relationship depend on anothe covariate?</li>
+<li>Aka, effect modification</li>
+</ul></li>
+<li>Non-linear effects
+<ul>
+<li>Parametric (e.g., Emax) models for binary data not well served by R</li>
+<li>Semi-parametric models (e.g., generalized additive models) are using the <code>mgcv</code> package</li>
+</ul></li>
+<li><p>Forest plots for covariate effects</p></li>
+<li><p>Clinical trial simulation</p></li>
+</ul>
+</div>
+<div id="key-learning-objectives-1" class="slide section level1">
+<h1>Key learning objectives</h1>
+<p>At the end of today’s session, I hope you will know:</p>
+<ul>
+<li>How to make effective exploratory analysis plots for binary data
+<ul>
+<li>We’ve seen plots for categorical and continuous predictors</li>
+</ul></li>
+<li><p>The basic concepts of maximum likelihood estimation for binary data models</p></li>
+<li>How to fit and evaluate binary data models
+<ul>
+<li>Using <code>glm</code> to fit models</li>
+<li>Using residuals and VPCs to evaluate models</li>
+</ul></li>
+<li>How to interpret model terms
+<ul>
+<li>Parameters tell us about odds ratios</li>
+</ul></li>
+</ul>
+</div>
+<div id="break" class="slide section level1">
+<h1>Break</h1>
+
+<p>Next up: Bayesain analysis of binary data</p>
+</div>
+<div id="references" class="slide section level1">
+<h1>References</h1>
+</div>
+
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "LogisticRegression_files/mathjax-local/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+</body>
+</html>
