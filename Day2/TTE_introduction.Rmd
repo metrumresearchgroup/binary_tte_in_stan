@@ -83,36 +83,39 @@ dat_use <-
     - time to study discontinuation
     - duration of hospital visit
 
+<!-- # Three essential components -->
+
+<!--  - Well-defined event -->
+<!--  - Clear time origin -->
+<!--  - Defined time scale -->
+
+<!-- :::: {style="padding: 0.5em; -->
+<!--   background: LightGray; -->
+<!--   color: black; -->
+<!--   border: 2px black; -->
+<!--   border-radius: 5px;"} -->
+<!-- ::: {.center} -->
+<!-- **Quiz** -->
+<!-- ::: -->
+
+<!-- What might be an event definition and time origin for _time to disease worsening_ in a clinical trial? -->
+<!-- :::: -->
+
+
 # Three essential components
 
  - Well-defined event
  - Clear time origin
  - Defined time scale
  
-:::: {style="padding: 0.5em;
-  background: LightGray;
-  color: black;
-  border: 2px black;
-  border-radius: 5px;"}
-::: {.center}
-**Quiz**
-:::
+:::{.notebox}
 
-What might be an event definition and time origin for _time to disease worsening_ in a clinical trial?
+::::{.center}
+**Quiz**
 ::::
 
-
-# Three essential components
-
- - Well-defined event
- - Clear time origin
- - Defined time scale
- 
-<div class="notebox">
-**Quiz**
-
 What might be an event definition and time origin for _time to disease worsening_ in a clinical trial?
-</div>
+:::
 
 
 # What makes TTE data different?
@@ -120,17 +123,17 @@ What might be an event definition and time origin for _time to disease worsening
 - For some subjects, we may not observe an event
    - The time to event is **censored**
 
-- Show an example of enrollment into a trial vs analysis time and end-of-study censoring
+- <red>Show an example of enrollment into a trial vs analysis time and end-of-study censoring</red>
 
 
 # Types of censoring
 
 - Right censoring
-  - We know the event didn't happen up to time $s$ (i.e., we know $T > s$)
+  - We know the event did not happen prior to time $b$ (i.e., we know $T > b$)
 - Left censoring
   - We know the event happened before time $a$ (i.e., we know $T < a$)
 - Interval censoring
-  - We know the event happened between times $a$ and $b$ but not the exact time 
+  - We know the event happened between times $a$ and $b$ but not the exact time (i.e, $a < T < b$) 
 
 - In clinical trials, we most often deal with right and interval censoring
   
@@ -141,9 +144,12 @@ What might be an event definition and time origin for _time to disease worsening
    * $T$ = time to event of interest
    * $C$ = time to censoring
 
-* With right censoring, we observe $T^* = \text{min}(T,C)$
+* With right censoring, we observe 
+    * $T^* = \text{min}(T,C)$
+    * $\delta = I(T \leq C)$
 
-* Remember: we are trying to estimate the distribution of T, but we observe T*
+* We are trying to estimate the distribution of T, but we observe T*
+
   * We'll return to this when discussing model diagnostics
 
 * Typical to assume that $T$ and $C$ are independent
@@ -151,23 +157,25 @@ What might be an event definition and time origin for _time to disease worsening
 
 # How does censoring introduce complexity?
 
-- If we observed even times for all subjects, we could use 'standard' methods
+- If we observed event times for all subjects, we could use 'standard' methods
 
 - Hard to estimate probability density function when we don't see all events happening
   - A type of missing data problem
 
-- Working with the **hazard function** alleviates some of the problems
+- Working with the <red>hazard function</red> alleviates some of the problems
 
 - Hazard function = instantaneous event rate, conditional on event happening on or after time $t$
-  - $h(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t |  T \geq t )$
+  - $h(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t ~|~  T \geq t )$
   - "conditional on event happening on or after time $t$" is what helps
 
 # Terminology
 
 - Cumulative hazard = total hazard accumulated to time $t$
   - $H(t) = \int_0^t h(s) ds$
+<br>
 - Probability density function = instantaneous event risk (aka *density*)
   - $f(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t)$
+<br>
 - Survival function = probability of an event happening after time $t$
   - $S(t) = P(T > t)$
 
@@ -189,7 +197,7 @@ f(t) &= h(t) S(t)
 \end{align*}
 $$
 
-- importance of survival function
+<!-- - importance of survival function -->
 - When estimating S(t), we (almost) always assume censoring is independent of event time
 
 # Workbook
@@ -200,13 +208,12 @@ Let's look at the relationship between the hazard, cumulative hazard, density, a
 #  Non-parametric estimation of survival, cumulative hazard and hazard functions
 
 * We'll start with non-parametric estimates of $S(t)$ and $H(t)$
-
-* The most commonly used estimator of $S(t)$ is the `Kaplan-Meier` estimator
-  - aka the *product limit* estimate
+* The most commonly used estimator of $S(t)$ is the <red>Kaplan-Meier</red> estimator
+  - aka the ***product limit*** estimate
 
 * The most common estimator of $H(t)$ is the `Nelson-Aalen` estimator
   - Can also estimate $S(t)$ as $\widehat{S_{FH}(t)} = \exp\left\{ \widehat{H_{NA}(t)} \right\}$
-  - This is known as the Flemming-Harrington estimate of $S(t)$
+  - This is known as the Fleming-Harrington estimate of $S(t)$
   - Similar, but not identical, to K-M estimate
 
 # Basics of Kaplan-Meier estimate
@@ -234,7 +241,7 @@ How would you estimate
 >    - $P(T > 90) = 6/10$ because we know exactly 4 events happened before 90 days
 
 >- $P(T > 94)$?
->    - $P(T > 94) = ?$  We know 6 event happened before 94 days, but what about the censored time at 92 days?
+>    - $P(T > 94) = ?$  We know 3 events happened after 94 days, but what about the censored time at 92 days?
 
 
 # Kaplan-Meier and conditional probability
@@ -242,10 +249,9 @@ How would you estimate
 It turns outs that we can use some basic probability calculations to estimate $S(t)$ in the presence of censoring.  
 
 1. Divide time into distinct intervals (at each event time, $\tau_j$)    
-
 2. For each interval $j$,    
     - Calculate the proportion of subjects with an event ($d_j$), among the subjects in the risk set for that interval ($r_j$)  
-    - The ***risk set*** at time $t$ = N - # events prior to $t$ - # censored prior to $t$  
+    - The <grn>risk set</grn> at time $t$ = N - # events prior to $t$ - # censored prior to $t$  
     - Calculate the probability of an event after the $j^{th}$ interval, conditional on no event prior to the interval as $1 - \frac{d_j}{r_j}$
 
 3. Estimate $S(t)$ as the product of the conditional probabilities up to time $t$
@@ -311,7 +317,7 @@ Let's practice.
 * Event rate at time $t$ (blue dashed line)
 * Restricted mean survival time to $t^*$
     * Average event-free time up to $t^*$
-    * Area under S(t) from 0 to $t^*$
+    * Equivalent to the area under S(t) from 0 to $t^*$
     
 ```{r, echo=FALSE}
 p1 <- survminer::ggsurvplot(fit0, conf.int = FALSE)
@@ -323,10 +329,10 @@ p2 <- p1$plot +
   geom_segment(aes(x=med, xend=med,y=0.5, yend=0), 
                arrow=arrow(length = unit(0.03, "npc")),
                linetype='dashed') +
-  geom_segment(aes(x=1, xend=1,y=0, yend=yr1), linetype='dashed', color='blue') +
+  geom_segment(aes(x=1, xend=1,y=0, yend=yr1), linetype='solid', color='blue') +
   geom_segment(aes(x=1, xend=0,y=yr1, yend=yr1), 
                arrow=arrow(length = unit(0.03, "npc")),
-                     linetype='dashed', color='blue') +
+                     linetype='solid', color='blue') +
   geom_area(mapping = aes(x = ifelse(time>=0 & time<=3 , time, 0)),
           fill = "red", alpha = 0.1) 
 
@@ -342,7 +348,7 @@ quantile(fit0, probs=0.50) %>% unlist()
 
 # Summary measures of S(t) in R: percentile
 
-  - Percent surviving to time t  
+  - Percent surviving to times t=c(0,1,2)  
 
 ```{r}
 summary(fit0, time=c(0,1,2))
@@ -365,20 +371,20 @@ print(fit0, rmean = 4)
   
 # Comparing two survival curves
 
-  _ Measuring differences
-      - difference in medians
-      - difference in RMST
-      - hazard ratio
+- Measuring differences
+    - difference in medians
+    - difference in RMST
+    - hazard ratio
       
-  - Testing
-      - log rank test
-         - Tests Ho: S_0(t) = S_1(t) vs not equal
-         - Equivalent to CMH test for binary data, where stratification is at unique event times
-         - A good test when the hazard ratio is constant (but applicable even if it is not)
-         - Most sensitive to late differences?
-      - May also hear about the generalized wilcoxan test
-         - most sensitive when early differences in survival
-         - good when true distribution is log-normal or log-logistic
+- Testing
+    - log rank test
+       - Tests Ho: S_0(t) = S_1(t) vs not equal
+       - Equivalent to CMH test for binary data, where stratification is at unique event times
+       - A good test when the hazard ratio is constant (but applicable even if it is not)
+       - Most sensitive to late differences?
+    - May also hear about the generalized wilcoxan test
+       - most sensitive when early differences in survival
+       - good when true distribution is log-normal or log-logistic
 
   
 # Modeling
