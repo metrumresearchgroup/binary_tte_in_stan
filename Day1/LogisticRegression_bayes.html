@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="copyright" content="Metrum Research Group &copy 2021"/>
+  <meta name="font-size-adjustment" content="3"/>
+  <title>Bayesian exposure-response modeling for binary data</title>
+  <style type="text/css">
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+            a.sourceLine { display: inline-block; line-height: 1.25; }
+    a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+    a.sourceLine:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode { white-space: pre; position: relative; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    code.sourceCode { white-space: pre-wrap; }
+    a.sourceLine { text-indent: -1em; padding-left: 1em; }
+    }
+    pre.numberSource a.sourceLine
+      { position: relative; left: -4em; }
+    pre.numberSource a.sourceLine::before
+      { content: attr(data-line-number);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; pointer-events: all; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {  }
+    @media screen {
+    a.sourceLine::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+          </style>
+  <style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link href="LogisticRegression_bayes_files/slidy-2/styles/slidy.css" rel="stylesheet" />
+  <script src="LogisticRegression_bayes_files/slidy-2/scripts/slidy.js"></script>
+  <script src="LogisticRegression_bayes_files/slidy_shiny-1/slidy_shiny.js"></script>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+   href="slidystyles.css" />
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Bayesian exposure-response modeling for binary data</h1>
+  <p class="author">
+
+  </p>
+</div>
+<div id="outline" class="slide section level1">
+<h1>Outline</h1>
+<ul>
+<li>Brief introduction to Bayesian analysis</li>
+<li>Fitting models</li>
+<li>Model checking</li>
+</ul>
+</div>
+<div id="approach-to-bayesian-modeling-in-this-course" class="slide section level1">
+<h1>Approach to Bayesian modeling in this course</h1>
+<ul>
+<li><p>For this series of classes we are going to use Stan to do Bayesian modeling</p>
+<ul>
+<li>Stan is a probabilistic programming language for fitting Bayesian models.<br />
+</li>
+<li>By default it uses Hamiltonian Monte Carlo (HMC), specifically a variation called the no U-turn sampler (NUTS).</li>
+<li>We will go into more details about HMC/NUTS later in the course</li>
+</ul></li>
+<li>Start with using <code>brms</code> as our gateway to Stan
+<ul>
+<li>brms is a package that enables simple fitting of many types models that you can fit using <code>glm</code>, <code>survreg</code>, <code>lme</code>, <code>nlme</code>, etc.</li>
+<li>Allows quick access to Bayesian inference</li>
+</ul></li>
+<li>Later we will program our own Stan models and run them with <code>cmdstanr</code>
+<ul>
+<li>Learn more about the Stan language</li>
+<li>Fit models that are not supported in <code>brms</code></li>
+</ul></li>
+</ul>
+</div>
+<div id="a-brief-review-of-bayesian-inference" class="slide section level1">
+<h1>A brief review of Bayesian inference</h1>
+<p><span class="math inline">\(\color{firebrick}{\text{Bayes Rule}}\)</span> the basis for inference about model parameters (<span class="math inline">\(\theta\)</span>) given data (<span class="math inline">\(y\)</span>) and prior knowledge about model parameters (<span class="math inline">\(p\left(\theta\right)\)</span>): <span class="math display">\[\begin{eqnarray*}
+p\left(\theta\,|\,y\right) &amp;=&amp; \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)}
+= \frac{p\left(\theta\right)p\left(y\,|\,\,\theta\right)}{\int{p\left(\theta\right)p\left(y\,|\,\theta\right) d\theta}}
+\\
+&amp;\propto&amp; p\left(\theta\right)p\left(y\,|\,\theta\right)
+\end{eqnarray*}\]</span> <!-- The $p$'s are probabilities or probability densities of the specified random variables. --></p>
+<div class="notebox">
+<p><strong>Goals: </strong></p>
+<ul>
+<li>Inference about <span class="math inline">\(\theta\)</span> or a function of <span class="math inline">\(\theta\)</span></li>
+<li>Predictions of future observations</li>
+</ul>
+</div>
+<ul>
+<li><p>The posterior summarizes what we know about <span class="math inline">\(\theta\)</span>, but typically we can’t express <span class="math inline">\(p\left(\theta\,|\,y\right)\)</span> in closed-form.</p>
+<ul>
+<li>We’ll use Markov Chain Monte Carlo to obtain samples from <span class="math inline">\(p\left(\theta\,|\,y\right)\)</span>.</li>
+</ul></li>
+</ul>
+</div>
+<div id="bayesian-modelinginference-process-using-mcmc" class="slide section level1">
+<h1>Bayesian modeling/inference process using MCMC</h1>
+<p><font size="6"></p>
+<ol style="list-style-type: decimal">
+<li><p>Construct a model for the data, conditional on parameters <span class="math inline">\(\theta\)</span>, <span class="math inline">\(p\left(y \,|\, \theta\right)\)</span></p></li>
+<li><p>Construct a prior distribution for <span class="math inline">\(\theta\)</span>, <span class="math inline">\(p\left(\theta\right)\)</span></p>
+<ul>
+<li>Ideally based on all available evidence/knowledge (or belief)</li>
+<li>Or deliberately select a non-informative (or weakly informative) prior</li>
+</ul></li>
+<li><p>Sample from the posterior distribution for <span class="math inline">\(\theta\)</span>, <span class="math inline">\(p\left(\theta \,|\, y\right)\)</span>.</p>
+<ul>
+<li>Look at convergence and sampler diagnostics</li>
+<li>Use for inferences regarding parameter values</li>
+</ul></li>
+<li><p>Sample from the posterior predictive distribution for <span class="math inline">\(y_\text{new}\)</span>: <span class="math inline">\(p\left(y_\text{new} \,|\, y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}\)</span>.</p>
+<ul>
+<li>Use for inferences regarding future observations</li>
+<li>Sample from <span class="math inline">\(p\left(y \,|\, \theta\right)\)</span> for values of <span class="math inline">\(\theta\)</span> from step 3.</li>
+</ul></li>
+</ol>
+<!-- $$p\left(y_{new}\,|\,y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$$ -->
+<p></font></p>
+</div>
+<div id="bayesian-ingredients-for-mcmc-sampling-from-a-posterior" class="slide section level1">
+<h1>Bayesian ingredients for MCMC sampling from a posterior</h1>
+<ul>
+<li>Data</li>
+<li>Model for the outcome(s) – the likelihood</li>
+<li>Models for the parameters – the prior distribution</li>
+<li>MCMC tool – Stan (via <code>brms</code> or <code>cmdstanr</code>)</li>
+</ul>
+</div>
+<div id="ingredients-for-hmcnuts" class="slide section level1">
+<h1>Ingredients for HMC/NUTS</h1>
+<ul>
+<li>A starting point in the parameter space (initial value, one per chain)</li>
+<li>Number of MCMC samples used to tune the HMC/NUTS algorithm (<code>warmup</code>)
+<ul>
+<li>This is not exactly the same as the burn-in in other MCMC algorithms</li>
+<li>NUTS uses these samples to <a href="https://mc-stan.org/docs/2_26/reference-manual/hmc-algorithm-parameters.html">adaptively tune the sampler</a></li>
+</ul></li>
+<li>Total number of samples to take, including the warm-up (<code>iter</code>)</li>
+<li>Parameters which inform how the sampler should adapt
+<ul>
+<li>Defaults are usually good for ‘simple’ models</li>
+<li>Often need to modify for more complex, hierarchical models</li>
+<li>Return to these later in the course</li>
+</ul></li>
+</ul>
+</div>
+<div id="lets-re-fit-our-ae-model-using-brms" class="slide section level1">
+<h1>Let’s re-fit our AE model using <code>brms</code></h1>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">mod01_glm &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="dt">formula =</span> AE01 <span class="op">~</span><span class="st"> </span>CAVGSS <span class="op">+</span><span class="st"> </span>BWT <span class="op">+</span><span class="st"> </span>PTTYPE <span class="op">+</span><span class="st"> </span>SEXTXT,  </a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">                  <span class="dt">data =</span> aedat, </a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">                  <span class="dt">family =</span> <span class="kw">bernoulli</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>)</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4">                 )</a></code></pre></div>
+<p><br></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">mod01_stan &lt;-<span class="st"> </span><span class="kw">brm</span>(<span class="dt">formula =</span> AE01 <span class="op">~</span><span class="st"> </span>CAVGSS <span class="op">+</span><span class="st"> </span>BWT <span class="op">+</span><span class="st"> </span>PTTYPE <span class="op">+</span><span class="st"> </span>SEXTXT,  </a>
+<a class="sourceLine" id="cb2-2" data-line-number="2">                  <span class="dt">data =</span> aedat, </a>
+<a class="sourceLine" id="cb2-3" data-line-number="3">                  <span class="dt">family =</span> <span class="kw">bernoulli</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>),</a>
+<a class="sourceLine" id="cb2-4" data-line-number="4">                  <span class="dt">warmup =</span> <span class="dv">500</span>, </a>
+<a class="sourceLine" id="cb2-5" data-line-number="5">                  <span class="dt">iter =</span> <span class="dv">2000</span>, </a>
+<a class="sourceLine" id="cb2-6" data-line-number="6">                  <span class="dt">chains =</span> <span class="dv">4</span>, </a>
+<a class="sourceLine" id="cb2-7" data-line-number="7">                  <span class="dt">inits =</span> <span class="st">&quot;random&quot;</span>, </a>
+<a class="sourceLine" id="cb2-8" data-line-number="8">                  <span class="dt">cores =</span> <span class="dv">4</span>, </a>
+<a class="sourceLine" id="cb2-9" data-line-number="9">                  <span class="dt">seed =</span> <span class="dv">123</span>)</a></code></pre></div>
+</div>
+<div id="what-about-the-prior-distributions" class="slide section level1">
+<h1>What about the prior distributions?</h1>
+<ul>
+<li>By default, <code>brms</code> uses flat, non-informative prior distributions for regression coefficients</li>
+<li>We can specify priors directly through the <code>prior</code> argument.
+<ul>
+<li>More to come in a few slides</li>
+</ul></li>
+</ul>
+</div>
+<div id="model-summary" class="slide section level1">
+<h1>Model summary</h1>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw">summary</span>(mod01_stan)</a></code></pre></div>
+<pre><code>.  Family: bernoulli 
+.   Links: mu = logit 
+. Formula: AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT 
+.    Data: aedat (Number of observations: 180) 
+. Samples: 4 chains, each with iter = 2000; warmup = 500; thin = 1;
+.          total post-warmup samples = 6000
+. 
+. Population-Level Effects: 
+.            Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+. Intercept     -7.39      4.45   -16.46     0.92 1.00     3615     3291
+. CAVGSS         0.86      0.18     0.52     1.24 1.00     4330     4103
+. BWT            0.04      0.06    -0.08     0.16 1.00     3428     3211
+. PTTYPEPT1      1.53      0.73     0.19     3.04 1.00     3957     3937
+. PTTYPEPT2      0.90      0.95    -1.01     2.74 1.00     3621     3673
+. SEXTXTMALE     0.07      0.90    -1.71     1.82 1.00     3545     3178
+. 
+. Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
+. and Tail_ESS are effective sample size measures, and Rhat is the potential
+. scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+<ul>
+<li>Defaults: Estimate = posterior mean and Est.Err = posterior sd. Can modify these using the <code>robust</code> argument to <code>brm</code></li>
+</ul>
+</div>
+<div id="mcmc-convergence-diagnostics" class="slide section level1">
+<h1>MCMC convergence diagnostics</h1>
+<ul>
+<li>Traceplots
+<ul>
+<li>Plot of sampled values vs iteration</li>
+<li>Look for stationarity and good mixing: fuzzy caterpillar</li>
+</ul></li>
+<li><span class="math inline">\(\hat{R}\)</span>
+<ul>
+<li>Heuristically: <span class="math inline">\(\frac{\text{total variance of } \theta \text{ (between and within-chain)}}{\text{average within-chain variance of } \theta}\)</span></li>
+<li>Target: <span class="math inline">\(\hat{R} &lt; 1.01\)</span> (sometimes, you’ll see a rule of <span class="math inline">\(\hat{R} &lt; 1.05\)</span>) <!-- MW: Gelman has changed his opinion to 1.01. If the model is good 1.05 can go down to 1.01 with more iterations --></li>
+<li>Output: Summary and plot (<code>mcmc_plot(mod01_stan, type='rhat')</code>)</li>
+</ul></li>
+<li>Effective sample sizes
+<ul>
+<li>bulk ESS for assessing posterior means, medians, etc</li>
+<li>tail ESS for assessing tail percentiles (5th, 95th)</li>
+<li>Target: Depends on your goals</li>
+<li>Output: Summary</li>
+</ul></li>
+</ul>
+</div>
+<div id="traceplots" class="slide section level1">
+<h1>Traceplots</h1>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">bayesplot<span class="op">::</span><span class="kw">mcmc_trace</span>(mod01_stan)</a></code></pre></div>
+<p><img src="LogisticRegression_bayes_files/figure-slidy/unnamed-chunk-7-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="lets-see-the-default-priors-in-our-model" class="slide section level1">
+<h1>Let’s see the default priors in our model</h1>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">prior_summary</span>(mod01_stan)</a></code></pre></div>
+<pre><code>. # A tibble: 7 x 9
+.   prior                class     coef       group resp  dpar  nlpar bound source
+.   &lt;chr&gt;                &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; 
+. 1 &quot;&quot;                   b         &quot;&quot;         &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…
+. 2 &quot;&quot;                   b         &quot;BWT&quot;      &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…
+. 3 &quot;&quot;                   b         &quot;CAVGSS&quot;   &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…
+. 4 &quot;&quot;                   b         &quot;PTTYPEPT… &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…
+. 5 &quot;&quot;                   b         &quot;PTTYPEPT… &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…
+. 6 &quot;&quot;                   b         &quot;SEXTXTMA… &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…
+. 7 &quot;student_t(3, 0, 2.… Intercept &quot;&quot;         &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    defau…</code></pre>
+</div>
+<div id="brms-centers-all-predictors-in-the-model" class="slide section level1">
+<h1>BRMS centers all predictors in the model</h1>
+<p>Mathematically, the RHS of the model <code>y ~ x1 + x2</code> is <span class="math display">\[b\_Intercept + b\_x1 \cdot x1 + b\_x2 \cdot x2\]</span></p>
+<p>Or, equivalently, <span class="math display">\[Intercept + b\_x1 \cdot (x1 - \overline{x1}) + b\_x2 \cdot (x2 - \overline{x2})\]</span> where <span class="math display">\[b\_Intercept = Intercept - b_x1 \cdot \overline{x1} - b\_x2 \cdot \overline{x2}\]</span></p>
+<p>This is the parameterization that <code>brms</code> uses. (<strong><em>Why do you think that is?</em></strong>)</p>
+<p>We need to specify priors for <code>Intercept</code>, <code>b_x1</code> and <code>b_x2</code></p>
+</div>
+<div id="to-change-them-use-the-set_priors-function" class="slide section level1">
+<h1>To change them use the <code>set_priors</code> function</h1>
+<p>A Normal(mean=0, sd=5) prior on all covariate effects:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1">priors_mod01 &lt;-<span class="st"> </span><span class="kw">set_prior</span>(<span class="st">&#39;normal(0,5)&#39;</span>, <span class="dt">class=</span><span class="st">&#39;b&#39;</span>)</a></code></pre></div>
+<p><br></p>
+<p>A Normal(0,5) prior on CAVGSS and a DoubleExponential prior on the other effects:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1">priors_mod01_de &lt;-<span class="st"> </span><span class="kw">set_prior</span>(<span class="st">&#39;normal(0,5)&#39;</span>, <span class="dt">class=</span><span class="st">&#39;b&#39;</span>, <span class="dt">coef=</span><span class="st">&#39;CAVGSS&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-2" data-line-number="2"><span class="st">  </span><span class="kw">set_prior</span>(<span class="st">&#39;double_exponential(0,1)&#39;</span>, <span class="dt">class=</span><span class="st">&#39;b&#39;</span>)</a></code></pre></div>
+<p>See <a href="https://mc-stan.org/docs/2_26/functions-reference/index.html">Stan functions reference</a> for list of all available distributions.</p>
+</div>
+<div id="workbook-bayes01" class="slide section level1">
+<h1>Workbook Bayes01</h1>
+<ul>
+<li>Model fitting in <code>brms</code></li>
+<li>Convergence diagnostics</li>
+</ul>
+</div>
+<div id="model-diagnostics" class="slide section level1">
+<h1>Model diagnostics</h1>
+<ul>
+<li><p>We can use similar diagnostics as with likelihood based methods, but now using posterior predictive distributions</p>
+<ul>
+<li>Quantile residual plots</li>
+<li>Posterior predictive checks</li>
+</ul></li>
+</ul>
+</div>
+<div id="quantile-residuals" class="slide section level1">
+<h1>Quantile residuals</h1>
+<ol style="list-style-type: decimal">
+<li>Simulate from posterior predictive distribution
+<ul>
+<li><code>brms</code> has a <strong><code>posterior_predict</code></strong> function to generate samples in a matrix</li>
+</ul></li>
+<li>Use <code>createDHARMa</code> function in the <code>DHARMa</code> package to format output
+<ul>
+<li>Input is a matrix of posterior samples and the observed outcome data</li>
+</ul></li>
+<li>Make plots as before
+<ul>
+<li>Residuals vs predicted</li>
+<li>Residuals vs predictors</li>
+</ul></li>
+</ol>
+</div>
+<div id="dharma-examples" class="slide section level1">
+<h1>DHARMa examples</h1>
+<div class="columns">
+<div class="column" style="width:47.5%;">
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">postpred_sample_mod01 =<span class="st"> </span><span class="kw">posterior_predict</span>(mod01_stan)</a>
+<a class="sourceLine" id="cb10-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb10-3" data-line-number="3">dharma_resids =<span class="st"> </span><span class="kw">createDHARMa</span>(<span class="dt">simulatedResponse =</span> <span class="kw">t</span>(postpred_sample_mod01),</a>
+<a class="sourceLine" id="cb10-4" data-line-number="4">                             <span class="dt">observedResponse =</span> aedat<span class="op">$</span>AE01,</a>
+<a class="sourceLine" id="cb10-5" data-line-number="5">                             <span class="dt">integerResponse =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb10-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb10-7" data-line-number="7"><span class="kw">plot</span>(dharma_resids)</a></code></pre></div>
+<p><img src="LogisticRegression_bayes_files/figure-slidy/unnamed-chunk-11-1.png" width="120%" style="display: block; margin: auto auto auto 0;" /></p>
+</div><div class="column" style="width:5%;">
+
+</div><div class="column" style="width:47.5%;">
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" data-line-number="1">aedat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb11-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">quantile_residual =</span> dharma_resids<span class="op">$</span>scaledResiduals) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb11-3" data-line-number="3"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>BWT, <span class="dt">y=</span>quantile_residual)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb11-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb11-5" data-line-number="5"><span class="st">  </span><span class="kw">geom_smooth</span>()</a></code></pre></div>
+<p><img src="LogisticRegression_bayes_files/figure-slidy/unnamed-chunk-12-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="posterior-predictive-checks" class="slide section level1">
+<h1>Posterior predictive checks</h1>
+<ol style="list-style-type: decimal">
+<li>Simulate from posterior predictive distribution
+<ul>
+<li><code>tidy_bayes</code> has an <strong><code>add_predicted_draws</code></strong> function to append the samples to a data frame</li>
+</ul></li>
+<li>Compute some summary statistic on each posterior draw and on the observed data
+<ul>
+<li>Summary statistic depends on what you want to diagnose</li>
+<li>For binary models, it is almost always the expected value (mean)</li>
+</ul></li>
+<li>Plot distribution of summary statistics and overlay observed values
+<ul>
+<li>Type of plot depends on grouping factor and summary statistic</li>
+</ul></li>
+</ol>
+</div>
+<div id="simulate-from-posterior-predictive-distribution" class="slide section level1">
+<h1>Simulate from posterior predictive distribution</h1>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" data-line-number="1">aedat_pp =<span class="st"> </span><span class="kw">add_predicted_draws</span>(<span class="dt">model=</span>mod01_stan, <span class="dt">newdata =</span> aedat)</a>
+<a class="sourceLine" id="cb12-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb12-3" data-line-number="3">aedat_pp <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-4" data-line-number="4"><span class="st">  </span><span class="kw">select</span>(USUBJID, PTTYPE, AE01, Quartile<span class="op">:</span>.prediction) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-5" data-line-number="5"><span class="st">  </span><span class="kw">slice_tail</span>(<span class="dt">n=</span><span class="dv">4</span>)</a></code></pre></div>
+<pre><code>. # A tibble: 4 x 9
+.   USUBJID PTTYPE  AE01 Quartile  .row .chain .iteration .draw .prediction
+.   &lt;fct&gt;   &lt;fct&gt;  &lt;int&gt; &lt;chr&gt;    &lt;int&gt;  &lt;int&gt;      &lt;int&gt; &lt;int&gt;       &lt;int&gt;
+. 1 UID-180 PT1        0 Q2         180     NA         NA  5997           1
+. 2 UID-180 PT1        0 Q2         180     NA         NA  5998           0
+. 3 UID-180 PT1        0 Q2         180     NA         NA  5999           0
+. 4 UID-180 PT1        0 Q2         180     NA         NA  6000           0</code></pre>
+</div>
+<div id="plot-the-vpc" class="slide section level1">
+<h1>Plot the VPC</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" data-line-number="1"><span class="co"># Observed data summary</span></a>
+<a class="sourceLine" id="cb14-2" data-line-number="2">obs_summary &lt;-<span class="st"> </span>aedat <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb14-3" data-line-number="3"><span class="st">  </span><span class="kw">group_by</span>(Quartile) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb14-4" data-line-number="4"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">phat_obs =</span> <span class="kw">mean</span>(AE01))</a>
+<a class="sourceLine" id="cb14-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb14-6" data-line-number="6"><span class="co">#Simulated data summary</span></a>
+<a class="sourceLine" id="cb14-7" data-line-number="7">sim_summary &lt;-<span class="st"> </span>aedat_pp <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb14-8" data-line-number="8"><span class="st">  </span><span class="kw">group_by</span>(.draw,Quartile) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb14-9" data-line-number="9"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">phat_sim =</span> <span class="kw">mean</span>(.prediction))</a>
+<a class="sourceLine" id="cb14-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb14-11" data-line-number="11"><span class="co"># VPC</span></a>
+<a class="sourceLine" id="cb14-12" data-line-number="12">sim_summary <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb14-13" data-line-number="13"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>Quartile, <span class="dt">y=</span>phat_sim)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-14" data-line-number="14"><span class="st">  </span><span class="kw">geom_violin</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-15" data-line-number="15"><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">data=</span>obs_summary, <span class="kw">aes</span>(<span class="dt">y=</span>phat_obs), <span class="dt">col=</span><span class="st">&#39;red&#39;</span>,<span class="dt">shape=</span><span class="dv">3</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-16" data-line-number="16"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Proportion with AE&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-17" data-line-number="17"><span class="st">  </span><span class="kw">coord_flip</span>()</a></code></pre></div>
+</div><div class="column">
+<p><img src="LogisticRegression_bayes_files/figure-slidy/unnamed-chunk-14-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="vpc-for-continuous-variable-define-summary-statistic" class="slide section level1">
+<h1>VPC for continuous variable: define summary statistic</h1>
+<ul>
+<li>Fit generalized additive model (smoother) to each simulated dataset</li>
+<li>Predict at a fixed grid of values (0 to 95<span class="math inline">\(^{th}\)</span> percentile)</li>
+</ul>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" data-line-number="1">summary_function &lt;-<span class="st"> </span><span class="cf">function</span>(.data, .x_name, <span class="dt">.y_name=</span><span class="st">&#39;value&#39;</span>) {</a>
+<a class="sourceLine" id="cb15-2" data-line-number="2">  .data &lt;-<span class="st"> </span>.data <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rename</span>(<span class="st">&#39;xvar&#39;</span> =<span class="st"> </span>.x_name, <span class="st">&#39;yvar&#39;</span>=.y_name)</a>
+<a class="sourceLine" id="cb15-3" data-line-number="3">  x_grid &lt;-<span class="st"> </span><span class="kw">with</span>(.data, <span class="kw">seq</span>(<span class="dt">from =</span> <span class="kw">min</span>(xvar),</a>
+<a class="sourceLine" id="cb15-4" data-line-number="4">                           <span class="dt">to =</span> <span class="kw">quantile</span>(xvar,<span class="dt">probs =</span> <span class="fl">0.95</span>), </a>
+<a class="sourceLine" id="cb15-5" data-line-number="5">                           <span class="dt">length =</span> <span class="dv">100</span>))</a>
+<a class="sourceLine" id="cb15-6" data-line-number="6">  fit &lt;-<span class="st"> </span><span class="kw">gam</span>(yvar <span class="op">~</span><span class="st"> </span><span class="kw">s</span>(xvar), <span class="dt">family=</span><span class="kw">binomial</span>(<span class="dt">link=</span><span class="st">&#39;logit&#39;</span>), <span class="dt">data=</span>.data)</a>
+<a class="sourceLine" id="cb15-7" data-line-number="7">  predictions &lt;-<span class="st"> </span><span class="kw">predict</span>(fit, <span class="dt">newdata =</span> <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid), <span class="dt">type=</span><span class="st">&#39;response&#39;</span>)</a>
+<a class="sourceLine" id="cb15-8" data-line-number="8">  <span class="kw">return</span>( <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid, <span class="dt">prediction =</span> predictions))</a>
+<a class="sourceLine" id="cb15-9" data-line-number="9">}</a></code></pre></div>
+</div>
+<div id="compute-summary-statistics-for-observed-data" class="slide section level1">
+<h1>Compute summary statistics for observed data</h1>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">obs_summary &lt;-<span class="st"> </span><span class="kw">summary_function</span>(aedat, <span class="dt">.x_name =</span> <span class="st">&#39;CAVGSS&#39;</span>, <span class="dt">.y_name=</span><span class="st">&#39;AE01&#39;</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb16-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">type=</span><span class="st">&#39;Observed&#39;</span>)</a>
+<a class="sourceLine" id="cb16-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb16-4" data-line-number="4"><span class="kw">head</span>(obs_summary)</a></code></pre></div>
+<pre><code>. # A tibble: 6 x 3
+.     xvar prediction type    
+.    &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;   
+. 1 0          0.0353 Observed
+. 2 0.0372     0.0364 Observed
+. 3 0.0744     0.0377 Observed
+. 4 0.112      0.0389 Observed
+. 5 0.149      0.0403 Observed
+. 6 0.186      0.0416 Observed</code></pre>
+</div>
+<div id="compute-summary-on-each-simulated-study" class="slide section level1">
+<h1>Compute summary on each simulated study</h1>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb18-1" data-line-number="1">sim_summary &lt;-<span class="st"> </span>aedat_pp <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-2" data-line-number="2"><span class="st">  </span><span class="co"># Nest everying except the simulation name</span></a>
+<a class="sourceLine" id="cb18-3" data-line-number="3"><span class="st">  </span><span class="kw">nest</span>(<span class="dt">cols=</span><span class="op">-</span>.draw) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-4" data-line-number="4"><span class="st">  </span><span class="co"># Use 200 sims for demonstration</span></a>
+<a class="sourceLine" id="cb18-5" data-line-number="5"><span class="st">  </span><span class="kw">sample_n</span>(<span class="dt">size=</span><span class="dv">200</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-6" data-line-number="6"><span class="st">  </span><span class="co"># Compute summary stats for each simulated dataset</span></a>
+<a class="sourceLine" id="cb18-7" data-line-number="7"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">predictions =</span> <span class="kw">map</span>(cols, <span class="op">~</span><span class="kw">summary_function</span>(.x, </a>
+<a class="sourceLine" id="cb18-8" data-line-number="8">                                                   <span class="dt">.x_name=</span><span class="st">&#39;CAVGSS&#39;</span>,</a>
+<a class="sourceLine" id="cb18-9" data-line-number="9">                                                   <span class="dt">.y_name=</span><span class="st">&#39;.prediction&#39;</span>))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-10" data-line-number="10"><span class="st">  </span><span class="kw">select</span>(.draw,predictions) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-11" data-line-number="11"><span class="st">  </span><span class="kw">unnest</span>(<span class="dt">cols=</span>predictions) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-12" data-line-number="12"><span class="st">  </span><span class="co"># Summarise across simulated data sets</span></a>
+<a class="sourceLine" id="cb18-13" data-line-number="13"><span class="st">  </span><span class="kw">group_by</span>(xvar) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-14" data-line-number="14"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">qlo =</span> <span class="kw">quantile</span>(prediction, <span class="dt">probs =</span> <span class="fl">0.05</span>),</a>
+<a class="sourceLine" id="cb18-15" data-line-number="15">            <span class="dt">qhi =</span> <span class="kw">quantile</span>(prediction, <span class="dt">probs =</span> <span class="fl">0.95</span>),</a>
+<a class="sourceLine" id="cb18-16" data-line-number="16">            <span class="dt">prediction=</span><span class="kw">median</span>(prediction)</a>
+<a class="sourceLine" id="cb18-17" data-line-number="17">            ) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb18-18" data-line-number="18"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">type =</span> <span class="st">&#39;Simulated&#39;</span>)</a></code></pre></div>
+</div>
+<div id="plot-vpc" class="slide section level1">
+<h1>Plot VPC</h1>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" data-line-number="1">sim_summary <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">bind_rows</span>(obs_summary) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-2" data-line-number="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>xvar, <span class="dt">y=</span>prediction)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-3" data-line-number="3"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">col=</span>type, <span class="dt">group=</span>type)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_ribbon</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>qlo, <span class="dt">ymax=</span>qhi, <span class="dt">fill=</span>type), <span class="dt">alpha=</span><span class="fl">0.2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb19-5" data-line-number="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
+<p><img src="LogisticRegression_bayes_files/figure-slidy/cont-vpc-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="model-comparison" class="slide section level1">
+<h1>Model Comparison</h1>
+<ul>
+<li>Goal: maximize expected log predictive density (ELPD) for future data
+<ul>
+<li>This is a measure of <red>out-of-sample</red> prediction quality</li>
+</ul></li>
+<li>Leave-one-out cross-validation (LOO-CV) to approximate ELPD
+<ul>
+<li>Involves fitting N models</li>
+<li>Can be approximated using pareto smoothed importance sampling of the posterior samples</li>
+<li><code>loo</code> package</li>
+</ul></li>
+<li>WAIC also approximates -2 ELPD
+<ul>
+<li>Proven to be asymptotocally equivalent to LOO-CV (modulo the <span class="math inline">\(-2\)</span>)</li>
+<li>Lower is better</li>
+<li>LOO-CV generally preferable due to its ability to tell when the estimates are not trustworthy</li>
+</ul></li>
+</ul>
+</div>
+<div id="workbook-bayes02-model-evaluation-and-comparison" class="slide section level1">
+<h1>Workbook Bayes02: Model evaluation and comparison</h1>
+</div>
+<div id="references" class="slide section level1">
+<h1>References</h1>
+</div>
+
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "LogisticRegression_bayes_files/mathjax-local/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+</body>
+</html>
