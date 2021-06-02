@@ -1,3 +1,7 @@
+body{
+    font-family: Geneva;
+    line-height: 1.25;
+}
 
 
 .sourceCode  {
@@ -31,7 +35,7 @@ grn {
 }
 
 .notebox {
-  padding: 1em;
+  padding: 0.5em;
   background: LightGray;
   color: black;
   border: 2px black;
