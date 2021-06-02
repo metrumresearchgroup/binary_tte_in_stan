@@ -16,6 +16,7 @@ params:
 
 ```{r,echo=FALSE,message=FALSE}
 knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+theme_set(theme_bw())
 ```
 
 
@@ -166,9 +167,91 @@ aedat %>%
 
 ## Posterior predictive checks
 
+We'll focus our model evaluation on the exposure-response relationship and use the same approach to our summary statistic as in the notes:
+* Fit generalized additive model (smoother) to each simulated dataset
+* Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
+
+First,, we'll simulate data from both of our models
+
 ```{r}
+aedat_pp01 = add_predicted_draws(model=mod01, newdata = aedat)
+aedat_pp01_ix = add_predicted_draws(model=mod01_ix, newdata = aedat)
+```
+
+Next, we'll define the summary function.  Take some time to understand what this function is doing.
+
+```{r}
+summary_function <- function(.data, .x_name, .y_name='value') {
+  # Give x and y variables generic names
+  .data <- .data %>% 
+    ungroup() %>% 
+    rename('xvar' = all_of(.x_name), 
+           'yvar' = all_of(.y_name))
+  # Determine grid of values at which to evaluate function
+  x_grid <- with(.data, seq(from = min(xvar),
+                           to = quantile(xvar,probs = 0.95), 
+                           length = 100))
+  # Fit GAM 
+  fit <- gam(yvar ~ s(xvar), family=binomial(link='logit'), data=.data)
+  # Obtain predictions
+  predictions <- predict(fit, newdata = data.frame(xvar=x_grid), type='response')
+  return( data.frame(xvar=x_grid, prediction = predictions))
+}
+```
+
+
+Next, we'll apply the summary function separately to groups stratified by patient type:
+
+```{r}
+obs_summary <- aedat %>% 
+  nest(cols=-PTTYPE) %>% 
+  mutate(preds = map(cols, function(.x) {
+    summary_function(.x, .x_name = 'CAVGSS', .y_name='AE01')})
+    ) %>% 
+  select(-cols) %>% 
+  unnest(cols = preds) %>% 
+  mutate(type='Observed')
+```
+
+We'll start with the vpc for mod01_ix by computing the summary on each simulated study.
+You might get some warning messages regarding the iteration limit being reached before convergence.  For the sake of time, we'll ignore them, but what do you think is likely to be causing them?
+
+```{r}
+sim_summary_01ix <- aedat_pp01_ix %>%
+  # Use 200 sims for demonstration
+  semi_join(data.frame(.draw = sample(1:max(aedat_pp01_ix$.draw), size=500))) %>% 
+  # Nest everying except the simulation name
+  group_by(.draw,PTTYPE) %>% 
+  nest() %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(data, ~summary_function(.x, 
+                                                   .x_name='CAVGSS',
+                                                   .y_name='.prediction'))) %>% 
+  select(.draw,PTTYPE, predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar,PTTYPE) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+```
+
+# Plot VPC
+
+```{r, 'cont-vpc'}
+sim_summary_01ix %>% 
+  bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  facet_wrap(~PTTYPE) +
+  labs(x='Steady-state Cavg', y='Probability of severe AE')
 
 ```
 
+
 **Exercise:**
-* Repeat the above VPCs for mod01_ix.  Do they look substantively better than for mod01?
+* Repeat the above VPCs for mod01.  Do they look substantively worse than for mod01_ix?
+
