@@ -1,0 +1,445 @@
+---
+title: "Bayesian exposure-response modeling for binary data"
+output:
+  slidy_presentation:
+#    theme: cerulean
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: slidystyles.css
+    footer: Metrum Research Group &copy 2021
+    mathjax: local
+    self_contained: false
+    df_print: tibble
+#bibliography: alpha.bib
+#nocite: | 
+#    @2795, @2192, @3684
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(GGally)
+library(binom)
+library(texreg)
+library(brms)
+library(tidybayes)
+library(DHARMa)
+library(mgcv)
+
+set.seed(314159)
+
+theme_set(theme_bw())
+
+expit <- function(x) 1 / (1+exp(-x))
+``` 
+
+# Outline
+
+* Brief introduction to Bayesian analysis
+* Fitting models
+* Model checking
+
+
+# Approach to Bayesian modeling in this course
+
+* For this series of classes we are going to use Stan to do Bayesian modeling
+
+    * Stan is a probabilistic programming language for fitting Bayesian models.  
+    * By default it uses Hamiltonian Monte Carlo (HMC), specifically a variation called the no U-turn sampler (NUTS).
+    * We will go into more details about HMC/NUTS later in the course
+
+* Start with using `brms` as our gateway to Stan 
+    * brms is a package that enables simple fitting of many types models that you can fit using `glm`, `survreg`, `lme`, `nlme`, etc.
+    * Allows quick access to Bayesian inference
+
+* Later we will program our own Stan models and run them with `cmdstanr`
+    * Learn more about the Stan language
+    * Fit models that are not supported in `brms`
+
+
+# A brief review of Bayesian inference
+
+
+$\color{firebrick}{\text{Bayes Rule}}$ the basis for inference about model parameters ($\theta$) given data ($y$) and prior knowledge about model parameters ($p\left(\theta\right)$):
+\begin{eqnarray*}
+p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)}
+= \frac{p\left(\theta\right)p\left(y\,|\,\,\theta\right)}{\int{p\left(\theta\right)p\left(y\,|\,\theta\right) d\theta}}
+\\
+&\propto& p\left(\theta\right)p\left(y\,|\,\theta\right)
+\end{eqnarray*}
+<!-- The $p$'s are probabilities or probability densities of the specified random variables. -->
+
+:::{.notebox}
+**Goals: **
+
+* Inference about $\theta$ or a function of $\theta$
+* Predictions of future observations
+:::
+
+* The posterior summarizes what we know about $\theta$, but typically we can't express $p\left(\theta\,|\,y\right)$ in closed-form.
+
+    * We'll use Markov Chain Monte Carlo to obtain samples from $p\left(\theta\,|\,y\right)$.
+
+
+# Bayesian modeling/inference process using MCMC
+
+<font size="6">
+
+1. Construct a model for the data, conditional on parameters $\theta$, $p\left(y \,|\, \theta\right)$
+
+2. Construct a prior distribution for $\theta$, $p\left(\theta\right)$
+
+    * Ideally based on all available evidence/knowledge (or belief)
+    * Or deliberately select a non-informative (or weakly informative)
+  prior
+
+3.  Sample from the posterior distribution for $\theta$, $p\left(\theta \,|\, y\right)$.
+
+    * Look at convergence and sampler diagnostics
+    * Use for inferences regarding parameter values
+
+4. Sample from the posterior predictive distribution for $y_\text{new}$  $p\left(y_\text{new} \,|\, y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$.
+
+    * Use for inferences regarding future observations
+
+<!-- $$p\left(y_{new}\,|\,y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$$ -->
+</font>
+
+# Bayesian ingredients for MCMC sampling from a posterior
+
+* Data
+* Model for the outcome(s) -- the likelihood
+* Models for the parameters -- the prior distribution
+* MCMC tool -- Stan (via `brms` or `cmdstanr`)
+
+# Ingredients for HMC/NUTS
+
+- A starting point in the parameter space (initial value, one per chain)
+- Number of MCMC samples used to tune the HMC/NUTS algorithm (`warmup`)
+    * This is not exactly the same as the burn-in in other MCMC algorithms
+    * NUTS uses these samples to [adaptively tune the sampler](https://mc-stan.org/docs/2_26/reference-manual/hmc-algorithm-parameters.html)
+    
+- Total number of samples to take, including the warm-up (`iter`)
+- Parameters which inform how the sampler should adapt
+    * Defaults are usually good for 'simple' models
+    * Often need to modify for more complex, hierarchical models
+    * Return to these later in the course
+
+
+# Let's re-fit our AE model using `brms`
+
+```{r,echo=FALSE}
+load('../data/aedat.RDS')
+source('preprocess_data.R')
+```
+
+
+```{r, eval=FALSE}
+mod01_glm <- glm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+                  data = aedat, 
+                  family = bernoulli(link = "logit")
+                 )
+```
+
+<br>
+
+```{r, eval=FALSE}
+mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+                  data = aedat, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123)
+```
+
+# What about the prior distributions?
+
+* By default, `brms` uses flat, non-informative prior distributions for regression coefficients
+* We can specify priors directly through the `prior` argument.
+  * More to come in a few slides
+
+# Model summary
+
+```{r, echo=FALSE, eval=TRUE}
+mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
+                  data = aedat, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123,
+                  file = 'mod01_stan_output')
+```
+
+```{r}
+summary(mod01_stan)
+```
+
+* Defaults: Estimate = posterior mean and Est.Err = posterior sd.  Can modify these using the `robust` argument to `brm`
+
+# MCMC convergence diagnostics
+
+* Traceplots
+    * Plot of sampled values vs iteration 
+    * Look for stationarity and good mixing: fuzzy caterpillar
+
+* $\hat{R}$
+    * Heuristically: $\frac{\text{total variance of } \theta \text{ (between and within-chain)}}{\text{average within-chain variance of } \theta}$
+    * Target: $\hat{R} < 1.05$
+    * Output: Summary and plot (`mcmc_plot(mod01_stan, type='rhat')`)
+
+* Effective sample sizes
+    * bulk ESS for assessing posterior means, medians, etc
+    * tail ESS for assessing tail percentiles (5th, 95th)
+    * Target: Depends on your goals
+    * Output: Summary
+    
+# Traceplots
+
+```{r}
+bayesplot::mcmc_trace(mod01_stan)
+```
+
+# Let's see the default priors in our model
+
+```{r}
+prior_summary(mod01_stan)
+```
+
+# BRMS centers all predictors in the model
+
+Mathematically, the RHS of the model `y ~ x1 + x2` is 
+$$b\_Intercept + b\_x1 \cdot x1 + b\_x2 \cdot x2$$
+
+Or, equivalently,
+$$Intercept + b\_x1 \cdot (x1 - \overline{x1}) + b\_x2 \cdot (x2 - \overline{x2})$$
+where 
+$$b\_Intercept = Intercept - b_x1 \cdot \overline{x1} - b\_x2 \cdot \overline{x2}$$
+
+This is the parameterization that `brms` uses.  (***Why do you think that is?***)
+
+We need to specify priors for `Intercept`, `b_x1` and `b_x2`
+
+
+# To change them use the `set_priors` function
+
+A Normal(mean=0, sd=5) prior on all covariate effects:
+```{r}
+priors_mod01 <- set_prior('normal(0,5)', class='b')
+```
+
+<br>
+
+A Normal(0,5) prior on CAVGSS and a DoubleExponential prior on the other effects:
+  
+```{r}
+priors_mod01_de <- set_prior('normal(0,5)', class='b', coef='CAVGSS') +
+  set_prior('double_exponential(0,1)', class='b')
+```
+
+See [Stan functions reference](https://mc-stan.org/docs/2_26/functions-reference/index.html) for list of all available distributions.
+
+# Workbook Bayes01
+
+* Model fitting in `brms`
+* Convergence diagnostics
+
+# Model diagnostics
+
+* We can use similar diagnostics as with likelihood based methods, but now using posterior predictive distributions
+
+    * Quantile residual plots
+    * Posterior predictive checks
+
+# Quantile residuals
+
+1. Simulate from posterior predictive distribution
+    * `brms` has a **`posterior_predict`** function to generate samples in a matrix
+2. Use `createDHARMa` function in the `DHARMa` package to format output
+    * Input is a matrix of posterior samples and the observed outcome data
+3. Make plots as before
+    * Residuals vs predicted
+    * Residuals vs predictors
+
+# DHARMa examples
+
+::::{.columns}
+
+:::{.column width=47.5%}
+```{r, echo=TRUE, out.width="120%"}
+postpred_sample_mod01 = posterior_predict(mod01_stan)
+
+dharma_resids = createDHARMa(simulatedResponse = t(postpred_sample_mod01),
+                             observedResponse = aedat$AE01,
+                             integerResponse = TRUE)
+
+plot(dharma_resids)
+```
+
+:::
+
+:::{.column width=5%}
+:::
+
+:::{.column width=47.5%}
+
+```{r, out.width="90%"}
+aedat %>% ungroup() %>% 
+  mutate(quantile_residual = dharma_resids$scaledResiduals) %>% 
+  ggplot(aes(x=BWT, y=quantile_residual)) +
+  geom_point() +
+  geom_smooth()
+```
+
+:::
+
+::::
+
+# Posterior predictive checks
+
+1. Simulate from posterior predictive distribution
+    * `tidy_bayes` has an **`add_predicted_draws`** function to append the samples to a data frame
+2. Compute some summary statistic on each posterior draw and on the observed data
+    * Summary statistic depends on what you want to diagnose
+    * For binary models, it is almost always the expected value (mean)
+3. Plot distribution of summary statistics and overlay observed values
+    * Type of plot depends on grouping factor and summary statistic
+
+
+# Simulate from posterior predictive distribution
+
+
+```{r}
+aedat_pp = add_predicted_draws(model=mod01_stan, newdata = aedat)
+
+aedat_pp %>% ungroup() %>% 
+  select(USUBJID, PTTYPE, AE01, Quartile:.prediction) %>% 
+  slice_tail(n=4)
+```
+
+# Plot the VPC
+
+::::{.columns}
+
+:::{.column}
+
+```{r, 'bayes-vpc', fig.show = 'hide'}
+# Observed data summary
+obs_summary <- aedat %>% 
+  group_by(Quartile) %>% 
+  summarise(phat_obs = mean(AE01))
+
+#Simulated data summary
+sim_summary <- aedat_pp %>% 
+  group_by(.draw,Quartile) %>% 
+  summarise(phat_sim = mean(.prediction))
+
+# VPC
+sim_summary %>% 
+  ggplot(aes(x=Quartile, y=phat_sim)) +
+  geom_violin() +
+  geom_point(data=obs_summary, aes(y=phat_obs), col='red',shape=3) +
+  labs(x='', y='Proportion with AE') +
+  coord_flip()
+```
+:::
+
+:::{.column}
+```{r, ref.label='bayes-vpc', echo=FALSE}
+
+```
+
+:::
+
+::::
+
+
+# VPC for continuous variable: define summary statistic
+
+* Fit generalized additive model (smoother) to each simulated dataset
+* Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
+
+```{r}
+summary_function <- function(.data, .x_name, .y_name='value') {
+  .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
+  x_grid <- with(.data, seq(from = min(xvar),
+                           to = quantile(xvar,probs = 0.95), 
+                           length = 100))
+  fit <- gam(yvar ~ s(xvar), family=binomial(link='logit'), data=.data)
+  predictions <- predict(fit, newdata = data.frame(xvar=x_grid), type='response')
+  return( data.frame(xvar=x_grid, prediction = predictions))
+}
+```
+
+# Compute summary statistics for observed data
+
+```{r}
+obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
+  mutate(type='Observed')
+
+head(obs_summary)
+```
+
+# Compute summary on each simulated study
+
+```{r}
+sim_summary <- aedat_pp %>% 
+  # Nest everying except the simulation name
+  nest(cols=-.draw) %>% 
+  # Use 200 sims for demonstration
+  sample_n(size=200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, 
+                                                   .x_name='CAVGSS',
+                                                   .y_name='.prediction'))) %>% 
+  select(.draw,predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+```
+
+# Plot VPC
+
+```{r, 'cont-vpc'}
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='Steady-state Cavg', y='Probability of severe AE')
+
+```
+
+# Model Comparison
+
+* Goal: maximize expected log predictive density (ELPD) for future data
+    * This is a measure of <red>out-of-sample</red> prediction quality
+
+* Leave-one-out cross-validation (LOO-CV) to approximate ELPD
+    * Involves fitting N models
+    * Can be approximated using pareto smoothed importance sampling of the posterior samples
+    * `loo` package
+    
+* WAIC also approximates -2 ELPD
+    * Proven to be asymptotocally equivalent to LOO-CV (modulo the $-2$)
+    * Lower is better
+    * `loo` package
+
+# Workbook Bayes02: Model evaluation and comparison
+
+# References
