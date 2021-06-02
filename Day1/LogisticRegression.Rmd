@@ -42,7 +42,7 @@ expit <- function(x) 1 / (1+exp(-x))
 * Encountering binary data
 * Groundwork
    * Notational conventions
-   * Modeling from a probabalistic viewpoint
+   * Modeling from a probabilistic viewpoint
    
 * Bernoulli distribution
    * Defining models
@@ -141,7 +141,7 @@ $$
 
 # Probability models: continuous variable
 
-Throughout the course we will conceptualize models from a probabalistic or `data generating` viewpoint.
+Throughout the course we will conceptualize models from a probabilistic or `data generating` viewpoint.
 
 We'll use expressions like:
 
@@ -155,7 +155,7 @@ $$\text{Height} \sim \text{Normal}(\mu, \sigma)$$
 :::
 If we know $\mu$ and $\sigma$ we can 
 
-  * Make probabalistic statements about height in the population
+  * Make probabilistic statements about height in the population
   * Simulate heights
   
 # Probability models: binary variable
@@ -187,7 +187,7 @@ $$\text{Tall} \sim \text{Bernoulli}(\pi)$$
 
 If we know $\pi$, we can
 
-  * Make probabalistic statements about the number of tall people in a random sample from the population
+  * Make probabilistic statements about the number of tall people in a random sample from the population
   * Simulate data
 
 
@@ -318,9 +318,9 @@ $$
 * However there is a numerical root finder that is specially tailored to the structure of logistic (and all GLM) models: the `Newton-Raphson` method ([see @2795]).
 
 
-# Workbook: Exploring the binomial density
+# Workbook 01: Exploring the binomial density
 
-* Biomial density
+* Binomial density
 * Likelihood function
 
 
@@ -333,7 +333,7 @@ $$
 
 * Suppose further that a dose level under consideration for a phase 2 study in `PT2` would have typical value exposures near 2.5 ug/mL.
 
-* The objective of *this* anlaysis will be to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
+* The objective of *this* analysis will be to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
 
 # Data snapshot
 
@@ -500,7 +500,7 @@ ggplot() +
 * Stratify by other covariates of interest
 
 
-# Workbook: Visualizing binary data
+# Workbook 02: Visualizing binary data
 
 
 
@@ -591,7 +591,7 @@ data.frame(x = c(-5, 5)) %>%
 ```
 
 
-# Workbook: Exploring odds ratios, relative risks, and the logit transformation
+# Workbook 03: Exploring odds ratios, relative risks, and the logit transformation
 
 
 # A logit-link GLM
@@ -779,7 +779,7 @@ data.frame(
     * It's certainly nice to have directly interpretable coefficients.
     * But in many cases, the predictive inferences matter more than the direct inferences on parameters.
     * Recommendation: choose link function based on what fits the data better, not based on mathematical convenience. Probit link handles models where tails are more "certain"
-* Probit models also arise from a different modeling framework: a latent variable determined by covariates with random gaussian noise with a threshold for a "true" outcome
+* Probit models also arise from a different modeling framework: a latent variable determined by covariates with random Gaussian noise with a threshold for a "true" outcome
 
 
 # Aside: Choice of exposure metric
@@ -799,7 +799,7 @@ data.frame(
         * Adds another layer of variability to exposures which should be modeled
 
 
-# Workbook: Fitting a logistic regression model
+# Workbook 04: Fitting a logistic regression model
 
 # Model diagnostics and comparison
 
@@ -875,7 +875,7 @@ ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
     * Start with response residuals. You know what these mean. 
     * Compare with deviance residuals. If the deviance residual plots look better, take comfort. 
     * Don't spend too much time trying to get any residual plots to look "good". They won't. Use them to suggest model refinements and then move on. 
-* The total residual deviance should be "close" to the residaul degrees of freedom
+* The total residual deviance should be "close" to the residual degrees of freedom
 
 # Example of deviance residuals
 
@@ -1089,10 +1089,10 @@ sim_summary %>% bind_rows(obs_summary) %>%
 
 * Likelihood and information criteria
     * Likelihood (or -2 log-likelihood) measures <red>in-sample</red> model fit
-    * Cross-validation to approximmate <red>out-of-sample</red> deviance
+    * Cross-validation to approximate <red>out-of-sample</red> deviance
     * IC approximate <red>out-of-sample</red> deviance
-        * AIC = -2*Log-likelihood + 2*k
-        * BIC = -2*Log-likelihood + log(N)*k
+        * AIC = $-2 \times \text{Log-likelihood} + 2 \times k$
+        * BIC = $-2 \times \text{Log-likelihood} + \log(N) \times k$
         * Lower is better
 
 
@@ -1100,12 +1100,12 @@ sim_summary %>% bind_rows(obs_summary) %>%
   * Classification accuracy scores (e.g. sensitivity, specificity, Kappa)
   * Receiver operating characteristic curve (ROC) and its AUC
 
-# Workbook: Model evaluation and comparison
+# Workbook 05: Model evaluation and comparison
 
 # What we haven't covered
 
 * Interactions
-    * Does the exposure-response relationship depend on anothe covariate?
+    * Does the exposure-response relationship depend on another covariate?
     * Aka, effect modification
 
 * Non-linear effects
@@ -1118,8 +1118,6 @@ sim_summary %>% bind_rows(obs_summary) %>%
 
 # Key learning objectives
 
-At the end of today's session, I hope you will know:
-
 * How to make effective exploratory analysis plots for binary data
     * We've seen plots for categorical and continuous predictors
     
@@ -1130,7 +1128,7 @@ At the end of today's session, I hope you will know:
     * Using residuals and VPCs to evaluate models
 
 * How to interpret model terms
-    * Parameters tell us about odds ratios
+    * Parameters in logistic refression models inform us about odds ratios
 
 
 
@@ -1138,7 +1136,7 @@ At the end of today's session, I hope you will know:
 
 \large
 
-Next up: Bayesain analysis of binary data
+Next up: Bayesian analysis of binary data
 
 
 # References

@@ -3,14 +3,12 @@ title: "Workbook"
 author: "Introduction to BRMS for exposure-response with binary endpoints"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
+  html_document:
+#    css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
     toc: true
-  # html_document:
-  #   css: docs/src/styles/styles.css
-  #   number_sections: true
-  #   theme: united
-  #   toc: true
-  #   toc_float: true
+    toc_float: true
 params:
   include: TRUE
 ---

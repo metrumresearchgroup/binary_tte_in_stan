@@ -12,6 +12,7 @@ aedat <- aedat %>%
   )
 
 aedat <- aedat %>% 
+  arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
   group_by(PBO) %>%
   mutate(Quartile = ifelse(PBO == "PBO", "PBO",
                            paste0("Q", ntile(CAVGSS, n = 4))))

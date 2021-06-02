@@ -1,0 +1,142 @@
+---
+title: "Workbook Bayes01"
+author: "Introduction to BRMS for exposure-response with binary endpoints"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+#    css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(brms)
+library(tidybayes)
+library(modelr)
+
+expit <- function(x) 1 / (1+exp(-x))
+# note plogs = expit
+```
+
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+source('preprocess_data.R')
+```
+
+
+# Fitting a model using brms
+
+```{r, "TRY firststan", purl=TRUE, results = "hide"}
+mod01_stan <- brm(formula = AE01 ~ CAVGSS + PTTYPE,  
+                  data=aedat, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123)
+```
+
+
+***Exercise:***  
+
+* Look at convergence diagnostics, do you think the Markov chains have converged?
+    - Trace plots (`mcmc_plot(mod01_stan, type='trace')`)
+    - Rhat (`mcmc_plot(mod01_stan, type='rhat')`)
+    - density plots (`mcmc_plot(mod01_stan, type='dens_overlay')`)
+    
+* Look at the posterior summaries for parameters (`summary(mod01_stan)`).  Is there an effect of exposure?
+    *  Think about how you might want to plot this effect.  We'll work on this later.
+
+***Exercise:***
+
+* Run a new model (mod02_stan) which adds `STUDYID`  to mod01_stan.  That is, the new model will use `formula = AE01 ~ CAVGSS + PTTYPE + STUDYID` 
+
+
+```{r}
+mod2_stan <- brm(formula = ,  
+                  data=aedat, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  seed = 123)
+```
+
+* Look at the convergence diagnostics.  How do these compare to mod01?
+    * What do you think is causing this?
+    * Try looking at a pairs plot of the posterior samples (`mcmc_plot(mod02_stan, type='pairs')`)
+
+
+***Exercise:***
+
+* Run a new model (mod03_stan) which modifies mod02_stan by adding normal prior distributions for the regression coefficients (i.e., class='b').  What might be reasonable prior standard deviations to make these only weakly informative?
+    * Use the code below as a starting point
+    * Look at the notes and/or the help file for set_prior ("?set_prior")
+
+```{r}
+mod03_stan <- brm(formula = ,  
+                  data=aedat, 
+                  family = bernoulli(link = "logit"),
+                  warmup = 500, 
+                  iter = 2000, 
+                  chains = 4, 
+                  inits = "random", 
+                  cores = 4,
+                  prior = set_prior(),
+                  seed = 123)
+```
+
+* Look at the convergence diagnostics.  How do these compare to mod02?
+    * What do you think is causing this?
+    * Try looking at a pairs plot (`mcmc_plot(mod02_stan, type='pairs)`)
+
+
+
+## reading R help
+
+R help pages can be .... helpful :)
+
+```{r, "TRY extractors", purl=TRUE, results = "hide"}
+?brm # See especially the "See Also" section
+?summary.brmsfit # See expecially the "Value" section
+?fixef
+?predict
+?predict.brmsfit
+```
+
+Exercise:
+
+* Print out a table of estimated coefficients and their standard errors.
+* Print out 95% confidence intervals for the model parameters.
+* Print out 90% confidence intervals for the model parameters.
+
+```{r}
+fixef(mod01_stan)
+fixef(mod01_stan,probs = c(0.05, 0.95))
+```
+

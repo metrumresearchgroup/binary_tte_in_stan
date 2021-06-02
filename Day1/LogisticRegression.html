@@ -161,7 +161,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Groundwork
 <ul>
 <li>Notational conventions</li>
-<li>Modeling from a probabalistic viewpoint</li>
+<li>Modeling from a probabilistic viewpoint</li>
 </ul></li>
 <li>Bernoulli distribution
 <ul>
@@ -257,7 +257,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div id="probability-models-continuous-variable" class="slide section level1">
 <h1>Probability models: continuous variable</h1>
-<p>Throughout the course we will conceptualize models from a probabalistic or <code>data generating</code> viewpoint.</p>
+<p>Throughout the course we will conceptualize models from a probabilistic or <code>data generating</code> viewpoint.</p>
 <p>We’ll use expressions like:</p>
 <p><span class="math display">\[\text{Height} \sim \text{Normal}(\mu, \sigma)\]</span></p>
 <div class="notebox">
@@ -268,7 +268,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>If we know <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> we can</p>
 <ul>
-<li>Make probabalistic statements about height in the population</li>
+<li>Make probabilistic statements about height in the population</li>
 <li>Simulate heights</li>
 </ul>
 </div>
@@ -295,7 +295,7 @@ Tall = \left\{ \begin{array}{ll}
 </div>
 <p>If we know <span class="math inline">\(\pi\)</span>, we can</p>
 <ul>
-<li>Make probabalistic statements about the number of tall people in a random sample from the population</li>
+<li>Make probabilistic statements about the number of tall people in a random sample from the population</li>
 <li>Simulate data</li>
 </ul>
 </div>
@@ -392,10 +392,10 @@ L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) &amp; = &amp; l(\pi| \mathbf{Y}=\mathbf
 <li>However there is a numerical root finder that is specially tailored to the structure of logistic (and all GLM) models: the <code>Newton-Raphson</code> method (<span class="citation">[see @2795]</span>).</li>
 </ul>
 </div>
-<div id="workbook-exploring-the-binomial-density" class="slide section level1">
-<h1>Workbook: Exploring the binomial density</h1>
+<div id="workbook-01-exploring-the-binomial-density" class="slide section level1">
+<h1>Workbook 01: Exploring the binomial density</h1>
 <ul>
-<li>Biomial density</li>
+<li>Binomial density</li>
 <li>Likelihood function</li>
 </ul>
 </div>
@@ -405,7 +405,7 @@ L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) &amp; = &amp; l(\pi| \mathbf{Y}=\mathbf
 <li><p>This data set is comprised of a two-week study (protocol A) and a six-week study (protocol B)</p></li>
 <li><p>The data set includes patients of type <code>PT2</code>, a patient type that (let’s say) has not been studied at higher dose levels.</p></li>
 <li><p>Suppose further that a dose level under consideration for a phase 2 study in <code>PT2</code> would have typical value exposures near 2.5 ug/mL.</p></li>
-<li><p>The objective of <em>this</em> anlaysis will be to determine whether the AE rate will be “sufficiently low” in <code>PT2</code> at that exposure.</p></li>
+<li><p>The objective of <em>this</em> analysis will be to determine whether the AE rate will be “sufficiently low” in <code>PT2</code> at that exposure.</p></li>
 </ul>
 </div>
 <div id="data-snapshot" class="slide section level1">
@@ -541,8 +541,8 @@ L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) &amp; = &amp; l(\pi| \mathbf{Y}=\mathbf
 <li>Stratify by other covariates of interest</li>
 </ul>
 </div>
-<div id="workbook-visualizing-binary-data" class="slide section level1">
-<h1>Workbook: Visualizing binary data</h1>
+<div id="workbook-02-visualizing-binary-data" class="slide section level1">
+<h1>Workbook 02: Visualizing binary data</h1>
 </div>
 <div id="measures-of-effect-odds-ratio" class="slide section level1">
 <h1>Measures of effect: odds ratio</h1>
@@ -610,8 +610,8 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <h1>More About Link Functions</h1>
 <p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-7-1.png" width="80%" style="display: block; margin: auto;" /></p>
 </div>
-<div id="workbook-exploring-odds-ratios-relative-risks-and-the-logit-transformation" class="slide section level1">
-<h1>Workbook: Exploring odds ratios, relative risks, and the logit transformation</h1>
+<div id="workbook-03-exploring-odds-ratios-relative-risks-and-the-logit-transformation" class="slide section level1">
+<h1>Workbook 03: Exploring odds ratios, relative risks, and the logit transformation</h1>
 </div>
 <div id="a-logit-link-glm" class="slide section level1">
 <h1>A logit-link GLM</h1>
@@ -716,26 +716,26 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 . 
 . Deviance Residuals: 
 .     Min       1Q   Median       3Q      Max  
-. -1.7355  -0.4204  -0.3190  -0.2171   2.8643  
+. -1.8703  -0.4502  -0.3383  -0.2204   2.8435  
 . 
 . Coefficients:
 .             Estimate Std. Error z value Pr(&gt;|z|)    
-. (Intercept) -7.23479    4.15562  -1.741   0.0817 .  
-. CAVGSS       0.78711    0.16434   4.790 1.67e-06 ***
-. BWT          0.04048    0.05792   0.699   0.4846    
-. PTTYPEPT1    1.32711    0.68083   1.949   0.0513 .  
-. PTTYPEPT2    0.81219    0.88587   0.917   0.3592    
-. SEXTXTMALE  -0.05737    0.83663  -0.069   0.9453    
+. (Intercept) -7.00249    4.27313  -1.639   0.1013    
+. CAVGSS       0.81127    0.17369   4.671    3e-06 ***
+. BWT          0.03671    0.05932   0.619   0.5360    
+. PTTYPEPT1    1.46361    0.69982   2.091   0.0365 *  
+. PTTYPEPT2    0.92954    0.90557   1.026   0.3047    
+. SEXTXTMALE   0.06964    0.85167   0.082   0.9348    
 . ---
 . Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 . 
 . (Dispersion parameter for binomial family taken to be 1)
 . 
-.     Null deviance: 149.26  on 209  degrees of freedom
-. Residual deviance: 113.60  on 204  degrees of freedom
-. AIC: 125.6
+.     Null deviance: 141.36  on 179  degrees of freedom
+. Residual deviance: 106.29  on 174  degrees of freedom
+. AIC: 118.29
 . 
-. Number of Fisher Scoring iterations: 6</code></pre>
+. Number of Fisher Scoring iterations: 5</code></pre>
 </div>
 <div id="interpreting-coefficients-in-logit-link-models-intercept" class="slide section level1">
 <h1>Interpreting coefficients in logit-link models: Intercept</h1>
@@ -766,8 +766,8 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <ul>
 <li>For continuous covariates, the odds ratio adjustments are exponential “per unit”
 <ul>
-<li>For example, the coefficient for body weight is <span class="math inline">\(\beta_{WT}\)</span> = 0.0405</li>
-<li>So, a 10 kg difference in weight corresponds to an odds increase of exp(10 <span class="math inline">\(\times\)</span> 0.0405 ) = 1.50</li>
+<li>For example, the coefficient for body weight is <span class="math inline">\(\beta_{WT}\)</span> = 0.0367</li>
+<li>So, a 10 kg difference in weight corresponds to an odds increase of exp(10 <span class="math inline">\(\times\)</span> 0.0367 ) = 1.44</li>
 </ul></li>
 <li>May be advantageous to scale exposure (e.g. divide by 1000) in order to avoid exponentiated coefficients like <span class="math inline">\(1.000123\)</span>, which might indicate a consequential effect despite being very close to 1
 <ul>
@@ -797,7 +797,7 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <li>But in many cases, the predictive inferences matter more than the direct inferences on parameters.</li>
 <li>Recommendation: choose link function based on what fits the data better, not based on mathematical convenience. Probit link handles models where tails are more “certain”</li>
 </ul></li>
-<li>Probit models also arise from a different modeling framework: a latent variable determined by covariates with random gaussian noise with a threshold for a “true” outcome</li>
+<li>Probit models also arise from a different modeling framework: a latent variable determined by covariates with random Gaussian noise with a threshold for a “true” outcome</li>
 </ul>
 </div>
 <div id="aside-choice-of-exposure-metric" class="slide section level1">
@@ -826,8 +826,8 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </ul></li>
 </ul>
 </div>
-<div id="workbook-fitting-a-logistic-regression-model" class="slide section level1">
-<h1>Workbook: Fitting a logistic regression model</h1>
+<div id="workbook-04-fitting-a-logistic-regression-model" class="slide section level1">
+<h1>Workbook 04: Fitting a logistic regression model</h1>
 </div>
 <div id="model-diagnostics-and-comparison" class="slide section level1">
 <h1>Model diagnostics and comparison</h1>
@@ -906,7 +906,7 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <li>Compare with deviance residuals. If the deviance residual plots look better, take comfort.</li>
 <li>Don’t spend too much time trying to get any residual plots to look “good”. They won’t. Use them to suggest model refinements and then move on.</li>
 </ul></li>
-<li>The total residual deviance should be “close” to the residaul degrees of freedom</li>
+<li>The total residual deviance should be “close” to the residual degrees of freedom</li>
 </ul>
 </div>
 <div id="example-of-deviance-residuals" class="slide section level1">
@@ -987,10 +987,10 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <pre><code>. # A tibble: 4 x 6
 .   USUBJID PTTYPE  AE01 Quartile name    value
 .   &lt;fct&gt;   &lt;fct&gt;  &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;   &lt;dbl&gt;
-. 1 UID-179 PT1        0 Q3       sim_497     0
-. 2 UID-179 PT1        0 Q3       sim_498     0
-. 3 UID-179 PT1        0 Q3       sim_499     1
-. 4 UID-179 PT1        0 Q3       sim_500     0</code></pre>
+. 1 UID-180 PT1        0 Q2       sim_497     0
+. 2 UID-180 PT1        0 Q2       sim_498     0
+. 3 UID-180 PT1        0 Q2       sim_499     0
+. 4 UID-180 PT1        0 Q2       sim_500     0</code></pre>
 </div>
 <div id="generate-vpc-for-categorical-predictor" class="slide section level1">
 <h1>Generate VPC for categorical predictor</h1>
@@ -1043,12 +1043,12 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <pre><code>. # A tibble: 6 x 3
 .     xvar prediction type    
 .    &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;   
-. 1 0          0.0285 Observed
-. 2 0.0367     0.0295 Observed
-. 3 0.0734     0.0305 Observed
-. 4 0.110      0.0316 Observed
-. 5 0.147      0.0327 Observed
-. 6 0.184      0.0338 Observed</code></pre>
+. 1 0          0.0353 Observed
+. 2 0.0372     0.0364 Observed
+. 3 0.0744     0.0377 Observed
+. 4 0.112      0.0389 Observed
+. 5 0.149      0.0403 Observed
+. 6 0.186      0.0416 Observed</code></pre>
 </div>
 <div id="compute-summary-on-each-simulated-study" class="slide section level1">
 <h1>Compute summary on each simulated study</h1>
@@ -1084,11 +1084,11 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <li>Likelihood and information criteria
 <ul>
 <li>Likelihood (or -2 log-likelihood) measures <red>in-sample</red> model fit</li>
-<li>Cross-validation to approximmate <red>out-of-sample</red> deviance</li>
+<li>Cross-validation to approximate <red>out-of-sample</red> deviance</li>
 <li>IC approximate <red>out-of-sample</red> deviance
 <ul>
-<li>AIC = -2<em>Log-likelihood + 2</em>k</li>
-<li>BIC = -2<em>Log-likelihood + log(N)</em>k</li>
+<li>AIC = <span class="math inline">\(-2 \times \text{Log-likelihood} + 2 \times k\)</span></li>
+<li>BIC = <span class="math inline">\(-2 \times \text{Log-likelihood} + \log(N) \times k\)</span></li>
 <li>Lower is better</li>
 </ul></li>
 </ul></li>
@@ -1099,15 +1099,15 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </ul></li>
 </ul>
 </div>
-<div id="workbook-model-evaluation-and-comparison" class="slide section level1">
-<h1>Workbook: Model evaluation and comparison</h1>
+<div id="workbook-05-model-evaluation-and-comparison" class="slide section level1">
+<h1>Workbook 05: Model evaluation and comparison</h1>
 </div>
 <div id="what-we-havent-covered" class="slide section level1">
 <h1>What we haven’t covered</h1>
 <ul>
 <li>Interactions
 <ul>
-<li>Does the exposure-response relationship depend on anothe covariate?</li>
+<li>Does the exposure-response relationship depend on another covariate?</li>
 <li>Aka, effect modification</li>
 </ul></li>
 <li>Non-linear effects
@@ -1121,7 +1121,6 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </div>
 <div id="key-learning-objectives-1" class="slide section level1">
 <h1>Key learning objectives</h1>
-<p>At the end of today’s session, I hope you will know:</p>
 <ul>
 <li>How to make effective exploratory analysis plots for binary data
 <ul>
@@ -1135,14 +1134,14 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </ul></li>
 <li>How to interpret model terms
 <ul>
-<li>Parameters tell us about odds ratios</li>
+<li>Parameters in logistic refression models inform us about odds ratios</li>
 </ul></li>
 </ul>
 </div>
 <div id="break" class="slide section level1">
 <h1>Break</h1>
 
-<p>Next up: Bayesain analysis of binary data</p>
+<p>Next up: Bayesian analysis of binary data</p>
 </div>
 <div id="references" class="slide section level1">
 <h1>References</h1>

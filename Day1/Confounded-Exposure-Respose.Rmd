@@ -32,15 +32,17 @@ expit <- function(x) 1 / (1+exp(-x))
 
 # Outline
 
-* Trastuzumab in mGC
+* Introduction and example: Trastuzumab in mGC
 * What is confounding?
 * Why is it a problem?
 * Thinking causally
 * What are some solutions?
 
-# Understanding exposure-response relationships is a key componant of decision-making:
+# Understanding exposure-response relationships is a key component of decision-making
 
-* Sponsors: Dose-selection for Phase 3
+For example,
+
+* Sponsors: Dose-selection for future trials or registration
 * Regulators: "Optimizing" benefit-risk in a population
 * Physicians: "Optimizing" benefit-risk for a patient
 
@@ -50,6 +52,9 @@ expit <- function(x) 1 / (1+exp(-x))
    * Find MTD -> run expansion cohort (Phase 1b/2) -> Phase 3 
 
 * Not uncommon in other disease areas
+    * Expense of producing dosage forms or amounts
+    * Success at MTD
+    * "Fast to market" strategies
 
    
 # With biologics this can cause a problem
@@ -58,7 +63,26 @@ expit <- function(x) 1 / (1+exp(-x))
     * This may be real 
     * May be due to other factors
 
-* __Give examples from Dai__
+:::{.columns}
+
+::::{.column}
+* Oncology
+    * Trastuzumab 
+    * Trastuzumab emtansine (T-DM1)
+    * Nivolumab
+    * Pembrolizumab
+    * Avelumab
+    * Ipilimumab
+    
+::::
+
+::::{.column}
+* Ulcerative colitis
+    * Infliximab
+    * Vedolizumab
+::::
+
+:::
 
 
 # ToGA: Trastuzumab in metastatic gastric cancer
@@ -130,7 +154,7 @@ knitr::include_graphics("graphics/HELOISE-subset.png")
 
 # What happened?
 
-* The apparent exposure-response in the ToGA trial was an artifact of `counfounding`
+* The apparent exposure-response in the ToGA trial was an artifact of <red>confounding</red>
 
 * Subsequent analyses (@Yang2013-tr) confirmed the lack of an exposure-response relationship in the ToGA study.
 
@@ -145,10 +169,10 @@ knitr::include_graphics("graphics/HELOISE-subset.png")
 
 # What is confounding?
 
-* Our primary interest is in the _causal_ effect of exposure on an outcome.
+* Our primary interest is in the <red>causal</red> effect of exposure on an outcome.
    * _If we change exposure, how does the response change?_
-* `Confounding` is a bias in the estimate of the causal effect.
-* Occurs when there is a `common cause` of exposure and the outcome.
+* <red>Confounding</red> is a bias in the estimate of the causal effect.
+* Occurs when there is a <red>common cause</red> of exposure and the outcome.
 
 :::{.notebox}
 Exposure-response confounding occurs when there is a common cause of exposure and the outcome of interest.
@@ -214,7 +238,7 @@ simulated_data %>%
 \end{tikzpicture}
 ```
 
-* The apparant relationship will differ from the causal one
+* The apparent relationship will differ from the causal one
 
 ::::
 
@@ -266,9 +290,11 @@ simulated_data %>%
 
 __Weight:__ _baseline_ factor indirectly affecting exposure (through CL)
 
-__Disease severity:__ _baseline_ factor directly affecting outcome and indirectly affecting exposure 
+__Disease severity:__ _baseline_ factor directly affecting outcome and indirectly affecting exposure through an effect on CL
 
-* If we're not careful, basline disease severity can counfound the causal relationship between exposure and survival
+* Effect on CL through, e.g., cachexia -> inflammation and proteolytic activity -> high CL
+
+* If we're not careful, baseline disease severity can confound the causal relationship between exposure and survival
 
 
 # Why is this a problem?
@@ -355,10 +381,11 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 # Solutions when confounding is due to baseline factors
 
 * Thinking about your estimand and potential confounding ahead of time  
-    * Use DAGs to help think
+    * Use DAGs to identify back door paths and how to block them without introducing other sources of bias
 
 * Study design
     * Include multiple dose levels / regimens to de-couple CL and dose
+    * Depending on the context, this may not be practical
     
 *  Adjusted analysis
     * Regression models
@@ -369,39 +396,35 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
         * Can use machine learning or other non-parametric methods for building PS model
     
 
-# Causal model with PD marker
+<!-- # Causal model with PD marker -->
 
-```{r,engine='tikz',echo=FALSE}
-\begin{tikzpicture}
-\tikzset{every node}=[font=\sffamily]
-\node (v0) at (0,0) {exposure};
-\node (v1) at (6,0)  {Alive at 1 year};
-\node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ;
-\node (v3) at (-2,0) {CL};
-\node (v4) at (-2,2)  {Weight};
-\node (v5) at (0,2) {dose};
-\node (v6) at (3,0) {PD marker};
-\draw [->] (v0) edge (v6);
-\draw [->] (v2) edge (v1);
-\draw [->] (v4) edge (v3);
-\draw [->] (v2) edge (v3);
-\draw [->] (v3) edge (v0);
-\draw [->] (v5) edge (v0);
-\draw [->] (v6) edge (v1);
-\end{tikzpicture}
-```
+<!-- ```{r,engine='tikz',echo=FALSE} -->
+<!-- \begin{tikzpicture} -->
+<!-- \tikzset{every node}=[font=\sffamily] -->
+<!-- \node (v0) at (0,0) {exposure}; -->
+<!-- \node (v1) at (6,0)  {Alive at 1 year}; -->
+<!-- \node[align=center] (v2) at (0,-2)  {baseline\\disease severity} ; -->
+<!-- \node (v3) at (-2,0) {CL}; -->
+<!-- \node (v4) at (-2,2)  {Weight}; -->
+<!-- \node (v5) at (0,2) {dose}; -->
+<!-- \node (v6) at (3,0) {PD marker}; -->
+<!-- \draw [->] (v0) edge (v6); -->
+<!-- \draw [->] (v2) edge (v1); -->
+<!-- \draw [->] (v4) edge (v3); -->
+<!-- \draw [->] (v2) edge (v3); -->
+<!-- \draw [->] (v3) edge (v0); -->
+<!-- \draw [->] (v5) edge (v0); -->
+<!-- \draw [->] (v6) edge (v1); -->
+<!-- \end{tikzpicture} -->
+<!-- ``` -->
 
-* Weight: baseline factor indirectly affecting exposure (through CL)  
-* Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure 
-* Does the extra informantion help?
+<!-- * Weight: baseline factor indirectly affecting exposure (through CL)   -->
+<!-- * Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure  -->
+<!-- * Does the extra information help? -->
 
 
 # Causal model with time-dependent confounding
 
-* Much more complex and DAGs don't provide a simple solution
-* Need more sophisticated statistical tools
-    * Marginal structural models
-    * G-computation
     
 ```{r,engine='tikz',echo=FALSE}
 \begin{tikzpicture}
@@ -425,3 +448,19 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 \end{tikzpicture}
 ```
 
+* Much more complex and DAGs don't provide a simple solution
+* Need more sophisticated statistical tools
+    * Marginal structural models + G-computation
+    * Joint PK-TS or PK-TS-OS models
+* Use early exposure measure (Dai et al., 2020)
+* Incorporate mediating biomarker (e.g., tumor size) (Kawakatsu et al., 2020)
+
+
+
+# Additional reading
+
+* Dai HI, Vugmeyster Y, Mangal N. Characterizing Exposure-Response Relationship for Therapeutic Monoclonal Antibodies in Immuno-Oncology and Beyond: Challenges, Perspectives, and Prospects. Clin Pharmacol Ther. 2020 Dec;108(6):1156–70.
+
+* Kawakatsu S, Bruno R, Kågedal M, Li C, Girish S, Joshi A, Wu B. Confounding factors in exposure-response analyses and mitigation strategies for monoclonal antibodies in oncology. Br J Clin Pharmacol [Internet]. 2020 Nov 20; Available from: http://dx.doi.org/10.1111/bcp.14662
+
+* Hernán MA, Hernández-Díaz S, Werler MM, Mitchell AA. Causal knowledge as a prerequisite for confounding evaluation: an application to birth defects epidemiology. Am J Epidemiol. 2002 Jan 15;155(2):176–84.

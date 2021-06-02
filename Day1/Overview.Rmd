@@ -88,7 +88,7 @@ We want you to finish this course with:
 * Four 3-4 hour sessions
 * Roughly one per week
 * Didactic + hands-on learning
-* Homework + "office hours"
+* Virtual office hours
 
 ----
 
@@ -99,7 +99,7 @@ We want you to finish this course with:
     * Notational conventions, Bernoulli distribution, Maximum likelihood
     * Visualizing relationships
     * Models, model checking, and measures of effect
-    * Bayesian models for binary data (Technical session)
+* Bayesian models for binary data (Technical session)
     
 ----
 
@@ -134,7 +134,7 @@ We want you to finish this course with:
 
 # Course materials
 
-* Each session has a slide set and a workbook.
+* Each session has slide sets and workbooks
 * Navigate slides by first typing "t". 
 * Workbooks are "Rmarkdown" documents. 
     * GUI button to execute a code chunk. 

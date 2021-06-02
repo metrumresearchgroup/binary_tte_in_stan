@@ -1,0 +1,174 @@
+---
+title: "Workbook Bayes02"
+author: "Model evaluation and comparison"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+#    css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(brms)
+library(tidybayes)
+library(DHARMa)
+library(modelr)
+
+expit <- function(x) 1 / (1+exp(-x))
+# note plogs = expit
+```
+
+# Slides01
+# Slides02
+## Toy data
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+source('preprocess_data.R')
+```
+
+
+## Re-fit model 01
+
+Fit the model with main effects for CAVGSS and PTTYPE using normal(0,5) prior distributions.
+
+```{r, "TRY firststan", purl=TRUE, results = "hide"}
+mod01 <- brm(formula = AE01 ~ CAVGSS + PTTYPE,  
+             data = aedat, 
+             family = bernoulli(link = "logit"),
+             warmup = 500, 
+             iter = 2000, 
+             chains = 4, 
+             inits = "random", 
+             cores = 4,
+             prior = set_prior('normal(0,5)',class='b'),
+             seed = 123)
+```
+
+
+For comparison, also fit a model that allows the exposure-response slope to differ by patient type.
+
+```{r, "TRY firststan", purl=TRUE, results = "hide"}
+mod01_ix <- brm(formula = AE01 ~ CAVGSS * PTTYPE,  
+                data = aedat, 
+                family = bernoulli(link = "logit"),
+                warmup = 500, 
+                iter = 2000, 
+                chains = 4, 
+                inits = "random", 
+                cores = 4,
+                prior = set_prior('normal(0,5)',class='b'),
+                seed = 123)
+```
+
+**Exercise:**
+* Check convergence diagnostics for mod01_ix
+* Look at the posterior summaries for the parameters (try using both `mcmc_plot(mod01_ix, type='intervals')` and `summary(mod01_ix)`)
+* What would you conclude about the effect of exposure?  Does your inference based on this model differ from mod01?
+
+
+# Compare models using WAIC and LOO-CV
+
+We'll use the `add_criteria` function to save the WAIC and loo output as part of the model object:
+
+```{r}
+mod01 <- add_criterion(mod01, c("loo","waic"))
+```
+
+To look at this we can print the list
+```{r}
+print(mod01$criteria$loo)
+print(mod01$criteria$waic)
+```
+
+This is the same as the output from the `loo` function:
+
+```{r}
+loo(mod01)
+waic(mod01)
+```
+
+
+**Exercise:**
+* Add WAIC and LOO-CV to mod01_ix
+* Compare the WAIC and LOO-CV values using the `loo_compare` function
+* Which model is preferred using these criteria?  Is it the same model you would select based on looking at the posterior distributions?
+
+
+# Residuals
+
+
+To use the quantile residuals, we'll need a sample from the posterior predictive distribution.  We can get this with the `posterior_predict` function.
+
+```{r}
+postpred_sample_mod01 = posterior_predict(mod01)
+dim(postpred_sample_mod01)
+```
+
+This yields a matrix with one row per posterior sample and one column per observation (subject).  Let's look at the first 5 samples for the first 10 subjects:
+
+```{r}
+postpred_sample_mod01[1:5,1:10]
+```
+
+
+Now we can use the `DHARMa::createDHARMa` function to calculate the quantile residuals
+
+```{r}
+dharma_resids = createDHARMa(simulatedResponse = t(postpred_sample_mod01),
+                             observedResponse = aedat$AE01,
+                             integerResponse = TRUE)
+```
+
+```{r}
+plot(dharma_resids)
+```
+
+Let's look at the residuals vs exposure. Ideally, the residuals should have a mean of 0.5 for all values of exposure.  How does this look to you?
+
+```{r}
+aedat <- aedat %>% ungroup() %>% 
+  mutate(quantile_residual = dharma_resids$scaledResiduals)
+```
+
+```{r}
+aedat %>% 
+  ggplot(aes(x=CAVGSS, y=quantile_residual)) +
+  geom_point() +
+  geom_smooth()
+```
+
+
+**Exercise:**
+* Repeat the above residual plots for mod01_ix.  Do they look substantively better than for mod01?
+
+
+## Posterior predictive checks
+
+```{r}
+
+```
+
+**Exercise:**
+* Repeat the above VPCs for mod01_ix.  Do they look substantively better than for mod01?
