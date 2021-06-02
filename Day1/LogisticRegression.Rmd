@@ -387,6 +387,7 @@ aedat %>%
   geom_col() +
   geom_errorbar(aes(ymin=lcl, ymax=ucl), 
                 width = 0.2) +
+  ylim(0,1) +
   labs(x='Study', y='Probability of severe AE')
 ```
 
@@ -418,6 +419,7 @@ aedat %>%
   geom_point() +
   geom_errorbar(aes(ymin=lcl, ymax=ucl), 
                 width = 0.2) +
+  ylim(0,1) +
   labs(x='Study', y='Probability of severe AE')
 ```
 
@@ -451,7 +453,8 @@ ggplot() +
            aes(x = CAVGSS), sides = "b") +
   geom_rug(data = filter(dat_eda, AE01 == 1),
            aes(x = CAVGSS), sides = "t") +
-  # Add smooth mean function
+  # Add smooth mean function.   Note: Use of gam with 
+  #  binomial family to keep predictions on (0,1) scale
   geom_smooth(data = dat_eda,
               aes(x = CAVGSS, y = AE01),
               method='gam', formula=y~s(x),
@@ -918,9 +921,11 @@ ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
 * Visual Predictive Checks (VPCs)
   * Recipe
     * Simulate many replicates of the DV using the estimated model and observed predictors
-    * Summarize each simulated replicate
+    * Determine summary statistic(s) of interest
+    * Calculate summary statistic for observed data
+    * Calculate summary statistic for each simulated replicate
     * Plot distribution(s) of summary statistics
-    * Overlay observed values
+    * Overlay observed value
   * The choice of summary statistics is problem dependent
   * A place to start is bucketing covariates and assessing overall trends
   * Will see more examples in the next hands-on portion
@@ -968,6 +973,18 @@ aedat %>% ungroup() %>%
 
 :::
 ::::
+
+# Visual Predictive Checks
+
+Recall our recipe:
+
+* Simulate many replicates of the DV using the estimated model and observed predictors
+* Determine summary statistic(s) of interest
+* Calculate summary statistic for observed data
+* Calculate summary statistic for each simulated replicate
+* Plot distribution(s) of summary statistics
+* Overlay observed value
+
 
 # Simulate data for a VPC
 
@@ -1023,14 +1040,14 @@ sim_summary %>%
 
 # VPC for continuous variable: define summary statistic
 
-* Fit generalized additive model (smoother) to each simulated dataset
-<!-- MW: Going from 0 to 95 doesn't make sense to me. 5 to 95 or 0 to 100 seems more natural. This demo is also generally confusing, as to what's being simulated and smoothed -->
-* Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
+* Summary statistic = non-parametric estimate of exposure-response relationship, evaluated at a fixed grid of values
+    * Fit generalized additive model (smoother) to each simulated dataset
+    * Predict at a fixed grid of values (5$^{th}$ to 95$^{th}$ percentile)
 
 ```{r}
 summary_function <- function(.data, .x_name, .y_name='value') {
   .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
-  x_grid <- with(.data, seq(from = min(xvar),
+  x_grid <- with(.data, seq(from = quantile(xvar, probs=0.05),
                            to = quantile(xvar,probs = 0.95), 
                            length = 100))
   fit <- gam(yvar ~ s(xvar), family=binomial(link='logit'), data=.data)

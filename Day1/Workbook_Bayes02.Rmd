@@ -40,10 +40,6 @@ theme_set(theme_bw())
 expit <- function(x) 1 / (1+exp(-x))
 # note plogs = expit
 ```
-<!-- MW: What do these headers refer to? -->
-# Slides01
-# Slides02
-## Toy data
 
 ```{r, "TRY toydata", purl=TRUE, results = "hide"}
 load('../data/aedat.RDS')
@@ -75,8 +71,7 @@ For comparison, also fit a model that allows the exposure-response slope to diff
 mod01_ix <- brm(formula = AE01 ~ CAVGSS * PTTYPE,  
                 data = aedat, 
                 family = bernoulli(link = "logit"),
-                ## MW: Why only 500 warmup instead of the default 1000/1000
-                warmup = 500, 
+                warmup = 1000, 
                 iter = 2000, 
                 chains = 4, 
                 inits = "random", 
@@ -111,7 +106,6 @@ This is the same as the output from the `loo` function:
 loo(mod01)
 waic(mod01)
 ```
-<!-- MW: Intended that WAIC has a message about trying loo? -->
 
 **Exercise:**
 * Add WAIC and LOO-CV to mod01_ix

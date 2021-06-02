@@ -35,6 +35,7 @@ library(mgcv)
 set.seed(314159)
 
 theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
 
 expit <- function(x) 1 / (1+exp(-x))
 ``` 
@@ -107,8 +108,7 @@ p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\rig
 4. Sample from the posterior predictive distribution for $y_\text{new}$:  $p\left(y_\text{new} \,|\, y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$.
 
     * Use for inferences regarding future observations
-
-<!-- MW: Spell this out concretely how to get Y new. This formula makes it look far more complicated than it is -->
+    * Sample from $p\left(y \,|\, \theta\right)$ for values of $\theta$ from step 3. 
 
 <!-- $$p\left(y_{new}\,|\,y\right) = \int{p\left(y_{new}\,|\,\theta\right)p\left(\theta\,|\,y\right) d\theta}$$ -->
 </font>
@@ -159,7 +159,7 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                   iter = 2000, 
                   chains = 4, 
                   inits = "random", 
-                  cores = 4, # MW: Would it be easier to just set the mc.cores option?
+                  cores = 4, 
                   seed = 123)
 ```
 
@@ -198,7 +198,7 @@ summary(mod01_stan)
 
 * $\hat{R}$
     * Heuristically: $\frac{\text{total variance of } \theta \text{ (between and within-chain)}}{\text{average within-chain variance of } \theta}$
-    * Target: $\hat{R} < 1.05$ 
+    * Target: $\hat{R} < 1.01$ (sometimes, you'll see a rule of $\hat{R} < 1.05$) 
 <!-- MW: Gelman has changed his opinion to 1.01. If the model is good 1.05 can go down to 1.01 with more iterations -->
     * Output: Summary and plot (`mcmc_plot(mod01_stan, type='rhat')`)
 
@@ -211,19 +211,16 @@ summary(mod01_stan)
 # Traceplots
 
 ```{r}
-# MW: Personal preference is that I don't like the default color scheme because its hard to tell chains apart.
-# Could try bayesplot::color_scheme_set("viridis")
 bayesplot::mcmc_trace(mod01_stan)
 ```
 
 # Let's see the default priors in our model
-<!-- MW: What's the point being made by this table? Its pretty confusing just to look at -->
 ```{r}
-#prior_summary(mod01_stan)
+prior_summary(mod01_stan)
 ```
 
 # BRMS centers all predictors in the model
-<!-- MW: Personal preference is to subscript the "_" parts -->
+
 Mathematically, the RHS of the model `y ~ x1 + x2` is 
 $$b\_Intercept + b\_x1 \cdot x1 + b\_x2 \cdot x2$$
 
@@ -439,11 +436,11 @@ sim_summary %>% bind_rows(obs_summary) %>%
     * Involves fitting N models
     * Can be approximated using pareto smoothed importance sampling of the posterior samples
     * `loo` package
-    <!-- MW: In the interest of time, I'd cut WAIC except for a passing mention. One of the big stan guys (gelman? Aki?) claims that LOO is always superior,primarily for its ability to tell when the estimates are not trustworthy -->
+
 * WAIC also approximates -2 ELPD
     * Proven to be asymptotocally equivalent to LOO-CV (modulo the $-2$)
     * Lower is better
-    * `loo` package
+    * LOO-CV generally preferable due to its ability to tell when the estimates are not trustworthy
 
 # Workbook Bayes02: Model evaluation and comparison
 
