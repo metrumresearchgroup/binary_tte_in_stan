@@ -60,6 +60,7 @@ dat_use <-
 ```
 
 ```{r, "TRY firstglm", purl=TRUE, results = "hide"}
+## MW: What's the point of this line?
 dat_mod <- dat_use
 mod01 <- glm(AE01 ~ CAVGSS + PTTYPE,
              family = binomial(link = "logit"),

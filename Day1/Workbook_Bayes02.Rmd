@@ -16,7 +16,6 @@ params:
 
 ```{r,echo=FALSE,message=FALSE}
 knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
-theme_set(theme_bw())
 ```
 
 
@@ -36,10 +35,12 @@ library(tidybayes)
 library(DHARMa)
 library(modelr)
 
+theme_set(theme_bw())
+
 expit <- function(x) 1 / (1+exp(-x))
 # note plogs = expit
 ```
-
+<!-- MW: What do these headers refer to? -->
 # Slides01
 # Slides02
 ## Toy data
@@ -74,6 +75,7 @@ For comparison, also fit a model that allows the exposure-response slope to diff
 mod01_ix <- brm(formula = AE01 ~ CAVGSS * PTTYPE,  
                 data = aedat, 
                 family = bernoulli(link = "logit"),
+                ## MW: Why only 500 warmup instead of the default 1000/1000
                 warmup = 500, 
                 iter = 2000, 
                 chains = 4, 
@@ -109,7 +111,7 @@ This is the same as the output from the `loo` function:
 loo(mod01)
 waic(mod01)
 ```
-
+<!-- MW: Intended that WAIC has a message about trying loo? -->
 
 **Exercise:**
 * Add WAIC and LOO-CV to mod01_ix
@@ -157,6 +159,7 @@ aedat <- aedat %>% ungroup() %>%
 aedat %>% 
   ggplot(aes(x=CAVGSS, y=quantile_residual)) +
   geom_point() +
+  # Geom smooth here is problematic with the intervals going beyond 0/1. 
   geom_smooth()
 ```
 
@@ -168,10 +171,10 @@ aedat %>%
 ## Posterior predictive checks
 
 We'll focus our model evaluation on the exposure-response relationship and use the same approach to our summary statistic as in the notes:
-* Fit generalized additive model (smoother) to each simulated dataset
+* Fit a generalized additive model (smoother) to each simulated dataset
 * Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
 
-First,, we'll simulate data from both of our models
+First, we'll simulate data from both of our models
 
 ```{r}
 aedat_pp01 = add_predicted_draws(model=mod01, newdata = aedat)

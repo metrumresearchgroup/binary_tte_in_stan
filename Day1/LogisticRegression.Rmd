@@ -542,11 +542,11 @@ Often undesirable: do you want to treat the difference between 3% and 5% the sam
 
 # The logit transform
 
-* The logit, or "log odds" function
+* The logit, or "log odds" function, qlogis() in R
 
 $$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)$$
 
-* The standard logistic function (also called the "expit") is the inverse of the logit:
+* The standard logistic function (also called the "expit") is the inverse of the logit, plogis() in R:
 
 $$\begin{align*}
 p &= \mathrm{expit}(x) \\[1em]
@@ -1024,6 +1024,7 @@ sim_summary %>%
 # VPC for continuous variable: define summary statistic
 
 * Fit generalized additive model (smoother) to each simulated dataset
+MW: Going from 0 to 95 doesn't make sense to me. 5 to 95 or 0 to 100 seems more natural. This demo is also generally confusing, as to what's being simulated and smoothed
 * Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
 
 ```{r}
