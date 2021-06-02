@@ -451,7 +451,7 @@ ggplot() +
            aes(x = CAVGSS), sides = "b") +
   geom_rug(data = filter(dat_eda, AE01 == 1),
            aes(x = CAVGSS), sides = "t") +
-  # Add snooth mean function
+  # Add smooth mean function
   geom_smooth(data = dat_eda,
               aes(x = CAVGSS, y = AE01),
               method='gam', formula=y~s(x),
@@ -542,11 +542,11 @@ Often undesirable: do you want to treat the difference between 3% and 5% the sam
 
 # The logit transform
 
-* The logit, or "log odds" function
+* The logit, or "log odds" function, qlogis() in R
 
 $$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)$$
 
-* The standard logistic function (also called the "expit") is the inverse of the logit:
+* The standard logistic function (also called the "expit") is the inverse of the logit, plogis() in R:
 
 $$\begin{align*}
 p &= \mathrm{expit}(x) \\[1em]
@@ -1024,6 +1024,7 @@ sim_summary %>%
 # VPC for continuous variable: define summary statistic
 
 * Fit generalized additive model (smoother) to each simulated dataset
+<!-- MW: Going from 0 to 95 doesn't make sense to me. 5 to 95 or 0 to 100 seems more natural. This demo is also generally confusing, as to what's being simulated and smoothed -->
 * Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
 
 ```{r}
@@ -1057,7 +1058,7 @@ sim_summary <- aedat_pp %>%
   slice(1:200) %>% 
   # Compute summary stats for each simulated dataset
   mutate(predictions = map(cols, ~summary_function(.x, .x_name='CAVGSS'))) %>% 
-  select(name,predictions) %>% 
+  select(name, predictions) %>% 
   unnest(cols=predictions) %>% 
   # Summarise across simulated data sets
   group_by(xvar) %>% 
