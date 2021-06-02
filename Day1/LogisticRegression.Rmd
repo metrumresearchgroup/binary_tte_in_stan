@@ -451,7 +451,7 @@ ggplot() +
            aes(x = CAVGSS), sides = "b") +
   geom_rug(data = filter(dat_eda, AE01 == 1),
            aes(x = CAVGSS), sides = "t") +
-  # Add snooth mean function
+  # Add smooth mean function
   geom_smooth(data = dat_eda,
               aes(x = CAVGSS, y = AE01),
               method='gam', formula=y~s(x),
