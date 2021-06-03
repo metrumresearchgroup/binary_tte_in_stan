@@ -5,69 +5,29 @@ output:
     fig_width: 9
     fig_height: 5
     font_adjustment: 3
-    transition: none
+    transition: faster
     css: slidystyles.css
     footer: metrumrg &copy 2021
 
 ---
 
 
-# Why Start Here?
+<!-- # Why Start Here? -->
 
-* The beginning is a very good place to start.
-* Why start with GLMs?
-* Why start with binary endpoints?
-* Why time-to-event analysis?
-
-----
-
-# Why start with GLMs? Broadly Useful.
-
-* `Binary` (the focus of this course)
-* `Ordered categorical` (e.g. grade of adverse event)
-* `Continuous`
-    * bounded below (e.g. Lognormal residuals), 
-    * bounded above and below (e.g. Beta residuals), 
-    * unbounded (e.g. Normal residuals) 
-* `Counts`
-* `Time-to-event` (Many TTE models are GLMs, even though they are generally fit using slightly different machinery)
-
-
-----
-
-# Why start with GLMs? Mind-expanding.
-
-* If you are coming from a Pop PK background, moving away from models with Normal (or log-Normal) residuals may force you to think at a new level of abstraction. 
-* If you are not used to modeling in R and Stan, the `glm()` and `brm()` functions in R provide a good introduction, because they conform to somewhat standard R conventions for model-fitting functions. 
-
-
-----
-
-# What does this mean?
-* Minimal NONMEMese
-* $\eta$ is not what you're used to
-* No $\sigma$ (For the most part)
-* No random effects (to start)
-
-----
-
-# Why start with binary data?
-
-* The Bernoulli distribution for binary data is (in most respects) as simple a statistical distribution as there is. Good place to start for many basic statistical concepts.  
-* There are fewer choices to make and fewer assumptions to check when dealing with binary data (e.g. as compared to time-to-event data). 
-
----- 
+<!-- * The beginning is a very good place to start. -->
+<!-- * Why start with GLMs? -->
+<!-- * Why start with binary endpoints? -->
+<!-- * Why time-to-event analysis? -->
 
 # Course objectives
 
 We want you to finish this course with: 
 
-* General conceptual understanding and basic intuitions for the analysis of binary outcomes 
-* General conceptual understanding and basic intuitions for the analysis of time-to-event data. 
-* Specific tips, tricks, and recipes for getting the job done "soup to nuts".
+* Conceptual understanding, basic intuitions, and hand-on experience for the analysis of binary outcomes and time-to-event data
+* Specific tips, tricks, and recipes for getting the job done "soup to nuts" in R and Stan
 
 
-----
+---- 
 
 # What this course isn't
 
@@ -86,30 +46,40 @@ We want you to finish this course with:
 # Course organization
 
 * Four 3-4 hour sessions
-* Roughly one per week
-* Didactic + hands-on learning
-* Virtual office hours
+    * June 4, 11, 25
+    * July 9
+* Each session is a mix of didactic + hands-on learning
+* Sessions will be recorded
+* We will pause periodically for questions
+    * Post questions in the chat box, or 
+    * Ask when we pause
+<br>
+* Board for ansynchonous questions and discussion?
+
+
+
+
 
 ----
 
 # Session 1
 
-* `Study designs and confounded exposure-response`
 * `Basic concepts for binary data` : 
     * Notational conventions, Bernoulli distribution, Maximum likelihood
     * Visualizing relationships
     * Models, model checking, and measures of effect
-* Bayesian models for binary data (Technical session)
+* `Bayesian models for binary data` (Technical session)
     
 ----
 
 # Session 2
-`Basic concepts for time-to-event data` : 
 
-* Time-to-event (TTE) data:: what makes it different?
-* Visualizing TTE data - the Kaplan-Meier estimator
-* Cox proportional hazards model
-* Introduction to parametric regression models
+* `Study designs and confounded exposure-response`  
+* `Basic concepts for time-to-event data` : 
+    * Time-to-event (TTE) data:: what makes it different?
+    * Visualizing TTE data - the Kaplan-Meier estimator
+    * Cox proportional hazards model
+    * Introduction to parametric regression models
 
 ----
 
@@ -138,5 +108,44 @@ We want you to finish this course with:
 * Navigate slides by first typing "t". 
 * Workbooks are "Rmarkdown" documents. 
     * GUI button to execute a code chunk. 
-    * GUI button to execute all prior code. __(Try this now. It will be useful if you mess up your data mid-session)__. 
+    * GUI button to execute all prior code. 
+
+<!-- ---- -->
+
+<!-- # Why start with GLMs?  -->
+
+<!-- They are broadly useful. -->
+
+<!-- * <red>Binary</red> (one focus of this course) -->
+<!-- * Ordered categorical (e.g. grade of adverse event) -->
+<!-- * Continuous -->
+<!--     * bounded below (e.g. Lognormal residuals),  -->
+<!--     * bounded above and below (e.g. Beta residuals),  -->
+<!--     * unbounded (e.g. Normal residuals)  -->
+<!-- * Counts -->
+<!-- * <red>Time-to-event</red> (Many TTE models are GLMs, even though they are generally fit using slightly different machinery) -->
+
+
+<!-- ---- -->
+
+<!-- # Why start with GLMs? Mind-expanding. -->
+
+<!-- * If you are coming from a Pop PK background, moving away from models with Normal (or log-Normal) residuals may force you to think at a new level of abstraction.  -->
+<!-- * If you are not used to modeling in R and Stan, the `glm()` and `brm()` functions in R provide a good introduction, because they conform to somewhat standard R conventions for model-fitting functions.  -->
+
+
+<!-- ---- -->
+
+<!-- # What does this mean? -->
+<!-- * Minimal NONMEMese -->
+<!-- * $\eta$ is not what you're used to -->
+<!-- * No $\sigma$ (For the most part) -->
+<!-- * No random effects (to start) -->
+
+<!-- ---- -->
+
+<!-- # Why start with binary data? -->
+
+<!-- * The Bernoulli distribution for binary data is (in most respects) as simple a statistical distribution as there is. Good place to start for many basic statistical concepts.   -->
+<!-- * There are fewer choices to make and fewer assumptions to check when dealing with binary data (e.g. as compared to time-to-event data).  -->
 

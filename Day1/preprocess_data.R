@@ -9,13 +9,16 @@ aedat <- aedat %>%
     STUDYID=="PROTB" ~ 6),
     # Time of severe event for those that had one
     TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
-  )
+  ) %>% 
+  ungroup()
 
 aedat <- aedat %>% 
+  group_by(USUBJID) %>% 
   arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
   group_by(PBO) %>%
   mutate(Quartile = ifelse(PBO == "PBO", "PBO",
-                           paste0("Q", ntile(CAVGSS, n = 4))))
+                           paste0("Q", ntile(CAVGSS, n = 4)))) %>% 
+  ungroup()
 
 ref_bwt <- median(aedat$BWT) # will want reference value later, so save as variable!
 

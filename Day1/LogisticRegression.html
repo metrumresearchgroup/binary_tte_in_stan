@@ -282,9 +282,7 @@ Tall = \left\{ \begin{array}{ll}
                \end{array}
        \right.
 \]</span></p>
-<blockquote>
-<p>NB: From here on, we’ll assume binary random variables are defined as 0 / 1</p>
-</blockquote>
+<!-- > NB: From here on, we'll assume binary random variables are defined as 0 / 1 -->
 <p>Then our model might be</p>
 <p><span class="math display">\[\text{Tall} \sim \text{Bernoulli}(\pi)\]</span></p>
 <div class="notebox">
@@ -304,7 +302,7 @@ Tall = \left\{ \begin{array}{ll}
 <p>Both of these link to specific probability density or probability mass functions:</p>
 <p>The <em>normal</em> (or <em>Gaussian</em>) pdf for height <span class="math display">\[
     p(height \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
-      \sigma} e^{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2}
+      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2\right\}
 \]</span></p>
 <p>and the <em>Bernoulli</em> pmf for Tall</p>
 <p><span class="math display">\[
@@ -552,35 +550,35 @@ L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) &amp; = &amp; l(\pi| \mathbf{Y}=\mathbf
 <ul>
 <li><code>Conditional probability</code> of an event, conditional on treatment “1”.</li>
 </ul>
-<p><span class="math display">\[ P(Y=1 \, | \, T = 1) \]</span></p>
+<p><span class="math display">\[ P(Y=1 \, | \, T = 1)  \in (0,1)\]</span></p>
 <ul>
 <li><code>Odds</code> of an event, conditional on treatment “1”:</li>
 </ul>
-<p><span class="math display">\[ \frac{P(Y=1 \, | \, T = 1)}{P(Y=0 \, | \, T = 1)} = \frac{P(Y=1 \, | \, T = 1)}{1 - P(Y=1 \, | \, T = 1)}\]</span></p>
+<p><span class="math display">\[ \frac{P(Y=1 \, | \, T = 1)}{P(Y=0 \, | \, T = 1)} = \frac{P(Y=1 \, | \, T = 1)}{1 - P(Y=1 \, | \, T = 1)} \in (0,\infty)\]</span></p>
 <ul>
 <li><code>Odds ratio</code> of an event, for treatment “1” versus treatment “0”:</li>
 </ul>
-<p><span class="math display">\[ \frac{\left.P(Y=1 \, | \, T = 1)\, \right/ P(Y=0 \, | \, T = 1)}{\left.P(Y=1 \, | \, T = 0) \, \right/ P(Y=0 \, | \, T = 0) }\]</span></p>
+<p><span class="math display">\[ \frac{\left.P(Y=1 \, | \, T = 1)\, \right/ P(Y=0 \, | \, T = 1)}{\left.P(Y=1 \, | \, T = 0) \, \right/ P(Y=0 \, | \, T = 0) } \in (0,\infty)\]</span></p>
 </div>
 <div id="measures-of-effect-relative-risk" class="slide section level1">
 <h1>Measures of effect: relative risk</h1>
 <p>Relative risk of an event, for treatment “1” versus treatment “0”:</p>
-<p><span class="math display">\[ \frac{P(Y=1 \, | \, T = 1)}{P(Y=1 \, | \, T = 0)}\]</span> Anecdotally, this is often the preferred / most interpretable way to quantify efficacy.</p>
+<p><span class="math display">\[ \frac{P(Y=1 \, | \, T = 1)}{P(Y=1 \, | \, T = 0)} \in (0,\infty)\]</span> Anecdotally, this is often the preferred / most interpretable way to quantify efficacy.</p>
 <p>NB: Odds ratio and relative risk are sometimes confused with each other. Note the difference.</p>
 </div>
 <div id="other-measures-of-effect-for-binary-data" class="slide section level1">
 <h1>Other measures of effect for binary data</h1>
 <p>Difference in probability of events, for treatment “1” versus treatment “0”:</p>
-<p><span class="math display">\[ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) \]</span> Often undesirable: do you want to treat the difference between 3% and 5% the same way that you treat the difference between 23% and 25% ?</p>
+<p><span class="math display">\[ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) \in (-1,1)\]</span> Often undesirable: do you want to treat the difference between 3% and 5% the same way that you treat the difference between 23% and 25% ?</p>
 </div>
 <div id="the-logit-transform" class="slide section level1">
 <h1>The logit transform</h1>
 <ul>
-<li>The logit, or “log odds” function, qlogis() in R</li>
+<li>The logit, or “log odds” function, <code>qlogis()</code> in R</li>
 </ul>
-<p><span class="math display">\[\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)\]</span></p>
+<p><span class="math display">\[\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right) \in (-\infty, \infty)\]</span></p>
 <ul>
-<li>The standard logistic function (also called the “expit”) is the inverse of the logit, plogis() in R:</li>
+<li>The standard logistic function (also called the “expit”) is the inverse of the logit, <code>plogis()</code> in R:</li>
 </ul>
 <p><span class="math display">\[\begin{align*}
 p &amp;= \mathrm{expit}(x) \\[1em]
@@ -933,31 +931,59 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <div id="simulation-based-diagnostics" class="slide section level1">
 <h1>Simulation-based Diagnostics</h1>
 <ul>
-<li>Quantile Residuals
+<li>Randomized quantile residuals
 <ul>
 <li>Use model to simulate data and calculate quantile of observed values against simulated data</li>
+<li>Similar to normalized prediction distribution errors (npdes) in pharmacometrics</li>
 <li>Smooths out discrete residual values</li>
 <li>DHARMa Package in R makes this easy (<code>simulateResiduals</code>)</li>
 </ul></li>
-<li>Visual Predictive Checks (VPCs)
+<li>Visual Predictive Checks (VPCs) <!-- * Recipe --> <!--   * Simulate many replicates of the DV using the estimated model and observed predictors --> <!--   * Determine summary statistic(s) of interest --> <!--   * Calculate summary statistic for observed data --> <!--   * Calculate summary statistic for each simulated replicate --> <!--   * Plot distribution(s) of summary statistics --> <!--   * Overlay observed value -->
 <ul>
-<li>Recipe
-<ul>
-<li>Simulate many replicates of the DV using the estimated model and observed predictors</li>
-<li>Determine summary statistic(s) of interest</li>
-<li>Calculate summary statistic for observed data</li>
-<li>Calculate summary statistic for each simulated replicate</li>
-<li>Plot distribution(s) of summary statistics</li>
-<li>Overlay observed value</li>
-</ul></li>
-<li>The choice of summary statistics is problem dependent</li>
-<li>A place to start is bucketing covariates and assessing overall trends</li>
+<li>The choice of summary statistics is problem dependent <!-- * A place to start is bucketing covariates and assessing overall trends --></li>
 <li>Will see more examples in the next hands-on portion</li>
 </ul></li>
 </ul>
 </div>
-<div id="quantile-residuals" class="slide section level1">
-<h1>Quantile residuals</h1>
+<div id="quantile-residuals-for-continuous-data" class="slide section level1">
+<h1>Quantile residuals for continuous data</h1>
+<p>Suppose we have a continuous random variable: <span class="math inline">\(Y \sim f(\theta).\)</span> Then,</p>
+<p><span class="math display">\[F(y_i) \sim \text{Uniform}(0,1)\]</span></p>
+<p>where <span class="math inline">\(F(x) = \int_{-\infty}^x f(y) ~ dy\)</span> is the cumulative distribution function for <span class="math inline">\(Y\)</span>.</p>
+<div class="columns">
+<div class="column">
+<p>So, for continuous data, we could</p>
+<ul>
+<li>Simulate many replicates from our fitted model to approximate <span class="math inline">\(F(Y)\)</span></li>
+<li>Evaluate the approximate <span class="math inline">\(F(Y)\)</span> at <span class="math inline">\(y_i\)</span></li>
+</ul>
+</div><div class="column">
+<p><img src="graphics/cdf_image_dharma.png" width="70%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="randomized-quantile-residuals-for-binary-data" class="slide section level1">
+<h1>Randomized quantile residuals for binary data</h1>
+<div class="columns">
+<div class="column">
+<p>For binary data, <span class="math inline">\(F(y)\)</span> is a step function, with steps at 0 and 1.</p>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-15-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div><div class="column">
+<p>Dunn and Smyth (1997 JCGS) defined the <strong><em>randomized quantile residual</em></strong>.</p>
+<p>For binary data, this is:</p>
+<p><span class="math display">\[
+r_{q,i} = \begin{cases}
+  u \sim U(0,\pi_i)  &amp; \text{if } y_i = 0\\
+  u \sim U(\pi_i, 1) &amp; \text{if } y_i = 0
+\end{cases}
+\]</span></p>
+</div>
+</div>
+<p>These residuals have nice properties (see, e.g., <a href="https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html">the DHARMa vignette</a>)</p>
+<p>Importantly, departures from a uniform distribution indicate lack of fit.</p>
+</div>
+<div id="randomized-quantile-residuals-example" class="slide section level1">
+<h1>Randomized quantile residuals example</h1>
 <div class="columns">
 <div class="column" style="width:47.5%;">
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" data-line-number="1">dharma_resids =<span class="st"> </span><span class="kw">simulateResiduals</span>(mod01_glm,</a>
@@ -965,7 +991,7 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <a class="sourceLine" id="cb11-3" data-line-number="3">                                  <span class="dt">integerResponse =</span> <span class="ot">TRUE</span>)</a>
 <a class="sourceLine" id="cb11-4" data-line-number="4"></a>
 <a class="sourceLine" id="cb11-5" data-line-number="5"><span class="kw">plot</span>(dharma_resids)</a></code></pre></div>
-<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-14-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-16-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
 </div><div class="column" style="width:5%;">
 
 </div><div class="column" style="width:47.5%;">
@@ -975,13 +1001,13 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <a class="sourceLine" id="cb12-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
 <a class="sourceLine" id="cb12-5" data-line-number="5"><span class="st">  </span><span class="kw">geom_smooth</span>() <span class="op">+</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb12-6" data-line-number="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y=</span><span class="st">&#39;Quantile residuals&#39;</span>, <span class="dt">x=</span><span class="st">&#39;Body Weight (kg)&#39;</span>)</a></code></pre></div>
-<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-15-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-17-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
 </div>
 </div>
 <div id="visual-predictive-checks" class="slide section level1">
 <h1>Visual Predictive Checks</h1>
-<p>Recall our recipe:</p>
+<p>Recall the VPC “recipe”:</p>
 <ul>
 <li>Simulate many replicates of the DV using the estimated model and observed predictors</li>
 <li>Determine summary statistic(s) of interest</li>
@@ -1031,7 +1057,7 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 <a class="sourceLine" id="cb15-16" data-line-number="16"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Proportion with AE&#39;</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb15-17" data-line-number="17"><span class="st">  </span><span class="kw">coord_flip</span>()</a></code></pre></div>
 </div><div class="column">
-<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-17-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-19-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
 </div>
 </div>
@@ -1045,14 +1071,16 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </ul></li>
 </ul>
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">summary_function &lt;-<span class="st"> </span><span class="cf">function</span>(.data, .x_name, <span class="dt">.y_name=</span><span class="st">&#39;value&#39;</span>) {</a>
-<a class="sourceLine" id="cb16-2" data-line-number="2">  .data &lt;-<span class="st"> </span>.data <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rename</span>(<span class="st">&#39;xvar&#39;</span> =<span class="st"> </span>.x_name, <span class="st">&#39;yvar&#39;</span>=.y_name)</a>
-<a class="sourceLine" id="cb16-3" data-line-number="3">  x_grid &lt;-<span class="st"> </span><span class="kw">with</span>(.data, <span class="kw">seq</span>(<span class="dt">from =</span> <span class="kw">quantile</span>(xvar, <span class="dt">probs=</span><span class="fl">0.05</span>),</a>
-<a class="sourceLine" id="cb16-4" data-line-number="4">                           <span class="dt">to =</span> <span class="kw">quantile</span>(xvar,<span class="dt">probs =</span> <span class="fl">0.95</span>), </a>
-<a class="sourceLine" id="cb16-5" data-line-number="5">                           <span class="dt">length =</span> <span class="dv">100</span>))</a>
-<a class="sourceLine" id="cb16-6" data-line-number="6">  fit &lt;-<span class="st"> </span><span class="kw">gam</span>(yvar <span class="op">~</span><span class="st"> </span><span class="kw">s</span>(xvar), <span class="dt">family=</span><span class="kw">binomial</span>(<span class="dt">link=</span><span class="st">&#39;logit&#39;</span>), <span class="dt">data=</span>.data)</a>
-<a class="sourceLine" id="cb16-7" data-line-number="7">  predictions &lt;-<span class="st"> </span><span class="kw">predict</span>(fit, <span class="dt">newdata =</span> <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid), <span class="dt">type=</span><span class="st">&#39;response&#39;</span>)</a>
-<a class="sourceLine" id="cb16-8" data-line-number="8">  <span class="kw">return</span>( <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid, <span class="dt">prediction =</span> predictions))</a>
-<a class="sourceLine" id="cb16-9" data-line-number="9">}</a></code></pre></div>
+<a class="sourceLine" id="cb16-2" data-line-number="2">  .data &lt;-<span class="st"> </span>.data <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb16-3" data-line-number="3"><span class="st">    </span><span class="kw">rename</span>(<span class="st">&#39;xvar&#39;</span> =<span class="st"> </span><span class="kw">all_of</span>(.x_name), </a>
+<a class="sourceLine" id="cb16-4" data-line-number="4">           <span class="st">&#39;yvar&#39;</span>=<span class="st"> </span><span class="kw">all_of</span>(.y_name))</a>
+<a class="sourceLine" id="cb16-5" data-line-number="5">  x_grid &lt;-<span class="st"> </span><span class="kw">with</span>(.data, <span class="kw">seq</span>(<span class="dt">from =</span> <span class="kw">quantile</span>(xvar, <span class="dt">probs=</span><span class="fl">0.05</span>),</a>
+<a class="sourceLine" id="cb16-6" data-line-number="6">                           <span class="dt">to =</span> <span class="kw">quantile</span>(xvar,<span class="dt">probs =</span> <span class="fl">0.95</span>), </a>
+<a class="sourceLine" id="cb16-7" data-line-number="7">                           <span class="dt">length =</span> <span class="dv">100</span>))</a>
+<a class="sourceLine" id="cb16-8" data-line-number="8">  fit &lt;-<span class="st"> </span><span class="kw">gam</span>(yvar <span class="op">~</span><span class="st"> </span><span class="kw">s</span>(xvar), <span class="dt">family=</span><span class="kw">binomial</span>(<span class="dt">link=</span><span class="st">&#39;logit&#39;</span>), <span class="dt">data=</span>.data)</a>
+<a class="sourceLine" id="cb16-9" data-line-number="9">  predictions &lt;-<span class="st"> </span><span class="kw">predict</span>(fit, <span class="dt">newdata =</span> <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid), <span class="dt">type=</span><span class="st">&#39;response&#39;</span>)</a>
+<a class="sourceLine" id="cb16-10" data-line-number="10">  <span class="kw">return</span>( <span class="kw">data.frame</span>(<span class="dt">xvar=</span>x_grid, <span class="dt">prediction =</span> predictions))</a>
+<a class="sourceLine" id="cb16-11" data-line-number="11">}</a></code></pre></div>
 </div>
 <div id="compute-summary-statistics-for-observed-data" class="slide section level1">
 <h1>Compute summary statistics for observed data</h1>
@@ -1091,12 +1119,19 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </div>
 <div id="plot-vpc" class="slide section level1">
 <h1>Plot VPC</h1>
+<div class="columns">
+<div class="column">
 <div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" data-line-number="1">sim_summary <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">bind_rows</span>(obs_summary) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb20-2" data-line-number="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x=</span>xvar, <span class="dt">y=</span>prediction)) <span class="op">+</span></a>
 <a class="sourceLine" id="cb20-3" data-line-number="3"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">col=</span>type, <span class="dt">group=</span>type)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb20-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_ribbon</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>qlo, <span class="dt">ymax=</span>qhi, <span class="dt">fill=</span>type), <span class="dt">alpha=</span><span class="fl">0.2</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb20-5" data-line-number="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
-<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-21-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+<a class="sourceLine" id="cb20-4" data-line-number="4"><span class="st">  </span><span class="kw">geom_ribbon</span>(<span class="kw">aes</span>(<span class="dt">ymin=</span>qlo, <span class="dt">ymax=</span>qhi, <span class="dt">fill=</span>type), </a>
+<a class="sourceLine" id="cb20-5" data-line-number="5">              <span class="dt">alpha=</span><span class="fl">0.2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-6" data-line-number="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Steady-state Cavg&#39;</span>, </a>
+<a class="sourceLine" id="cb20-7" data-line-number="7">       <span class="dt">y=</span><span class="st">&#39;Probability of severe AE&#39;</span>)</a></code></pre></div>
+</div><div class="column">
+<p><img src="LogisticRegression_files/figure-slidy/unnamed-chunk-23-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
 </div>
 <div id="model-comparison" class="slide section level1">
 <h1>Model Comparison</h1>
@@ -1154,7 +1189,7 @@ p &amp;= \mathrm{expit}(x) \\[1em]
 </ul></li>
 <li>How to interpret model terms
 <ul>
-<li>Parameters in logistic refression models inform us about odds ratios</li>
+<li>Parameters in logistic regression models inform us about odds ratios</li>
 </ul></li>
 </ul>
 </div>

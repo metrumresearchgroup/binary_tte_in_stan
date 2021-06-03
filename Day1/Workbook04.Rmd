@@ -42,39 +42,31 @@ expit <- function(x) 1 / (1+exp(-x))
 # Preamble of data assembly done in previous workbooks
 
 load('../data/aedat.RDS')
-aedat <-
-  aedat %>% group_by(USUBJID) %>%
-  # End of study for patients without a severe event
-  mutate(TTE_SEVERE = case_when(
-    STUDYID=="PROTA" ~ 2,
-    STUDYID=="PROTB" ~ 6
-  ),
-  # Time of severe event for those that had one
-  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
-  )
-dat_use <-
-  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
-  group_by(PBO) %>%
-  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
-                           paste0("Q", ntile(CAVGSS, n = 4))))
+source('preprocess_data.R')
 ```
 
+Let's start by fitting a model with effects of steady-state Cavg and patient type.  Note that patient type is a factor. and the reference level is "HV".
+
+```{r}
+levels(aedat$PTTYPE)
+```
+
+
 ```{r, "TRY firstglm", purl=TRUE, results = "hide"}
-## MW: What's the point of this line?
-dat_mod <- dat_use
 mod01 <- glm(AE01 ~ CAVGSS + PTTYPE,
              family = binomial(link = "logit"),
-             data = dat_mod,
+             data = aedat,
              )
 ```
 
 Exercise:
 
 * Re-fit the model using a probit link (mod01_probit)
+
 * Re-fit the model with STUDYID as an additional covariate (mod02)
 
 ```{r}
-
+# Your code here
 ```
 
 
@@ -97,7 +89,7 @@ Exercise:
 * Print out 90% confidence intervals for the model parameters.
 
 ```{r}
-
+# Your code here
 ```
 
 
@@ -110,19 +102,20 @@ partab01
 
 Exercise:
 
-* Make the intercept more interpretable by applying the inverse of the link function.
+* Make the intercept more interpretable by applying the inverse of the link function.  What scale is this?
 * What exposure and covariate settings does the intercept correspond to?
 
 ```{r}
-
+# You can extract the intercept row like this:
+partab01['(Intercept)',]
 ```
 
 
 ## Re-coding predictors
 
 ```{r, "TRY recoding", purl=TRUE, results = "hide"}
-ref_bwt <- median(dat_use$BWT) # will want reference value later, so save as variable!
-dat_mod <- dat_use %>% mutate(
+ref_bwt <- median(aedat$BWT) # will want reference value later, so save as variable!
+dat_mod <- aedat %>% mutate(
   BWT_norm = BWT - ref_bwt,
   PTTYPE = factor(PTTYPE, levels = c("PT1", "PT2", "HV"))
   )
@@ -131,7 +124,7 @@ dat_mod <- dat_use %>% mutate(
 
 Exercise: 
 
-* Re-fit model `mod01` adding the effects of PTTYPE and normalize body weight.  What exposure and covariate settings does the intercept corresponds to?
+* Re-fit model `mod01` inclucding, CAVGSS, the re-coded PTTYPE and normalized body weight.  What exposure and covariate settings does the intercept corresponds to?
 
 ```{r}
 

@@ -11,7 +11,7 @@
 
 <meta name="author" content="Model Fitting" />
 
-<meta name="date" content="2021-06-01" />
+<meta name="date" content="2021-06-03" />
 
 <title>Workbook</title>
 
@@ -1528,7 +1528,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Workbook</h1>
 <h4 class="author">Model Fitting</h4>
-<h4 class="date">2021-06-01</h4>
+<h4 class="date">2021-06-03</h4>
 
 </div>
 
@@ -1551,31 +1551,20 @@ expit &lt;- function(x) 1 / (1+exp(-x))</code></pre>
 <pre class="r"><code># Preamble of data assembly done in previous workbooks
 
 load('../data/aedat.RDS')
-aedat &lt;-
-  aedat %&gt;% group_by(USUBJID) %&gt;%
-  # End of study for patients without a severe event
-  mutate(TTE_SEVERE = case_when(
-    STUDYID==&quot;PROTA&quot; ~ 2,
-    STUDYID==&quot;PROTB&quot; ~ 6
-  ),
-  # Time of severe event for those that had one
-  TTE_SEVERE = ifelse(AETOXGR==&quot;Severe&quot;, TTE, TTE_SEVERE)
-  )
-dat_use &lt;-
-  aedat %&gt;% arrange(USUBJID, TTE_SEVERE) %&gt;% slice(1) %&gt;%
-  group_by(PBO) %&gt;%
-  mutate(Quartile = ifelse(PBO == &quot;PBO&quot;, &quot;PBO&quot;,
-                           paste0(&quot;Q&quot;, ntile(CAVGSS, n = 4))))</code></pre>
-<pre class="r"><code>dat_mod &lt;- dat_use
-mod01 &lt;- glm(AE01 ~ CAVGSS + PTTYPE,
+source('preprocess_data.R')</code></pre>
+<p>Let’s start by fitting a model with effects of steady-state Cavg and patient type. Note that patient type is a factor. and the reference level is “HV”.</p>
+<pre class="r"><code>levels(aedat$PTTYPE)</code></pre>
+<pre><code>. [1] &quot;HV&quot;  &quot;PT1&quot; &quot;PT2&quot;</code></pre>
+<pre class="r"><code>mod01 &lt;- glm(AE01 ~ CAVGSS + PTTYPE,
              family = binomial(link = &quot;logit&quot;),
-             data = dat_mod,
+             data = aedat,
              )</code></pre>
 <p>Exercise:</p>
 <ul>
-<li>Re-fit the model using a probit link (mod01_probit)</li>
-<li>Re-fit the model with STUDYID as an additional covariate (mod02)</li>
+<li><p>Re-fit the model using a probit link (mod01_probit)</p></li>
+<li><p>Re-fit the model with STUDYID as an additional covariate (mod02)</p></li>
 </ul>
+<pre class="r"><code># Your code here</code></pre>
 <div id="reading-r-help" class="section level2">
 <h2><span class="header-section-number">2.1</span> Reading R help</h2>
 <p>R help pages can be overwhelming. Nonetheless, take a look at the following help files.</p>
@@ -1590,6 +1579,7 @@ mod01 &lt;- glm(AE01 ~ CAVGSS + PTTYPE,
 <li>Print out 95% confidence intervals for the model parameters.</li>
 <li>Print out 90% confidence intervals for the model parameters.</li>
 </ul>
+<pre class="r"><code># Your code here</code></pre>
 </div>
 <div id="model-intercept" class="section level2">
 <h2><span class="header-section-number">2.2</span> Model intercept</h2>
@@ -1597,21 +1587,25 @@ mod01 &lt;- glm(AE01 ~ CAVGSS + PTTYPE,
 partab01</code></pre>
 <p>Exercise:</p>
 <ul>
-<li>Make the intercept more interpretable by applying the inverse of the link function.</li>
+<li>Make the intercept more interpretable by applying the inverse of the link function. What scale is this?</li>
 <li>What exposure and covariate settings does the intercept correspond to?</li>
 </ul>
+<pre class="r"><code># You can extract the intercept row like this:
+partab01['(Intercept)',]</code></pre>
+<pre><code>.               2.5 %    97.5 % 
+. -3.992817 -5.534301 -2.795132</code></pre>
 </div>
 <div id="re-coding-predictors" class="section level2">
 <h2><span class="header-section-number">2.3</span> Re-coding predictors</h2>
-<pre class="r"><code>ref_bwt &lt;- median(dat_use$BWT) # will want reference value later, so save as variable!
-dat_mod &lt;- dat_use %&gt;% mutate(
+<pre class="r"><code>ref_bwt &lt;- median(aedat$BWT) # will want reference value later, so save as variable!
+dat_mod &lt;- aedat %&gt;% mutate(
   BWT_norm = BWT - ref_bwt,
   PTTYPE = factor(PTTYPE, levels = c(&quot;PT1&quot;, &quot;PT2&quot;, &quot;HV&quot;))
   )
 ?relevel</code></pre>
 <p>Exercise:</p>
 <ul>
-<li><p>Re-fit model <code>mod01</code> adding the effects of PTTYPE and normalize body weight. What exposure and covariate settings does the intercept corresponds to?</p></li>
+<li><p>Re-fit model <code>mod01</code> inclucding, CAVGSS, the re-coded PTTYPE and normalized body weight. What exposure and covariate settings does the intercept corresponds to?</p></li>
 <li><p>How many fold higher are the odds of an AE for <code>PT1</code> versus <code>HV</code>?</p></li>
 </ul>
 </div>

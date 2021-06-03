@@ -6,7 +6,7 @@ output:
     fig_width: 9
     fig_height: 5
     font_adjustment: 3
-    transition: none
+    transition: faster
     css: slidystyles.css
     footer: Metrum Research Group &copy 2021
     mathjax: local
@@ -171,7 +171,7 @@ Tall = \left\{ \begin{array}{ll}
 $$
 
 
-> NB: From here on, we'll assume binary random variables are defined as 0 / 1
+<!-- > NB: From here on, we'll assume binary random variables are defined as 0 / 1 -->
 
 Then our model might be
 
@@ -198,7 +198,7 @@ Both of these link to specific probability density or probability mass functions
 The _normal_ (or _Gaussian_) pdf for height
 $$
     p(height \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
-      \sigma} e^{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2}
+      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2\right\}
 $$
 
 and the _Bernoulli_ pmf for Tall
@@ -513,22 +513,22 @@ ggplot() +
 
 * `Conditional probability` of an event, conditional on treatment "1".
 
-$$ P(Y=1 \, | \, T = 1) $$
+$$ P(Y=1 \, | \, T = 1)  \in (0,1)$$
 
 * `Odds` of an event, conditional on treatment "1": 
 
-$$ \frac{P(Y=1 \, | \, T = 1)}{P(Y=0 \, | \, T = 1)} = \frac{P(Y=1 \, | \, T = 1)}{1 - P(Y=1 \, | \, T = 1)}$$
+$$ \frac{P(Y=1 \, | \, T = 1)}{P(Y=0 \, | \, T = 1)} = \frac{P(Y=1 \, | \, T = 1)}{1 - P(Y=1 \, | \, T = 1)} \in (0,\infty)$$
 
 * `Odds ratio` of an event, for treatment "1" versus treatment "0":
 
-$$ \frac{\left.P(Y=1 \, | \, T = 1)\, \right/ P(Y=0 \, | \, T = 1)}{\left.P(Y=1 \, | \, T = 0) \, \right/ P(Y=0 \, | \, T = 0) }$$
+$$ \frac{\left.P(Y=1 \, | \, T = 1)\, \right/ P(Y=0 \, | \, T = 1)}{\left.P(Y=1 \, | \, T = 0) \, \right/ P(Y=0 \, | \, T = 0) } \in (0,\infty)$$
 
 
 # Measures of effect: relative risk
 
 Relative risk of an event, for treatment "1" versus treatment "0":
 
-$$ \frac{P(Y=1 \, | \, T = 1)}{P(Y=1 \, | \, T = 0)}$$
+$$ \frac{P(Y=1 \, | \, T = 1)}{P(Y=1 \, | \, T = 0)} \in (0,\infty)$$
 Anecdotally, this is often the preferred / most interpretable way to quantify efficacy.
 
 NB: Odds ratio and relative risk are sometimes confused with each other. Note the difference. 
@@ -539,17 +539,17 @@ NB: Odds ratio and relative risk are sometimes confused with each other. Note th
 Difference in probability of events, for treatment "1" versus treatment "0":
     
 
-$$ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) $$
+$$ P(Y=1 \, | \, T = 1) - P(Y=1 \, | \, T = 0) \in (-1,1)$$
 Often undesirable: do you want to treat the difference between 3% and 5% the same way that you treat the difference between 23% and 25% ? 
 
 
 # The logit transform
 
-* The logit, or "log odds" function, qlogis() in R
+* The logit, or "log odds" function, `qlogis()` in R
 
-$$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right)$$
+$$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right) \in (-\infty, \infty)$$
 
-* The standard logistic function (also called the "expit") is the inverse of the logit, plogis() in R:
+* The standard logistic function (also called the "expit") is the inverse of the logit, `plogis()` in R:
 
 $$\begin{align*}
 p &= \mathrm{expit}(x) \\[1em]
@@ -913,25 +913,103 @@ ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
 
 # Simulation-based Diagnostics
 
-* Quantile Residuals
+* Randomized quantile residuals
     * Use model to simulate data and calculate quantile of observed values against simulated data
+    * Similar to normalized prediction distribution errors (npdes) in pharmacometrics
     * Smooths out discrete residual values
     * DHARMa Package in R makes this easy (`simulateResiduals`)
     
 * Visual Predictive Checks (VPCs)
-  * Recipe
-    * Simulate many replicates of the DV using the estimated model and observed predictors
-    * Determine summary statistic(s) of interest
-    * Calculate summary statistic for observed data
-    * Calculate summary statistic for each simulated replicate
-    * Plot distribution(s) of summary statistics
-    * Overlay observed value
+  <!-- * Recipe -->
+  <!--   * Simulate many replicates of the DV using the estimated model and observed predictors -->
+  <!--   * Determine summary statistic(s) of interest -->
+  <!--   * Calculate summary statistic for observed data -->
+  <!--   * Calculate summary statistic for each simulated replicate -->
+  <!--   * Plot distribution(s) of summary statistics -->
+  <!--   * Overlay observed value -->
   * The choice of summary statistics is problem dependent
-  * A place to start is bucketing covariates and assessing overall trends
+  <!-- * A place to start is bucketing covariates and assessing overall trends -->
   * Will see more examples in the next hands-on portion
 
 
-# Quantile residuals
+# Quantile residuals for continuous data
+
+Suppose we have a continuous random variable: $Y \sim f(\theta).$  Then,
+
+$$F(y_i) \sim \text{Uniform}(0,1)$$ 
+
+where $F(x) = \int_{-\infty}^x f(y) ~ dy$ is the cumulative distribution function for $Y$.
+
+::::{.columns}
+
+:::{.column}
+So, for continuous data, we could
+
+* Simulate many replicates from our fitted model to approximate $F(Y)$
+* Evaluate the approximate $F(Y)$ at $y_i$
+
+:::
+
+:::{.column}
+
+```{r, echo=FALSE, out.width='70%'}
+# All defaults
+knitr::include_graphics("graphics/cdf_image_dharma.png")
+```
+:::
+
+::::
+
+# Randomized quantile residuals for binary data
+
+::::{.columns}
+
+:::{.column}
+
+For binary data, $F(y)$ is a step function, with steps at 0 and 1.
+
+```{r, echo=FALSE}
+data.frame(x=c(0,1), y=c(.25, 1)) %>% 
+ggplot() +
+  geom_point(aes(x,y)) +
+  geom_point(x=0,y=0, shape=1) +
+  geom_point(x=1,y=0.25, shape=1) +
+  geom_segment(aes(x=0, xend=1, y=0.25, yend=0.25)) +
+  geom_segment(aes(x=-0.5, xend=0, y=0, yend=0),
+               arrow = arrow(length=unit(0.20,"cm"), 
+                             ends="first", 
+                             type = "closed")) +
+  geom_segment(aes(x=1, xend=1.5, y=1, yend=1),
+               arrow = arrow(length=unit(0.20,"cm"), 
+                             ends="last", 
+                             type = "closed")) +
+  labs(x="y", y="F(y)")
+```
+
+:::
+
+:::{.column}
+
+Dunn and Smyth (1997 JCGS) defined the ***randomized quantile residual***.
+
+For binary data, this is:
+
+$$
+r_{q,i} = \begin{cases}
+  u \sim U(0,\pi_i)  & \text{if } y_i = 0\\
+  u \sim U(\pi_i, 1) & \text{if } y_i = 0
+\end{cases}
+$$
+:::
+
+::::
+
+These residuals have nice properties (see, e.g., [the DHARMa vignette](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html))
+
+Importantly, departures from a uniform distribution indicate lack of fit.
+
+
+# Randomized quantile residuals example
 
 ::::{.columns}
 
@@ -976,7 +1054,7 @@ aedat %>% ungroup() %>%
 
 # Visual Predictive Checks
 
-Recall our recipe:
+Recall the VPC "recipe":
 
 * Simulate many replicates of the DV using the estimated model and observed predictors
 * Determine summary statistic(s) of interest
@@ -1046,7 +1124,9 @@ sim_summary %>%
 
 ```{r}
 summary_function <- function(.data, .x_name, .y_name='value') {
-  .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
+  .data <- .data %>% ungroup() %>% 
+    rename('xvar' = all_of(.x_name), 
+           'yvar'= all_of(.y_name))
   x_grid <- with(.data, seq(from = quantile(xvar, probs=0.05),
                            to = quantile(xvar,probs = 0.95), 
                            length = 100))
@@ -1088,19 +1168,32 @@ sim_summary <- aedat_pp %>%
 
 # Plot VPC
 
+::::{.columns}
+
+:::{.column}
+
 ```{r, 'cont-vpc', fig.show='hide'}
 sim_summary %>% bind_rows(obs_summary) %>% 
   ggplot(aes(x=xvar, y=prediction)) +
   geom_line(aes(col=type, group=type)) +
-  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
-  labs(x='Steady-state Cavg', y='Probability of severe AE')
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), 
+              alpha=0.2) +
+  labs(x='Steady-state Cavg', 
+       y='Probability of severe AE')
 
 ```
 
-```{r, ref.label='cont-vpc', echo=FALSE, out.width="90%"}
+:::
+
+:::{.column}
+
+```{r, ref.label='cont-vpc', echo=FALSE, out.width="95%"}
 
 ```
 
+:::
+
+::::
 
 
 # Model Comparison
@@ -1146,7 +1239,7 @@ sim_summary %>% bind_rows(obs_summary) %>%
     * Using residuals and VPCs to evaluate models
 
 * How to interpret model terms
-    * Parameters in logistic refression models inform us about odds ratios
+    * Parameters in logistic regression models inform us about odds ratios
 
 
 
