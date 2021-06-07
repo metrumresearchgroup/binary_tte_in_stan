@@ -66,11 +66,19 @@ dat_use <-
 # Outline
 
 
-# Key learning objectives
+# Key learning objectives for today
 
-* One
-* Two
-* Three
+* Conceptual understanding of TTE data and the impact of censoring
+* Visualizing relationships between TTE distribution and covariates
+* Key concepts of the Cox regression model, how to fit and interpret parameters
+* Fitting models to TTE data using parametric distributions
+
+# Not covered today, but coming soon
+
+* Bayesian analysis of TTE models
+* Repeated time to event
+* Effects for covariates that vary continuously with time
+* 
 
 # What is time-to-event data?
   
@@ -397,9 +405,24 @@ print(fit0, rmean = 4)
 # Workbook
    - fitting model, extracting estimates, interpreting estimates, log-rank test, stratifying
  
+
+
+# Cox model as a Poisson regression
+
+Use survreg
+
+
+# Piecewise exponential as an approximation
+
+
+# Smooth hazard funtion using flexsurvreg
+ - bonum material at the end if time
+
+ 
 # Extensions to standard Cox model
-  - Stratified Cox model
-  - Time-varying covariates
+  - Stratified Cox model -- different baseline hazard by strata
+  - Time-varying covariates -- needs counting process notation -- doesn't allow continuously varying covariates
+  
   - (Demonstrate using supplemental workbook but no explicit hands-on)
 
 
