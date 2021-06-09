@@ -14,7 +14,8 @@ output:
     self_contained: false
     df_print: kable
     variant: markdown+fancy_lists
-#bibliography: alpha.bib
+bibliography: Day2-references.bib
+csl: statistical-science.csl
 #nocite: | 
 #    @2795, @2192, @3684
 ---
@@ -224,6 +225,7 @@ p2
 
 - Cumulative hazard = total hazard accumulated to time $t$
   - $H(t) = \int_0^t h(s) ds$
+  - This is the expected number of events to time $t$ [@noauthor_2011-gh]
 <br>
 - Probability density function = instantaneous event risk (aka *density*)
   - $f(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t)$
@@ -612,7 +614,7 @@ where $x_1$ is binary and $x_2$ is continuous.
 * Then, $e^{\theta_1}$ represents the hazard ratio comparing $x_1=1$ to $x_1=0$
     - $\theta_1$ represents the log hazard ratio
 
-* $e^{\theta_1}$ represents the "per unit" hazard ratio
+* $e^{\theta_2}$ represents the hazard ratio for a one unit difference in $x_2$
     - $\exp(\theta_1 \times d)$ represents the hazard ratio for a $d$ unit difference in $x_2$
 
 
@@ -642,47 +644,288 @@ To fit the Cox model in R, we'll use the `coxph` function:
 fit1 <- coxph(Surv(TTE, AE_any) ~ Quartile, data=dat_use)
 ```
 
+* Similar LHS as used with `survfit` (for K-M estimate)
+* RHS can include factor or continuous variables
+  - Character variables are converted to factors
 
 
 # Output from `coxph`
 
-```{r, echo=FALSE}
-fit1
-
-ci = pmtables::sig(exp(confint(fit1))["QuartileQ1",])
-hr1 = pmtables::sig(exp(coef(fit1))[1])
+```{r, echo=TRUE}
+print(fit1)
 ```
 
-* Hazard ratio comparing Q1 to placebo: `glue::glue("{hr1} ({paste(ci,collapse=',')})")`
+```{r, echo=FALSE}
+ci = pmtables::sig(exp(confint(fit1))["QuartileQ1",])
+
+hr1 = pmtables::sig(exp(coef(fit1))[1])
+
+est = glue::glue("{hr1} ({paste(ci,collapse=',')})")
+```
+
+* Hazard ratio comparing Q1 to placebo: `r est`
+
+# Estimation of the baseline cumulative hazard function from a Cox model
+
+* Recall, estimation of covariate effects did not need an estimate of $h_0(t)$
+
+* However, we can obtain a post-hoc estimate of $H_0(t)$ and $S_0(t)$
+
+$$
+\widehat{H_0}(t) = \sum_{j: t(j) \leq t} \frac{D_j}{\sum_{i \in R(j)} \exp(\hat{\theta}_1 x_{1i} + \dots \hat{\theta}_p x_{pi})}
+$$
+where 
+
+* $t(j)$ are the ordered unique event times
+* $R(j)$ is the set of subjects at risk for an event at $t(j)$
+* $D_j$ is the number of events at time $t(j)
+
+# Baseline hazard estimation: intuition
+
+$$
+\widehat{H_0}(t) = \sum_{j: t(j) \leq t} \frac{D_j}{\sum_{i \in R(j)} \exp(\hat{\theta}_1 x_{1i} + \dots \hat{\theta}_p x_{pi})}
+$$
+
+* With no covariates, this simplifies to the Nelson-Aalen estimator
+* With covariates, the denominator is the counter-factual number of subjects at risk had all subjects been in the reference group
+
+The baseline survival function is $\widehat{S_0}(t) = \exp\left\{ -\widehat{H_0}(t) \right\}$
+
+The subject-specific survival function is
+$$
+\widehat{S_i}(t) = \left[ \widehat{S_0}(t) \right] ^{\exp(\hat{\theta}_1 x_{1i} + \dots + \hat{\theta}_p x_{pi})} 
+$$
 
 # Model evaluation for the Cox model
 
-* martingale and deviance residuals
-* assessing the PH assumption (coxzph)
-* extracting the H0 estimate
+Our primary model evaluation tools will be:
 
-ggadjustedcurves
+* Comparing model predicted and observed survival
+* Martingale and deviance residuals for functional form of covariate effects
+* Assessing the PH assumption
 
 
+# Comparing model predicted and observed survival (1)
+
+To extract predicted survival curves from a Cox model, we'll use the `survfit` function
+
+```{r}
+# One line per unique covariate pattern
+dat_pred <- dat_use %>% 
+  arrange(Quartile) %>% 
+  distinct(Quartile)
+
+# Use survfit to extract predicted survival function
+# survfit0 adds time=0 to the predictions; helps with plotting
+cox_preds_fit1 <- survfit(fit1, newdata = dat_pred) %>% 
+  survfit0() 
+
+head(cbind(cox_preds_fit1$time, cox_preds_fit1$surv))
+
+```
+
+# Comparing model predicted and observed survival (2)
+
+:::{.columns}
+
+::::{.column}
+
+```{r, "coxpred", fig.show='hide'}
+survival_preds_fit1 <- cox_preds_fit1$surv %>% 
+  as.data.frame() %>% 
+  mutate(time = cox_preds_fit1$time) %>% 
+  pivot_longer(cols=-time) %>% 
+  mutate(group = as.numeric(name),
+         Quartile = paste0(dat_pred$Quartile[group]))
+
+ggsurvplot(survfit(Surv(TTE, AE_any) ~ Quartile, data=dat_use), 
+           data=dat_use)$plot +
+  geom_step(data=survival_preds_fit1,
+            aes(x=time, y=value), linetype='dashed') +
+  facet_wrap(~Quartile
+             )
+
+```
+
+::::
+
+::::{.column}
+```{r, ref.label="coxpred", echo=FALSE}
+
+```
+
+::::
+
+:::
+
+
+# Martingale residuals
+
+The Martingale residual is defined as
+
+$$
+M_i = \delta_i - \widehat{H_i}(T^*_i)
+$$
+where 
+
+$$
+\delta_i = \cases{1 & event \\
+0 & censored}
+$$
+and
+$T^*$ is the observed event or censoring time
+
+:::{.notebox}
+
+Because $H(t)$ is is expected number of events according to the model, the Martingale residual is an "observed - expected" type of residual.
+
+:::
+
+Often asymmetric due to the fact that $M_i \in (-\infty, 1)$
+
+# Deviance residuals
+
+The deviance residual is defined as
+
+$$
+D_i = \text{sign}(M_i) \sqrt{-2 \left( M_i + \delta_i \log \widehat{H_i}(T^*_i)\right) }
+$$
+
+* More symmetric than Martingale residuals
+* Roughly have mean=0 and sd=1
+
+# Uses for Martingale and Deviance residuals
+
+:::{.columns}
+
+::::{.column}
+
+* Plot vs linear predictor to assess exponential link
+* Plot vs covariate to assess functional form
+    - If model is correct, should see no trends
+
+```{r,"devplot", fig.show='hide'}
+dat_use <- dat_use %>% ungroup() %>% 
+  mutate(dev_resids = residuals(fit1, type = "deviance"))
+
+ggplot(dat_use, aes(x=BWT, y=dev_resids)) +
+  geom_point() +
+  geom_point() + geom_smooth() +
+  labs(x='Body weight (kg)', y='Deviance residual')
+
+```
+::::
+
+::::{.column}
+```{r, ref.label='devplot', echo=FALSE, out.width="95%"}
+
+```
+
+::::
+
+:::
+
+
+# Assessing PH assumption
+
+* Plot standardized Schoenfeld residuals vs time
+    - Shows how coefficient changes with time
+    - Flat line if PH model is correct
+* Test for significance of including time-by-covariate interactions in the model
+* Compare predicted and observed survival
+
+# Assessing PH assumption: example
+
+:::{.columns}
+
+::::{.column}
+
+```{r}
+assess_ph_fit1 <- cox.zph(fit1)
+
+print(assess_ph_fit1)
+
+```
+
+* This is the score test for adding a time-by-covariate interation.
+  - Indicates a violation of the PH assumption
+  - Also suggested by the plot of the standardized Schoenfeld residuals vs time
+  - The observed and predicted S(t) plots didn'
+  
+::::
+
+::::{.column}
+
+```{r, out.width="95%"}
+plot(assess_ph_fit1)
+```
+
+::::
+
+:::
 
 # Workbook
    - Fitting the Cox model
-   - Extracting parameterestimates and confidence intervals
+   - Extracting parameter estimates and confidence intervals
    - Interpreting estimates
  
 
 
 # Cox model as a Poisson regression
 
-Use survreg
+It turns out that we can get the same likelihood if we view the data as arising from a Poisson process with intervals defined by the unique event times. @Whitehead1980-fl
+
+* Divide time into non-overlapping intervals with segments defined by observed event times
+* Constant baseline hazard within each interval
+
+:::{.notebox}
+
+This yields another way of thinking about the Cox model as a data generating model.
+
+* Data are arising from a continuous baseline hazard which we estimate with piecewise constants
+* Piecewise constant hazard = piecewise exponential model
+
+:::
 
 
-# Piecewise exponential as an approximation to this
+# Piecewise exponential as an approximation to the Cox model
+
+* This means that one approximation to a Cox model is
+    - Piecewise exponential with predefined intervals
+    - The more intervals, the closer the result is to Cox model
+
+The model is given by 
+$$h(t) = h_0(t) \exp(\theta_1 x_1 + \dots + \theta_p x_p)$$ 
+where
+
+$$
+h_0(t) = \lambda_j \text{ for } t \in [\tau_{j-1} ,  \tau_j)
+$$
+
+* How to define the time intervals depends on 
+    - Clinical knowledge (e.g., transplant @French2012-qv )
+    - Time-varying predictors
+    - Expected number and timing of events
+
+* This formulation provides a semi-parametric model from which we can simulate survival data
 
 
-# Smooth hazard function using flexsurvreg
- - bonum material at the end if time
+# Smooth non-parametric hazard functions 
 
+* An alternative semi-parametric model is to estimate the baseline hazard using smoothing splines @Royston2002-vc
+
+* Can be fitted using the `flexsurv` R package and in `brms`
+
+* Royston and Parmar  @Royston2002-vc propose $g(S(t)) = s(t) + \beta^T x$
+
+    - $s(t)$ is a smooth function modeled using cubic smoothing splines
+    - $g(S) = \log( -\log(S))$ corresponds to a proportional hazards model
+    - $g(S) = \log(1/S - 1)$ corresponds to a proportional odds model
+
+* `brms` implementation uses M-splines for the baseline hazard
+
+    - M-splines are non-negative and integrate to I-splines
+    - Simplifies calculations
 
 
 # Workbook: Semi-parametric alternatives to the Cox model
@@ -690,10 +933,17 @@ Use survreg
 
 
 # Extensions to standard Cox model
-  - Stratified Cox model -- different baseline hazard by strata
-  - Time-varying covariates -- needs counting process notation -- doesn't allow continuously varying covariates
-  
-  - (Demonstrate using supplemental workbook but no explicit hands-on)
+
+* Stratified Cox model 
+    - Allows different  baseline hazard by strata
+    - $h(t) = \color{red}{h_{0,s}(t)} \exp(\theta_1 x_1 + \dots + \theta_p x_p)$
+    - Often used in primary analysis of TTE endpoints in clinical trials (e.g., stratify by region)
+* Time-varying covariates 
+    - Extension to the standard Cox model
+    - Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)
+    - Doesn't allow for continuously varying covariates
+    - Frequently used when conditioning on an intermediate event (e.g., Stanford heart transplant data)
+    
 
 
 #  Intro to Parametric models
@@ -704,10 +954,7 @@ Use survreg
     - likelihood contributions for censored and observed events
     - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
 
- 
-# Good reading
- - Nick Holford's tutorial
- 
+ @Holford2013-mh
  
  
  

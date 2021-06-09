@@ -294,7 +294,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li>Cumulative hazard = total hazard accumulated to time <span class="math inline">\(t\)</span>
 <ul>
-<li><span class="math inline">\(H(t) = \int_0^t h(s) ds\)</span> <br></li>
+<li><span class="math inline">\(H(t) = \int_0^t h(s) ds\)</span></li>
+<li>This is the expected number of events to time <span class="math inline">\(t\)</span> <span class="citation">[1]</span> <br></li>
 </ul></li>
 <li>Probability density function = instantaneous event risk (aka <em>density</em>)
 <ul>
@@ -620,7 +621,7 @@ h(t) = h_0(t) \exp(\theta_1 x_1 + \theta_2 x_2)
 <ul>
 <li><span class="math inline">\(\theta_1\)</span> represents the log hazard ratio</li>
 </ul></li>
-<li><span class="math inline">\(e^{\theta_1}\)</span> represents the “per unit” hazard ratio
+<li><span class="math inline">\(e^{\theta_2}\)</span> represents the hazard ratio for a one unit difference in <span class="math inline">\(x_2\)</span>
 <ul>
 <li><span class="math inline">\(\exp(\theta_1 \times d)\)</span> represents the hazard ratio for a <span class="math inline">\(d\)</span> unit difference in <span class="math inline">\(x_2\)</span></li>
 </ul></li>
@@ -645,9 +646,17 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 <h1>Estimation of the Cox model in R</h1>
 <p>To fit the Cox model in R, we’ll use the <code>coxph</code> function:</p>
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">fit1 &lt;-<span class="st"> </span><span class="kw">coxph</span>(<span class="kw">Surv</span>(TTE, AE_any) <span class="op">~</span><span class="st"> </span>Quartile, <span class="dt">data=</span>dat_use)</a></code></pre></div>
+<ul>
+<li>Similar LHS as used with <code>survfit</code> (for K-M estimate)</li>
+<li>RHS can include factor or continuous variables
+<ul>
+<li>Character variables are converted to factors</li>
+</ul></li>
+</ul>
 </div>
 <div id="output-from-coxph" class="slide section level1">
 <h1>Output from <code>coxph</code></h1>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" data-line-number="1"><span class="kw">print</span>(fit1)</a></code></pre></div>
 <pre><code>. Call:
 . coxph(formula = Surv(TTE, AE_any) ~ Quartile, data = dat_use)
 . 
@@ -660,37 +669,238 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 . Likelihood ratio test=6.39  on 4 df, p=0.1717
 . n= 180, number of events= 132</code></pre>
 <ul>
-<li>Hazard ratio comparing Q1 to placebo: <code>glue::glue(&quot;{hr1} ({paste(ci,collapse=',')})&quot;)</code></li>
+<li>Hazard ratio comparing Q1 to placebo: 0.873 (0.483,1.58)</li>
 </ul>
+</div>
+<div id="estimation-of-the-baseline-cumulative-hazard-function-from-a-cox-model" class="slide section level1">
+<h1>Estimation of the baseline cumulative hazard function from a Cox model</h1>
+<ul>
+<li><p>Recall, estimation of covariate effects did not need an estimate of <span class="math inline">\(h_0(t)\)</span></p></li>
+<li><p>However, we can obtain a post-hoc estimate of <span class="math inline">\(H_0(t)\)</span> and <span class="math inline">\(S_0(t)\)</span></p></li>
+</ul>
+<p><span class="math display">\[
+\widehat{H_0}(t) = \sum_{j: t(j) \leq t} \frac{D_j}{\sum_{i \in R(j)} \exp(\hat{\theta}_1 x_{1i} + \dots \hat{\theta}_p x_{pi})}
+\]</span> where</p>
+<ul>
+<li><span class="math inline">\(t(j)\)</span> are the ordered unique event times</li>
+<li><span class="math inline">\(R(j)\)</span> is the set of subjects at risk for an event at <span class="math inline">\(t(j)\)</span></li>
+<li><span class="math inline">\(D_j\)</span> is the number of events at time $t(j)</li>
+</ul>
+</div>
+<div id="baseline-hazard-estimation-intuition" class="slide section level1">
+<h1>Baseline hazard estimation: intuition</h1>
+<p><span class="math display">\[
+\widehat{H_0}(t) = \sum_{j: t(j) \leq t} \frac{D_j}{\sum_{i \in R(j)} \exp(\hat{\theta}_1 x_{1i} + \dots \hat{\theta}_p x_{pi})}
+\]</span></p>
+<ul>
+<li>With no covariates, this simplifies to the Nelson-Aalen estimator</li>
+<li>With covariates, the denominator is the counter-factual number of subjects at risk had all subjects been in the reference group</li>
+</ul>
+<p>The baseline survival function is <span class="math inline">\(\widehat{S_0}(t) = \exp\left\{ -\widehat{H_0}(t) \right\}\)</span></p>
+<p>The subject-specific survival function is <span class="math display">\[
+\widehat{S_i}(t) = \left[ \widehat{S_0}(t) \right] ^{\exp(\hat{\theta}_1 x_{1i} + \dots + \hat{\theta}_p x_{pi})} 
+\]</span></p>
 </div>
 <div id="model-evaluation-for-the-cox-model" class="slide section level1">
 <h1>Model evaluation for the Cox model</h1>
+<p>Our primary model evaluation tools will be:</p>
 <ul>
-<li>martingale and deviance residuals</li>
-<li>assessing the PH assumption (coxzph)</li>
-<li>extracting the H0 estimate</li>
+<li>Comparing model predicted and observed survival</li>
+<li>Martingale and deviance residuals for functional form of covariate effects</li>
+<li>Assessing the PH assumption</li>
 </ul>
-<p>ggadjustedcurves</p>
+</div>
+<div id="comparing-model-predicted-and-observed-survival-1" class="slide section level1">
+<h1>Comparing model predicted and observed survival (1)</h1>
+<p>To extract predicted survival curves from a Cox model, we’ll use the <code>survfit</code> function</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" data-line-number="1"><span class="co"># One line per unique covariate pattern</span></a>
+<a class="sourceLine" id="cb19-2" data-line-number="2">dat_pred &lt;-<span class="st"> </span>dat_use <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-3" data-line-number="3"><span class="st">  </span><span class="kw">arrange</span>(Quartile) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-4" data-line-number="4"><span class="st">  </span><span class="kw">distinct</span>(Quartile)</a>
+<a class="sourceLine" id="cb19-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb19-6" data-line-number="6"><span class="co"># Use survfit to extract predicted survival function</span></a>
+<a class="sourceLine" id="cb19-7" data-line-number="7"><span class="co"># survfit0 adds time=0 to the predictions; helps with plotting</span></a>
+<a class="sourceLine" id="cb19-8" data-line-number="8">cox_preds_fit1 &lt;-<span class="st"> </span><span class="kw">survfit</span>(fit1, <span class="dt">newdata =</span> dat_pred) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-9" data-line-number="9"><span class="st">  </span><span class="kw">survfit0</span>() </a>
+<a class="sourceLine" id="cb19-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb19-11" data-line-number="11"><span class="kw">head</span>(<span class="kw">cbind</span>(cox_preds_fit1<span class="op">$</span>time, cox_preds_fit1<span class="op">$</span>surv))</a></code></pre></div>
+<pre><code>.                           1         2         3         4         5
+. [1,] 0.0000000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
+. [2,] 0.0008052808 0.9952417 0.9958441 0.9948982 0.9942727 0.9921360
+. [3,] 0.0019346783 0.9904835 0.9916857 0.9897981 0.9885509 0.9842966
+. [4,] 0.0022448385 0.9857236 0.9875233 0.9846981 0.9828328 0.9764792
+. [5,] 0.0023020837 0.9809590 0.9833542 0.9795947 0.9771146 0.9686788
+. [6,] 0.0030770114 0.9761791 0.9791693 0.9744769 0.9713839 0.9608783</code></pre>
+</div>
+<div id="comparing-model-predicted-and-observed-survival-2" class="slide section level1">
+<h1>Comparing model predicted and observed survival (2)</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb21-1" data-line-number="1">survival_preds_fit1 &lt;-<span class="st"> </span>cox_preds_fit1<span class="op">$</span>surv <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb21-2" data-line-number="2"><span class="st">  </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb21-3" data-line-number="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">time =</span> cox_preds_fit1<span class="op">$</span>time) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb21-4" data-line-number="4"><span class="st">  </span><span class="kw">pivot_longer</span>(<span class="dt">cols=</span><span class="op">-</span>time) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb21-5" data-line-number="5"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">group =</span> <span class="kw">as.numeric</span>(name),</a>
+<a class="sourceLine" id="cb21-6" data-line-number="6">         <span class="dt">Quartile =</span> <span class="kw">paste0</span>(dat_pred<span class="op">$</span>Quartile[group]))</a>
+<a class="sourceLine" id="cb21-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb21-8" data-line-number="8"><span class="kw">ggsurvplot</span>(<span class="kw">survfit</span>(<span class="kw">Surv</span>(TTE, AE_any) <span class="op">~</span><span class="st"> </span>Quartile, <span class="dt">data=</span>dat_use), </a>
+<a class="sourceLine" id="cb21-9" data-line-number="9">           <span class="dt">data=</span>dat_use)<span class="op">$</span>plot <span class="op">+</span></a>
+<a class="sourceLine" id="cb21-10" data-line-number="10"><span class="st">  </span><span class="kw">geom_step</span>(<span class="dt">data=</span>survival_preds_fit1,</a>
+<a class="sourceLine" id="cb21-11" data-line-number="11">            <span class="kw">aes</span>(<span class="dt">x=</span>time, <span class="dt">y=</span>value), <span class="dt">linetype=</span><span class="st">&#39;dashed&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb21-12" data-line-number="12"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Quartile</a>
+<a class="sourceLine" id="cb21-13" data-line-number="13">             )</a></code></pre></div>
+</div><div class="column">
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-24-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="martingale-residuals" class="slide section level1">
+<h1>Martingale residuals</h1>
+<p>The Martingale residual is defined as</p>
+<p><span class="math display">\[
+M_i = \delta_i - \widehat{H_i}(T^*_i)
+\]</span> where</p>
+<p><span class="math display">\[
+\delta_i = \cases{1 &amp; event \\
+0 &amp; censored}
+\]</span> and <span class="math inline">\(T^*\)</span> is the observed event or censoring time</p>
+<div class="notebox">
+<p>Because <span class="math inline">\(H(t)\)</span> is is expected number of events according to the model, the Martingale residual is an “observed - expected” type of residual.</p>
+</div>
+<p>Often asymmetric due to the fact that <span class="math inline">\(M_i \in (-\infty, 1)\)</span></p>
+</div>
+<div id="deviance-residuals" class="slide section level1">
+<h1>Deviance residuals</h1>
+<p>The deviance residual is defined as</p>
+<p><span class="math display">\[
+D_i = \text{sign}(M_i) \sqrt{-2 \left( M_i + \delta_i \log \widehat{H_i}(T^*_i)\right) }
+\]</span></p>
+<ul>
+<li>More symmetric than Martingale residuals</li>
+<li>Roughly have mean=0 and sd=1</li>
+</ul>
+</div>
+<div id="uses-for-martingale-and-deviance-residuals" class="slide section level1">
+<h1>Uses for Martingale and Deviance residuals</h1>
+<div class="columns">
+<div class="column">
+<ul>
+<li>Plot vs linear predictor to assess exponential link</li>
+<li>Plot vs covariate to assess functional form
+<ul>
+<li>If model is correct, should see no trends</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb22-1" data-line-number="1">dat_use &lt;-<span class="st"> </span>dat_use <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb22-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">dev_resids =</span> <span class="kw">residuals</span>(fit1, <span class="dt">type =</span> <span class="st">&quot;deviance&quot;</span>))</a>
+<a class="sourceLine" id="cb22-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb22-4" data-line-number="4"><span class="kw">ggplot</span>(dat_use, <span class="kw">aes</span>(<span class="dt">x=</span>BWT, <span class="dt">y=</span>dev_resids)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-5" data-line-number="5"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-6" data-line-number="6"><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span><span class="st"> </span><span class="kw">geom_smooth</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb22-7" data-line-number="7"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x=</span><span class="st">&#39;Body weight (kg)&#39;</span>, <span class="dt">y=</span><span class="st">&#39;Deviance residual&#39;</span>)</a></code></pre></div>
+</div><div class="column">
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-25-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="assessing-ph-assumption" class="slide section level1">
+<h1>Assessing PH assumption</h1>
+<ul>
+<li>Plot standardized Schoenfeld residuals vs time
+<ul>
+<li>Shows how coefficient changes with time</li>
+<li>Flat line if PH model is correct</li>
+</ul></li>
+<li>Test for significance of including time-by-covariate interactions in the model</li>
+<li>Compare predicted and observed survival</li>
+</ul>
+</div>
+<div id="assessing-ph-assumption-example" class="slide section level1">
+<h1>Assessing PH assumption: example</h1>
+<div class="columns">
+<div class="column">
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb23-1" data-line-number="1">assess_ph_fit1 &lt;-<span class="st"> </span><span class="kw">cox.zph</span>(fit1)</a>
+<a class="sourceLine" id="cb23-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb23-3" data-line-number="3"><span class="kw">print</span>(assess_ph_fit1)</a></code></pre></div>
+<pre><code>.          chisq df       p
+. Quartile  23.3  4 0.00011
+. GLOBAL    23.3  4 0.00011</code></pre>
+<ul>
+<li>This is the score test for adding a time-by-covariate interation.
+<ul>
+<li>Indicates a violation of the PH assumption</li>
+<li>Also suggested by the plot of the standardized Schoenfeld residuals vs time</li>
+<li>The observed and predicted S(t) plots didn’</li>
+</ul></li>
+</ul>
+</div><div class="column">
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb25-1" data-line-number="1"><span class="kw">plot</span>(assess_ph_fit1)</a></code></pre></div>
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-27-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
 </div>
 <div id="workbook-1" class="slide section level1">
 <h1>Workbook</h1>
 <ul>
 <li>Fitting the Cox model</li>
-<li>Extracting parameterestimates and confidence intervals</li>
+<li>Extracting parameter estimates and confidence intervals</li>
 <li>Interpreting estimates</li>
 </ul>
 </div>
 <div id="cox-model-as-a-poisson-regression" class="slide section level1">
 <h1>Cox model as a Poisson regression</h1>
-<p>Use survreg</p>
+<p>It turns out that we can get the same likelihood if we view the data as arising from a Poisson process with intervals defined by the unique event times. <span class="citation">[2]</span></p>
+<ul>
+<li>Divide time into non-overlapping intervals with segments defined by observed event times</li>
+<li>Constant baseline hazard within each interval</li>
+</ul>
+<div class="notebox">
+<p>This yields another way of thinking about the Cox model as a data generating model.</p>
+<ul>
+<li>Data are arising from a continuous baseline hazard which we estimate with piecewise constants</li>
+<li>Piecewise constant hazard = piecewise exponential model</li>
+</ul>
 </div>
-<div id="piecewise-exponential-as-an-approximation-to-this" class="slide section level1">
-<h1>Piecewise exponential as an approximation to this</h1>
+</div>
+<div id="piecewise-exponential-as-an-approximation-to-the-cox-model" class="slide section level1">
+<h1>Piecewise exponential as an approximation to the Cox model</h1>
+<ul>
+<li>This means that one approximation to a Cox model is
+<ul>
+<li>Piecewise exponential with predefined intervals</li>
+<li>The more intervals, the closer the result is to Cox model</li>
+</ul></li>
+</ul>
+<p>The model is given by <span class="math display">\[h(t) = h_0(t) \exp(\theta_1 x_1 + \dots + \theta_p x_p)\]</span> where</p>
+<p><span class="math display">\[
+h_0(t) = \lambda_j \text{ for } t \in [\tau_{j-1} ,  \tau_j)
+\]</span></p>
+<ul>
+<li>How to define the time intervals depends on
+<ul>
+<li>Clinical knowledge (e.g., transplant <span class="citation">[3]</span> )</li>
+<li>Time-varying predictors</li>
+<li>Expected number and timing of events</li>
+</ul></li>
+<li>This formulation provides a semi-parametric model from which we can simulate survival data</li>
+</ul>
 </div>
 <div id="smooth-hazard-function-using-flexsurvreg" class="slide section level1">
 <h1>Smooth hazard function using flexsurvreg</h1>
 <ul>
-<li>bonum material at the end if time</li>
+<li><p>An alternative semi-parametric model is to estimate the baseline hazard using smoothing splines <span class="citation">[4]</span></p></li>
+<li><p>Can be fitted using the <code>flexsurv</code> R package and in <code>brms</code></p></li>
+<li>Royston and Parmar <span class="citation">[4]</span> propose <span class="math inline">\(g(S(t)) = s(t) + \beta^T x\)</span>
+<ul>
+<li><span class="math inline">\(s(t)\)</span> is a smooth function modeled using cubic smoothing splines</li>
+<li><span class="math inline">\(g(S) = \log( -\log(S))\)</span> corresponds to a proportional hazards model</li>
+<li><span class="math inline">\(g(S) = \log(1/S - 1)\)</span> corresponds to a proportional odds model</li>
+</ul></li>
+<li><code>brms</code> implementation uses M-splines for the baseline hazard
+<ul>
+<li>M-splines are non-negative and integrate to I-splines</li>
+<li>Simplifies calculations</li>
+</ul></li>
 </ul>
 </div>
 <div id="workbook-semi-parametric-alternatives-to-the-cox-model" class="slide section level1">
@@ -699,9 +909,18 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 <div id="extensions-to-standard-cox-model" class="slide section level1">
 <h1>Extensions to standard Cox model</h1>
 <ul>
-<li>Stratified Cox model – different baseline hazard by strata</li>
-<li><p>Time-varying covariates – needs counting process notation – doesn’t allow continuously varying covariates</p></li>
-<li><p>(Demonstrate using supplemental workbook but no explicit hands-on)</p></li>
+<li>Stratified Cox model
+<ul>
+<li>Allows different baseline hazard by strata</li>
+<li><span class="math inline">\(h(t) = \textcolor{red}{h_{0,s}(t)} \exp(\theta_1 x_1 + \dots + \theta_p x_p)\)</span></li>
+<li>Often used in primary analysis of TTE endpoints in clinical trials (e.g., stratify by region)</li>
+</ul></li>
+<li>Time-varying covariates
+<ul>
+<li>Extension to the standard Cox model</li>
+<li>Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)</li>
+<li>Doesn’t allow for continuously varying covariates Frequently used when conditioning on an intermediate event (e.g., Stanford heart transplant data)</li>
+</ul></li>
 </ul>
 </div>
 <div id="intro-to-parametric-models" class="slide section level1">
@@ -714,12 +933,7 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 <li>Terminology: “Cox” model vs “PH” model (hint: no baseline hazard vs yes bl hazard)</li>
 </ul></li>
 </ul>
-</div>
-<div id="good-reading" class="slide section level1">
-<h1>Good reading</h1>
-<ul>
-<li>Nick Holford’s tutorial</li>
-</ul>
+<p><span class="citation">[5]</span></p>
 </div>
 <div id="technical-session" class="slide section level1">
 <h1>Technical session</h1>
@@ -728,8 +942,25 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 <li>Bayes estimation</li>
 </ul>
 </div>
-<div id="references" class="slide section level1">
+<div id="references" class="slide section level1 unnumbered">
 <h1>References</h1>
+<div id="refs" class="references">
+<div id="ref-noauthor_2011-gh">
+<p>[1] <span class="smallcaps">Anon</span>. (2011). Appendix 2: An introduction to the counting process approach to survival analysis. In <em>Applied survival analysis</em> pp 359–63. John Wiley &amp; Sons, Inc., Hoboken, NJ, USA.</p>
+</div>
+<div id="ref-Whitehead1980-fl">
+<p>[2] <span class="smallcaps">Whitehead</span>, J. (1980). Fitting cox’s regression model to survival data using GLIM. <em>J. R. Stat. Soc. Ser. C Appl. Stat.</em> <strong>29</strong> 268–75.</p>
+</div>
+<div id="ref-French2012-qv">
+<p>[3] <span class="smallcaps">French</span>, J. L., <span class="smallcaps">Thomas</span>, N. and <span class="smallcaps">Wang</span>, C. (2012). Using historical data with bayesian methods in early clinical trial monitoring. <em>Stat. Biopharm. Res.</em> <strong>4</strong> 384–94.</p>
+</div>
+<div id="ref-Royston2002-vc">
+<p>[4] <span class="smallcaps">Royston</span>, P. and <span class="smallcaps">Parmar</span>, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. <em>Stat. Med.</em> <strong>21</strong> 2175–97.</p>
+</div>
+<div id="ref-Holford2013-mh">
+<p>[5] <span class="smallcaps">Holford</span>, N. (2013). A time to event tutorial for pharmacometricians. <em>CPT Pharmacometrics Syst Pharmacol</em> <strong>2</strong> e43.</p>
+</div>
+</div>
 </div>
 
   <!-- dynamically load mathjax for compatibility with self-contained -->
