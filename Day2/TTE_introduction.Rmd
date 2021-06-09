@@ -31,7 +31,7 @@ library(survMisc)
 library(texreg)
 
 set.seed(314159)
-
+theme_set(theme_bw())
 ``` 
 
 
@@ -131,19 +131,50 @@ What might be an event definition and time origin for _time to disease worsening
 - For some subjects, we may not observe an event
    - The time to event is **censored**
 
-- <red>Show an example of enrollment into a trial vs analysis time and end-of-study censoring</red>
+```{r, message=FALSE, echo=FALSE}
+dtte = cgd %>% group_by(id,random,status) %>% 
+  summarise(min_time = min(tstop)) %>% 
+  group_by(id,random) %>% 
+  arrange(min_time) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  mutate(start = random-min(random),
+         end = start + min_time,
+         status = factor(status,levels=0:1, labels=c('Censored','Event')),
+         study_start = min(random))
+
+p1 = dtte %>% 
+  ggplot(aes(y=id)) +
+  geom_point(aes(x=start)) +
+  geom_point(aes(x=end, shape=status, fill=status,col=status)) +
+  geom_segment(aes(x=start, xend=end, yend=id, col=status), alpha=0.3) +
+  labs(x='Study time')
+
+p2 = dtte %>% 
+  ggplot(aes(y=id)) +
+  geom_point(aes(x=0)) +
+  geom_point(aes(x=end-start, shape=status, fill=status,col=status)) +
+  geom_segment(aes(x=0, xend=end-start, yend=id, col=status), alpha=0.3) +
+  labs(x='Subject time')
+
+```
+
+:::{.columns}
+
+::::{.column}
+```{r, out.width='95%', out.height='50%', echo=FALSE}
+p1
+```
+::::
+
+::::{.column}
+```{r, out.width='95%', echo=FALSE}
+p2
+```
+::::
 
 
-# Types of censoring
-
-- Right censoring
-  - We know the event did not happen prior to time $b$ (i.e., we know $T > b$)
-- Left censoring
-  - We know the event happened before time $a$ (i.e., we know $T < a$)
-- Interval censoring
-  - We know the event happened between times $a$ and $b$ but not the exact time (i.e, $a < T < b$) 
-
-- In clinical trials, we most often deal with right and interval censoring
+:::
   
 # A little notation
 
@@ -162,6 +193,19 @@ What might be an event definition and time origin for _time to disease worsening
 
 * Typical to assume that $T$ and $C$ are independent
   
+
+
+# Types of censoring
+
+- Right censoring
+  - We know the event did not happen prior to time $b$ (i.e., we know $T > b$)
+- Left censoring
+  - We know the event happened before time $a$ (i.e., we know $T < a$)
+- Interval censoring
+  - We know the event happened between times $a$ and $b$ but not the exact time (i.e, $a < T < b$) 
+
+- In clinical trials, we most often deal with right and interval censoring
+
 
 # How does censoring introduce complexity?
 
@@ -323,8 +367,9 @@ Let's practice.
 
 * Median time to event (black dashed line)
 * Event rate at time $t$ (blue dashed line)
-* Restricted mean survival time to $t^*$
-    * Average event-free time up to $t^*$
+* Restricted mean survival time (RMST) to $t^*$
+    * (Unrestricted) mean survival may not be well-defined
+    * RMST is the average event-free time up to $t^*$
     * Equivalent to the area under S(t) from 0 to $t^*$
     
 ```{r, echo=FALSE}
@@ -379,31 +424,251 @@ print(fit0, rmean = 4)
   
 # Comparing two survival curves
 
-- Measuring differences
-    - difference in medians
-    - difference in RMST
-    - hazard ratio
-      
-- Testing
-    - log rank test
-       - Tests Ho: S_0(t) = S_1(t) vs not equal
-       - Equivalent to CMH test for binary data, where stratification is at unique event times
-       - A good test when the hazard ratio is constant (but applicable even if it is not)
-       - Most sensitive to late differences?
-    - May also hear about the generalized wilcoxan test
-       - most sensitive when early differences in survival
-       - good when true distribution is log-normal or log-logistic
+- Hazard ratio
+    - Most commonly used measure of effects
+    - Closely tied to the Cox model
+- Difference or ratio of median survival
+    - Simple measure, easily understood
+    - Connection to accelerated failure time models
+- Difference or ratio of RMST
+    - Re-emerging with treatments providing long-term cure fractions
 
-  
-# Modeling
- - Semi-parametric: Cox PH model
-    - likelihood contributions for censored and observed events
-    - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
-    - We don't need to estimate h_0(t) !!
-    - assumptions
- 
+:::{.notebox}
+
+Which one(s) you use depends on which aspects of the survival distribution are important
+
+:::
+
+# Are these survival distributions the same?
+
+```{r, echo=FALSE, out.width='90%'}
+
+time_vector = seq(0,4,length=100)
+
+hr_data <- tibble(a1=c(2,2,2),a2=c(2, 0.75,0.75),
+       med1 = c(2,2,2), med2=c(3,2,3),
+       comp=factor(paste("Scenario", c(1,2,3)))) %>% 
+  mutate(b1=med1/log(2)^(1/a1),
+         b2=med2/log(2)^(1/a2),
+         surv1 = map2(a1,b1,~pweibull(time_vector, .x, .y, lower.tail = FALSE)),
+         surv2 = map2(a2,b2,~pweibull(time_vector, .x, .y, lower.tail = FALSE))) %>% unnest(cols=c(surv1,surv2)) %>% 
+  mutate(time=rep(time_vector,times=3),
+         haz1 = (a1/b1)*(time/b1)^a1,
+         haz2 = (a2/b2)*(time/b2)^a2,
+         hr = haz1/haz2) 
+
+hr_summary <- hr_data %>% 
+  group_by(comp) %>% 
+  summarise(hr = mean(hr,na.rm = TRUE), 
+            med1=mean(med1), 
+            med2=mean(med2),
+            rmst1_2 = sum(surv1[time <=2])*diff(time_vector)[1],
+            rmst2_2 = sum(surv2[time <=2])*diff(time_vector)[1],
+            rmst1_4 = sum(surv1)*diff(time_vector)[1],
+            rmst2_4 = sum(surv2)*diff(time_vector)[1]
+) %>% 
+  mutate(label_hr=paste0("HR: ",pmtables::sig(hr)),
+         label_med=paste0("Med. diff: ",pmtables::sig(med1-med2)),
+         label_rmst=paste0("RMST diff: ",pmtables::sig(rmst1_4-rmst2_4)))
+
+hr_data %>% 
+  ggplot(aes(x=time, y=surv1,color='Treatment')) + geom_line() + 
+  geom_line(aes(y=surv2,color='Reference')) +
+  facet_wrap(~comp)+
+  ylim(0,1) +
+  geom_text(data=hr_summary, x=1, y=0.25, aes(label=label_hr), col='black') +
+  geom_text(data=hr_summary, x=1.4, y=0.15, aes(label=label_med), col='black') +
+  geom_text(data=hr_summary, x=1.4, y=0.05, aes(label=label_rmst), col='black') +
+  scale_color_manual(name='Group',
+                     values=c("Treatment"="blue", "Reference"="red")) +
+  labs(x='Time', y='Surviving fraction')
+
+
+
+```
+
+
+
+# Testing for differences in survival functions
+
+$H_0: S_0(t) = S_1(t)$ vs $H_1: S_0(t) \ne S_1(t)$
+
+- Log rank test
+   - Equivalent to Mantel_Haenszel test for binary data, where stratification is at unique event times (see back-ups for more details)
+   - Most powerful test when the hazard ratio is constant (but applicable even if it is not)
+   - Gives relatively higher weight to later differences in S(t)
+
+- Generalized Wilcoxan test
+   - A weighted verison of the log-rank test with weights proportional to the number at risk
+   - Gives relatively higher weight to early differences in S(t)
+   - Thus, more sensitive when differences in survival occur early
+
+
+# Semi-parametric models for TTE data
+
+* Cox Proportional hazards model (the Cox model)
+    - Baseline hazard is not estimated directly
+* Connection to Poisson model
+    - Brelow's formulation
+* Piecewise exponential as a simplification
+* Smooth baseline hazards
+    - Provides a similar (though not identical) model with the ability to simulate
+
+
+
+# Cox PH model
+
+Proposed by Cox 
+
+:::{.notebox}
+$$
+h(t) = h_0(t) \exp(\theta_1 x_1 + \dots \theta_p x_p)
+$$
+Note: there is no intercept in the exponential ... <red>why?</red>
+:::
+
+$h_0(t)$ is referred to as the <red>baseline hazard</red>
+
+* $h_0(t) > 0$ 
+* The baseline hazard function is not specified
+    * We'll see that it does not need to be specified in order to estimate $\theta$
+* The covariate effects modify the hazard <red>proportionately</red>
+    - The covariate model is linear in the parameters
+    - Similar  to the linear predictor we saw in logistic regression
+
+
+# Connection to survival function
+
+Recall that 
+$$
+S(t) = \exp \left\{ -\int_0^t h(s) ~ ds \right\}
+$$
+
+Then, under the Cox model we have
+
+$$
+\begin{align*}
+S(t) &= \exp \left\{ -\int_0^t h_0(s) \exp(\theta_1 x_1) ~ ds \right\} \\
+ &= \exp \left\{ -\exp(\theta_1 x_1) ~ H_0(t) \right\} \\
+ &= \left\{ S_0(t)\right\}^{\exp(\theta_1 x_1)}
+\end{align*}
+$$
+where $S_0(t) = \exp\left\{ -H_0(t) \right\}$ is the <red>baseline survival function</red>
+
+
+# Example of proportional hazards
+
+```{r, echo=FALSE}
+
+.tmp = data.frame(times = seq(0,4,length=100)) %>% 
+  mutate(h0 = exp(-3 + 0.5 * sin(pi*times) + 0.5*times ),
+         h1 = h0 * exp(0.33)) %>% 
+  rowwise() %>% 
+  mutate(H0 = map_dbl(times, ~integrate(f=function(t) {exp(-3 + 0.5 * sin(pi*t) + 0.5*t )},
+                                        lower = 0, upper=.)$value),
+         S0 = exp(-H0),
+         S1 = exp(-H0*exp(0.33))
+         )
+
+p1 = .tmp %>% 
+  ggplot(aes(x=times)) +
+  geom_line(aes(y=h0)) +
+  geom_line(aes(y=h1), color='red') +
+  labs(x='Time', y='Hazard')
+
+p2 = .tmp %>% 
+  ggplot(aes(x=times)) +
+  geom_line(aes(y=S0)) +
+  geom_line(aes(y=S1), color='red') +
+  labs(x='Time', y='Survival')
+
+```
+
+:::{.columns}
+
+::::{.column}
+```{r, echo=FALSE, out.width="90%"}
+p1
+```
+::::
+
+::::{.column}
+```{r, echo=FALSE, out.width="90%"}
+p2
+```
+::::
+
+:::
+
+
+# Parameter interpretation
+
+Suppose we have the model
+$$
+h(t) = h_0(t) \exp(\theta_1 x_1 + \theta_2 x_2)
+$$
+where $x_1$ is binary and $x_2$ is continuous.
+
+* Then, $e^{\theta_1}$ represents the hazard ratio comparing $x_1=1$ to $x_1=0$
+    - $\theta_1$ represents the log hazard ratio
+
+* $e^{\theta_1}$ represents the "per unit" hazard ratio
+    - $\exp(\theta_1 \times d)$ represents the hazard ratio for a $d$ unit difference in $x_2$
+
+
+# Example model
+
+As an example, let's fit the model:
+$$
+h(t) = h_0(t) \exp\left\{ \theta_1 \cdot Q_1 + \theta_2 \cdot Q_2 + \theta_3 \cdot Q_3 + \theta_4 \cdot Q_4 \right\}
+$$
+where the covariates $Q_1, \dots, Q_4$ are indicators for exposure quartile
+
+$$
+Q_j = \begin{cases} 1 & \text{CAVGSS in quartile } j \\
+  0 & \text{otherwise}\end{cases}
+$$
+
+Questions:
+
+* What does $h_0(t)$ correspond to?
+* What does $\theta_1$ correspond to?
+
+# Estimation of the Cox model in R
+
+To fit the Cox model in R, we'll use the `coxph` function:
+
+```{r}
+fit1 <- coxph(Surv(TTE, AE_any) ~ Quartile, data=dat_use)
+```
+
+
+
+# Output from `coxph`
+
+```{r, echo=FALSE}
+fit1
+
+ci = pmtables::sig(exp(confint(fit1))["QuartileQ1",])
+hr1 = pmtables::sig(exp(coef(fit1))[1])
+```
+
+* Hazard ratio comparing Q1 to placebo: `glue::glue("{hr1} ({paste(ci,collapse=',')})")`
+
+# Model evaluation for the Cox model
+
+* martingale and deviance residuals
+* assessing the PH assumption (coxzph)
+* extracting the H0 estimate
+
+ggadjustedcurves
+
+
+
 # Workbook
-   - fitting model, extracting estimates, interpreting estimates, log-rank test, stratifying
+   - Fitting the Cox model
+   - Extracting parameterestimates and confidence intervals
+   - Interpreting estimates
  
 
 
@@ -412,13 +677,18 @@ print(fit0, rmean = 4)
 Use survreg
 
 
-# Piecewise exponential as an approximation
+# Piecewise exponential as an approximation to this
 
 
-# Smooth hazard funtion using flexsurvreg
+# Smooth hazard function using flexsurvreg
  - bonum material at the end if time
 
- 
+
+
+# Workbook: Semi-parametric alternatives to the Cox model
+
+
+
 # Extensions to standard Cox model
   - Stratified Cox model -- different baseline hazard by strata
   - Time-varying covariates -- needs counting process notation -- doesn't allow continuously varying covariates
@@ -431,6 +701,8 @@ Use survreg
   * Prop Haz
   * AFT
 
+    - likelihood contributions for censored and observed events
+    - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
 
  
 # Good reading
@@ -442,8 +714,6 @@ Use survreg
 # Technical session
  
  * muhaz
- * Semi-parametric alternatives to K-M 
- * Semi-parametric alternatives to Cox PH
  * Bayes estimation
  
 # References

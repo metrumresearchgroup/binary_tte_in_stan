@@ -1,0 +1,746 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="copyright" content="Metrum Research Group &copy 2021"/>
+  <meta name="font-size-adjustment" content="3"/>
+  <title>Exposure-response modeling for time-to-event data</title>
+  <style type="text/css">
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+            a.sourceLine { display: inline-block; line-height: 1.25; }
+    a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+    a.sourceLine:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode { white-space: pre; position: relative; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    code.sourceCode { white-space: pre-wrap; }
+    a.sourceLine { text-indent: -1em; padding-left: 1em; }
+    }
+    pre.numberSource a.sourceLine
+      { position: relative; left: -4em; }
+    pre.numberSource a.sourceLine::before
+      { content: attr(data-line-number);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; pointer-events: all; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {  }
+    @media screen {
+    a.sourceLine::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+          </style>
+  <style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link href="TTE_introduction_files/slidy-2/styles/slidy.css" rel="stylesheet" />
+  <script src="TTE_introduction_files/slidy-2/scripts/slidy.js"></script>
+  <script src="TTE_introduction_files/slidy_shiny-1/slidy_shiny.js"></script>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+   href="slidystyles.css" />
+  <meta name="duration" content="45" />
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Exposure-response modeling for time-to-event data</h1>
+  <p class="author">
+
+  </p>
+</div>
+<div id="outline" class="slide section level1">
+<h1>Outline</h1>
+</div>
+<div id="key-learning-objectives-for-today" class="slide section level1">
+<h1>Key learning objectives for today</h1>
+<ul>
+<li>Conceptual understanding of TTE data and the impact of censoring</li>
+<li>Visualizing relationships between TTE distribution and covariates</li>
+<li>Key concepts of the Cox regression model, how to fit and interpret parameters</li>
+<li>Fitting models to TTE data using parametric distributions</li>
+</ul>
+</div>
+<div id="not-covered-today-but-coming-soon" class="slide section level1">
+<h1>Not covered today, but coming soon</h1>
+<ul>
+<li>Bayesian analysis of TTE models</li>
+<li>Repeated time to event</li>
+<li>Effects for covariates that vary continuously with time</li>
+<li></li>
+</ul>
+</div>
+<div id="what-is-time-to-event-data" class="slide section level1">
+<h1>What is time-to-event data?</h1>
+<ul>
+<li>In clinical studies, we often measure the time to a specific event:
+<ul>
+<li>time to death</li>
+<li>time to disease worsening</li>
+<li>time to incident adverse event</li>
+<li>time to abnormal lab value (e.g., AST &gt; 3xULN)</li>
+<li>time to infection</li>
+<li>time to study discontinuation</li>
+<li>duration of hospital visit</li>
+</ul></li>
+</ul>
+<!-- # Three essential components -->
+<!--  - Well-defined event -->
+<!--  - Clear time origin -->
+<!--  - Defined time scale -->
+<!-- :::: {style="padding: 0.5em; -->
+<!--   background: LightGray; -->
+<!--   color: black; -->
+<!--   border: 2px black; -->
+<!--   border-radius: 5px;"} -->
+<!-- ::: {.center} -->
+<!-- **Quiz** -->
+<!-- ::: -->
+<!-- What might be an event definition and time origin for _time to disease worsening_ in a clinical trial? -->
+<!-- :::: -->
+</div>
+<div id="three-essential-components" class="slide section level1">
+<h1>Three essential components</h1>
+<ul>
+<li>Well-defined event</li>
+<li>Clear time origin</li>
+<li>Defined time scale</li>
+</ul>
+<div class="notebox">
+<div class="center">
+<p><strong>Quiz</strong></p>
+</div>
+<p>What might be an event definition and time origin for <em>time to disease worsening</em> in a clinical trial?</p>
+</div>
+</div>
+<div id="what-makes-tte-data-different" class="slide section level1">
+<h1>What makes TTE data different?</h1>
+<ul>
+<li>For some subjects, we may not observe an event
+<ul>
+<li>The time to event is <strong>censored</strong></li>
+</ul></li>
+</ul>
+<div class="columns">
+<div class="column">
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-4-1.png" width="95%" height="50%" style="display: block; margin: auto auto auto 0;" /></p>
+</div><div class="column">
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-5-1.png" width="95%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="a-little-notation" class="slide section level1">
+<h1>A little notation</h1>
+<ul>
+<li><p>There are two time-to-event processes happening:</p>
+<ul>
+<li><span class="math inline">\(T\)</span> = time to event of interest</li>
+<li><span class="math inline">\(C\)</span> = time to censoring</li>
+</ul></li>
+<li>With right censoring, we observe
+<ul>
+<li><span class="math inline">\(T^* = \text{min}(T,C)\)</span></li>
+<li><span class="math inline">\(\delta = I(T \leq C)\)</span></li>
+</ul></li>
+<li><p>We are trying to estimate the distribution of T, but we observe T*</p>
+<ul>
+<li>We’ll return to this when discussing model diagnostics</li>
+</ul></li>
+<li><p>Typical to assume that <span class="math inline">\(T\)</span> and <span class="math inline">\(C\)</span> are independent</p></li>
+</ul>
+</div>
+<div id="types-of-censoring" class="slide section level1">
+<h1>Types of censoring</h1>
+<ul>
+<li>Right censoring
+<ul>
+<li>We know the event did not happen prior to time <span class="math inline">\(b\)</span> (i.e., we know <span class="math inline">\(T &gt; b\)</span>)</li>
+</ul></li>
+<li>Left censoring
+<ul>
+<li>We know the event happened before time <span class="math inline">\(a\)</span> (i.e., we know <span class="math inline">\(T &lt; a\)</span>)</li>
+</ul></li>
+<li>Interval censoring
+<ul>
+<li>We know the event happened between times <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span> but not the exact time (i.e, <span class="math inline">\(a &lt; T &lt; b\)</span>)</li>
+</ul></li>
+<li>In clinical trials, we most often deal with right and interval censoring</li>
+</ul>
+</div>
+<div id="how-does-censoring-introduce-complexity" class="slide section level1">
+<h1>How does censoring introduce complexity?</h1>
+<ul>
+<li><p>If we observed event times for all subjects, we could use ‘standard’ methods</p></li>
+<li>Hard to estimate probability density function when we don’t see all events happening
+<ul>
+<li>A type of missing data problem</li>
+</ul></li>
+<li><p>Working with the <red>hazard function</red> alleviates some of the problems</p></li>
+<li>Hazard function = instantaneous event rate, conditional on event happening on or after time <span class="math inline">\(t\)</span>
+<ul>
+<li><span class="math inline">\(h(t) = \lim_{\Delta t \rightarrow 0} P(t &lt; T \leq t+\Delta t ~|~ T \geq t )\)</span></li>
+<li>“conditional on event happening on or after time <span class="math inline">\(t\)</span>” is what helps</li>
+</ul></li>
+</ul>
+</div>
+<div id="terminology" class="slide section level1">
+<h1>Terminology</h1>
+<ul>
+<li>Cumulative hazard = total hazard accumulated to time <span class="math inline">\(t\)</span>
+<ul>
+<li><span class="math inline">\(H(t) = \int_0^t h(s) ds\)</span> <br></li>
+</ul></li>
+<li>Probability density function = instantaneous event risk (aka <em>density</em>)
+<ul>
+<li><span class="math inline">\(f(t) = \lim_{\Delta t \rightarrow 0} P(t &lt; T \leq t+\Delta t)\)</span> <br></li>
+</ul></li>
+<li>Survival function = probability of an event happening after time <span class="math inline">\(t\)</span>
+<ul>
+<li><span class="math inline">\(S(t) = P(T &gt; t)\)</span></li>
+</ul></li>
+</ul>
+</div>
+<div id="connections" class="slide section level1">
+<h1>Connections</h1>
+<p>Two important relationships to remember:</p>
+<ul>
+<li><p>The relation between the survival function and the cumulative hazard <span class="math display">\[
+\begin{align*}
+S(t) &amp;= \exp\left\{-H(t)\right\}
+\end{align*}
+\]</span></p></li>
+<li><p>We can derive the density function from the hazard and survival functions <span class="math display">\[
+\begin{align*}
+f(t) &amp;= h(t) S(t)
+\end{align*}
+\]</span></p></li>
+</ul>
+<!-- - importance of survival function -->
+<ul>
+<li>When estimating S(t), we (almost) always assume censoring is independent of event time</li>
+</ul>
+</div>
+<div id="workbook" class="slide section level1">
+<h1>Workbook</h1>
+<p>Let’s look at the relationship between the hazard, cumulative hazard, density, and survival functions for some parametric distributions.</p>
+</div>
+<div id="non-parametric-estimation-of-survival-cumulative-hazard-and-hazard-functions" class="slide section level1">
+<h1>Non-parametric estimation of survival, cumulative hazard and hazard functions</h1>
+<ul>
+<li>We’ll start with non-parametric estimates of <span class="math inline">\(S(t)\)</span> and <span class="math inline">\(H(t)\)</span></li>
+<li>The most commonly used estimator of <span class="math inline">\(S(t)\)</span> is the <red>Kaplan-Meier</red> estimator
+<ul>
+<li>aka the <strong><em>product limit</em></strong> estimate</li>
+</ul></li>
+<li>The most common estimator of <span class="math inline">\(H(t)\)</span> is the <code>Nelson-Aalen</code> estimator
+<ul>
+<li>Can also estimate <span class="math inline">\(S(t)\)</span> as <span class="math inline">\(\widehat{S_{FH}(t)} = \exp\left\{ \widehat{H_{NA}(t)} \right\}\)</span></li>
+<li>This is known as the Fleming-Harrington estimate of <span class="math inline">\(S(t)\)</span></li>
+<li>Similar, but not identical, to K-M estimate</li>
+</ul></li>
+</ul>
+</div>
+<div id="basics-of-kaplan-meier-estimate" class="slide section level1">
+<h1>Basics of Kaplan-Meier estimate</h1>
+<p>Suppose we have these 10 event times (in days):</p>
+<pre><code>.  [1] &quot;81&quot;   &quot;81&quot;   &quot;88&quot;   &quot;88&quot;   &quot;92+&quot;  &quot;92&quot;   &quot;93&quot;   &quot;95&quot;   &quot;95&quot;   &quot;105+&quot;</code></pre>
+<p>where a “+” denotes a censored observation.</p>
+<p>How would you estimate</p>
+<ul class="incremental">
+<li><span class="math inline">\(P(T &gt; 80)\)</span> ?
+<ul class="incremental">
+<li><span class="math inline">\(P(T&gt;80) = 1\)</span> because all event times are after 80 days</li>
+</ul></li>
+</ul>
+<ul class="incremental">
+<li><span class="math inline">\(P(T &gt; 90)\)</span>?
+<ul class="incremental">
+<li><span class="math inline">\(P(T &gt; 90) = 6/10\)</span> because we know exactly 4 events happened before 90 days</li>
+</ul></li>
+</ul>
+<ul class="incremental">
+<li><span class="math inline">\(P(T &gt; 94)\)</span>?
+<ul class="incremental">
+<li><span class="math inline">\(P(T &gt; 94) = ?\)</span> We know 3 events happened after 94 days, but what about the censored time at 92 days?</li>
+</ul></li>
+</ul>
+</div>
+<div id="kaplan-meier-and-conditional-probability" class="slide section level1">
+<h1>Kaplan-Meier and conditional probability</h1>
+<p>It turns outs that we can use some basic probability calculations to estimate <span class="math inline">\(S(t)\)</span> in the presence of censoring.</p>
+<ol style="list-style-type: decimal">
+<li>Divide time into distinct intervals (at each event time, <span class="math inline">\(\tau_j\)</span>)<br />
+</li>
+<li>For each interval <span class="math inline">\(j\)</span>,
+<ul>
+<li>Calculate the proportion of subjects with an event (<span class="math inline">\(d_j\)</span>), among the subjects in the risk set for that interval (<span class="math inline">\(r_j\)</span>)<br />
+</li>
+<li>The <grn>risk set</grn> at time <span class="math inline">\(t\)</span> = N - # events prior to <span class="math inline">\(t\)</span> - # censored prior to <span class="math inline">\(t\)</span><br />
+</li>
+<li>Calculate the probability of an event after the <span class="math inline">\(j^{th}\)</span> interval, conditional on no event prior to the interval as <span class="math inline">\(1 - \frac{d_j}{r_j}\)</span></li>
+</ul></li>
+<li>Estimate <span class="math inline">\(S(t)\)</span> as the product of the conditional probabilities up to time <span class="math inline">\(t\)</span>
+<ul>
+<li><span class="math inline">\(\hat{S}_{KM}(t) = \prod_{\tau_j \leq t} 1 - \frac{d_j}{r_j}\)</span></li>
+</ul></li>
+</ol>
+</div>
+<div id="kaplan-meier-estimation-in-r" class="slide section level1">
+<h1>Kaplan-Meier estimation in R</h1>
+<p>Fortunately, we don’t have to do that work by hand :)</p>
+<p>The <code>survfit</code> function in the R package <code>survival</code> does the work for us:</p>
+<div class="center">
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">fit0 &lt;-<span class="st"> </span><span class="kw">survfit</span>(<span class="kw">Surv</span>(TTE,AE_any) <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data=</span>dat_use)</a></code></pre></div>
+</div>
+<ul>
+<li>The <code>Surv(time, event)</code> function creates a survival response object
+<ul>
+<li><code>time</code> = event or censoring time</li>
+<li><code>event</code> = event indicator (1=event, 0 = right censored)</li>
+<li>More complex types of censoring can be handled</li>
+</ul></li>
+<li>RHS of formula cannot include continuous variables (<em>Why?</em>)
+<ul>
+<li>This is okay: <code>survfit(Surv(TTE, AE_any) ~ Quartile, data=dat_use)</code></li>
+<li>This is not: <code>survfit(Surv(TTE, AE_any) ~ CAVGSS, data=dat_use)</code></li>
+</ul></li>
+</ul>
+</div>
+<div id="basic-survfit-output" class="slide section level1">
+<h1>Basic Survfit output</h1>
+<p>The <code>survfit</code> object gives us some basic information:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw">print</span>(fit0)</a></code></pre></div>
+<pre><code>. Call: survfit(formula = Surv(TTE, AE_any) ~ 1, data = dat_use)
+. 
+.       n  events  median 0.95LCL 0.95UCL 
+. 180.000 132.000   0.320   0.139   0.649</code></pre>
+</div>
+<div id="more-survfit-output" class="slide section level1">
+<h1>More Survfit output</h1>
+<p>We can get more detail and predicted values with <code>summmary</code></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw">summary</span>(fit0, <span class="dt">times =</span> <span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dt">by=</span><span class="fl">0.25</span>))</a></code></pre></div>
+<pre><code>. Call: survfit(formula = Surv(TTE, AE_any) ~ 1, data = dat_use)
+. 
+.  time n.risk n.event survival std.err lower 95% CI upper 95% CI
+.  0.00    180       0    1.000  0.0000        1.000        1.000
+.  0.25     94      86    0.522  0.0372        0.454        0.601
+.  0.50     80      14    0.444  0.0370        0.377        0.523
+.  0.75     73       7    0.406  0.0366        0.340        0.484
+.  1.00     67       6    0.372  0.0360        0.308        0.450</code></pre>
+<p>We’ll explore more in the hands-on section.</p>
+</div>
+<div id="plotting-the-estimated-survival-function" class="slide section level1">
+<h1>Plotting the estimated survival function</h1>
+<p>The <code>survminer::ggsurvplot</code> function provides clean plots</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1">survminer<span class="op">::</span><span class="kw">ggsurvplot</span>(fit0, <span class="dt">risk.table =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-10-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="workbook-survfit-estimation-and-plotting-vs-categorical-predictors" class="slide section level1">
+<h1>Workbook: survfit estimation and plotting vs categorical predictors</h1>
+<p>Let’s practice.</p>
+</div>
+<div id="summary-measures-of-st" class="slide section level1">
+<h1>Summary measures of S(t)</h1>
+<ul>
+<li>Median time to event (black dashed line)</li>
+<li>Event rate at time <span class="math inline">\(t\)</span> (blue dashed line)</li>
+<li>Restricted mean survival time (RMST) to <span class="math inline">\(t^*\)</span>
+<ul>
+<li>(Unrestricted) mean survival may not be well-defined</li>
+<li>RMST is the average event-free time up to <span class="math inline">\(t^*\)</span></li>
+<li>Equivalent to the area under S(t) from 0 to <span class="math inline">\(t^*\)</span></li>
+</ul></li>
+</ul>
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-11-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="summary-measures-of-st-in-r-median" class="slide section level1">
+<h1>Summary measures of S(t) in R: median</h1>
+<ul>
+<li>Median time to event</li>
+</ul>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="kw">quantile</span>(fit0, <span class="dt">probs=</span><span class="fl">0.50</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">unlist</span>()</a></code></pre></div>
+<pre><code>. quantile.50    lower.50    upper.50 
+.   0.3200023   0.1393874   0.6492904</code></pre>
+</div>
+<div id="summary-measures-of-st-in-r-percentile" class="slide section level1">
+<h1>Summary measures of S(t) in R: percentile</h1>
+<ul>
+<li>Percent surviving to times t=c(0,1,2)</li>
+</ul>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1"><span class="kw">summary</span>(fit0, <span class="dt">time=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">2</span>))</a></code></pre></div>
+<pre><code>. Call: survfit(formula = Surv(TTE, AE_any) ~ 1, data = dat_use)
+. 
+.  time n.risk n.event survival std.err lower 95% CI upper 95% CI
+.     0    180       0    1.000   0.000        1.000        1.000
+.     1     67     113    0.372   0.036        0.308        0.450
+.     2     59       8    0.328   0.035        0.266        0.404</code></pre>
+</div>
+<div id="summary-measures-of-st-in-r-rmst" class="slide section level1">
+<h1>Summary measures of S(t) in R: RMST</h1>
+<ul>
+<li>Restricted mean survival time</li>
+</ul>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" data-line-number="1"><span class="kw">print</span>(fit0, <span class="dt">rmean =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>. Call: survfit(formula = Surv(TTE, AE_any) ~ 1, data = dat_use)
+. 
+.          n     events     *rmean *se(rmean)     median    0.95LCL    0.95UCL 
+.   180.0000   132.0000     0.8364     0.0659     0.3200     0.1394     0.6493 
+.     * restricted mean with upper limit =  2</code></pre>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" data-line-number="1"><span class="kw">print</span>(fit0, <span class="dt">rmean =</span> <span class="dv">4</span>)</a></code></pre></div>
+<pre><code>. Call: survfit(formula = Surv(TTE, AE_any) ~ 1, data = dat_use)
+. 
+.          n     events     *rmean *se(rmean)     median    0.95LCL    0.95UCL 
+.    180.000    132.000      1.397      0.128      0.320      0.139      0.649 
+.     * restricted mean with upper limit =  4</code></pre>
+</div>
+<div id="workbook-summary-measures-from-st" class="slide section level1">
+<h1>Workbook: summary measures from S(t)</h1>
+</div>
+<div id="comparing-two-survival-curves" class="slide section level1">
+<h1>Comparing two survival curves</h1>
+<ul>
+<li>Hazard ratio
+<ul>
+<li>Most commonly used measure of effects</li>
+<li>Closely tied to the Cox model</li>
+</ul></li>
+<li>Difference or ratio of median survival
+<ul>
+<li>Simple measure, easily understood</li>
+<li>Connection to accelerated failure time models</li>
+</ul></li>
+<li>Difference or ratio of RMST
+<ul>
+<li>Re-emerging with treatments providing long-term cure fractions</li>
+</ul></li>
+</ul>
+<div class="notebox">
+<p>Which one(s) you use depends on which aspects of the survival distribution are important</p>
+</div>
+</div>
+<div id="are-these-survival-distributions-the-same" class="slide section level1">
+<h1>Are these survival distributions the same?</h1>
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-16-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="testing-for-differences-in-survival-functions" class="slide section level1">
+<h1>Testing for differences in survival functions</h1>
+<p><span class="math inline">\(H_0: S_0(t) = S_1(t)\)</span> vs <span class="math inline">\(H_1: S_0(t) \ne S_1(t)\)</span></p>
+<ul>
+<li>Log rank test
+<ul>
+<li>Equivalent to Mantel_Haenszel test for binary data, where stratification is at unique event times (see back-ups for more details)</li>
+<li>Most powerful test when the hazard ratio is constant (but applicable even if it is not)</li>
+<li>Gives relatively higher weight to later differences in S(t)</li>
+</ul></li>
+<li>Generalized Wilcoxan test
+<ul>
+<li>A weighted verison of the log-rank test with weights proportional to the number at risk</li>
+<li>Gives relatively higher weight to early differences in S(t)</li>
+<li>Thus, more sensitive when differences in survival occur early</li>
+</ul></li>
+</ul>
+</div>
+<div id="semi-parametric-models-for-tte-data" class="slide section level1">
+<h1>Semi-parametric models for TTE data</h1>
+<ul>
+<li>Cox Proportional hazards model (the Cox model)
+<ul>
+<li>Baseline hazard is not estimated directly</li>
+</ul></li>
+<li>Connection to Poisson model
+<ul>
+<li>Brelow’s formulation</li>
+</ul></li>
+<li>Piecewise exponential as a simplification</li>
+<li>Smooth baseline hazards
+<ul>
+<li>Provides a similar (though not identical) model with the ability to simulate</li>
+</ul></li>
+</ul>
+</div>
+<div id="cox-ph-model" class="slide section level1">
+<h1>Cox PH model</h1>
+<p>Proposed by Cox</p>
+<div class="notebox">
+<p><span class="math display">\[
+h(t) = h_0(t) \exp(\theta_1 x_1 + \dots \theta_p x_p)
+\]</span> Note: there is no intercept in the exponential … <red>why?</red></p>
+</div>
+<p><span class="math inline">\(h_0(t)\)</span> is referred to as the <red>baseline hazard</red></p>
+<ul>
+<li><span class="math inline">\(h_0(t) &gt; 0\)</span></li>
+<li>The baseline hazard function is not specified
+<ul>
+<li>We’ll see that it does not need to be specified in order to estimate <span class="math inline">\(\theta\)</span></li>
+</ul></li>
+<li>The covariate effects modify the hazard <red>proportionately</red>
+<ul>
+<li>The covariate model is linear in the parameters</li>
+<li>Similar to the linear predictor we saw in logistic regression</li>
+</ul></li>
+</ul>
+</div>
+<div id="connection-to-survival-function" class="slide section level1">
+<h1>Connection to survival function</h1>
+<p>Recall that <span class="math display">\[
+S(t) = \exp \left\{ -\int_0^t h(s) ~ ds \right\}
+\]</span></p>
+<p>Then, under the Cox model we have</p>
+<p><span class="math display">\[
+\begin{align*}
+S(t) &amp;= \exp \left\{ -\int_0^t h_0(s) \exp(\theta_1 x_1) ~ ds \right\} \\
+ &amp;= \exp \left\{ -\exp(\theta_1 x_1) ~ H_0(t) \right\} \\
+ &amp;= \left\{ S_0(t)\right\}^{\exp(\theta_1 x_1)}
+\end{align*}
+\]</span> where <span class="math inline">\(S_0(t) = \exp\left\{ -H_0(t) \right\}\)</span> is the <red>baseline survival function</red></p>
+</div>
+<div id="example-of-proportional-hazards" class="slide section level1">
+<h1>Example of proportional hazards</h1>
+<div class="columns">
+<div class="column">
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-18-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div><div class="column">
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-19-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+</div>
+</div>
+<div id="parameter-interpretation" class="slide section level1">
+<h1>Parameter interpretation</h1>
+<p>Suppose we have the model <span class="math display">\[
+h(t) = h_0(t) \exp(\theta_1 x_1 + \theta_2 x_2)
+\]</span> where <span class="math inline">\(x_1\)</span> is binary and <span class="math inline">\(x_2\)</span> is continuous.</p>
+<ul>
+<li>Then, <span class="math inline">\(e^{\theta_1}\)</span> represents the hazard ratio comparing <span class="math inline">\(x_1=1\)</span> to <span class="math inline">\(x_1=0\)</span>
+<ul>
+<li><span class="math inline">\(\theta_1\)</span> represents the log hazard ratio</li>
+</ul></li>
+<li><span class="math inline">\(e^{\theta_1}\)</span> represents the “per unit” hazard ratio
+<ul>
+<li><span class="math inline">\(\exp(\theta_1 \times d)\)</span> represents the hazard ratio for a <span class="math inline">\(d\)</span> unit difference in <span class="math inline">\(x_2\)</span></li>
+</ul></li>
+</ul>
+</div>
+<div id="example-model" class="slide section level1">
+<h1>Example model</h1>
+<p>As an example, let’s fit the model: <span class="math display">\[
+h(t) = h_0(t) \exp\left\{ \theta_1 \cdot Q_1 + \theta_2 \cdot Q_2 + \theta_3 \cdot Q_3 + \theta_4 \cdot Q_4 \right\}
+\]</span> where the covariates <span class="math inline">\(Q_1, \dots, Q_4\)</span> are indicators for exposure quartile</p>
+<p><span class="math display">\[
+Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
+  0 &amp; \text{otherwise}\end{cases}
+\]</span></p>
+<p>Questions:</p>
+<ul>
+<li>What does <span class="math inline">\(h_0(t)\)</span> correspond to?</li>
+<li>What does <span class="math inline">\(\theta_1\)</span> correspond to?</li>
+</ul>
+</div>
+<div id="estimation-of-the-cox-model-in-r" class="slide section level1">
+<h1>Estimation of the Cox model in R</h1>
+<p>To fit the Cox model in R, we’ll use the <code>coxph</code> function:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">fit1 &lt;-<span class="st"> </span><span class="kw">coxph</span>(<span class="kw">Surv</span>(TTE, AE_any) <span class="op">~</span><span class="st"> </span>Quartile, <span class="dt">data=</span>dat_use)</a></code></pre></div>
+</div>
+<div id="output-from-coxph" class="slide section level1">
+<h1>Output from <code>coxph</code></h1>
+<pre><code>. Call:
+. coxph(formula = Surv(TTE, AE_any) ~ Quartile, data = dat_use)
+. 
+.                coef exp(coef) se(coef)      z      p
+. QuartileQ1 -0.13566   0.87314  0.30201 -0.449 0.6533
+. QuartileQ2  0.06989   1.07239  0.29661  0.236 0.8137
+. QuartileQ3  0.18586   1.20425  0.28771  0.646 0.5183
+. QuartileQ4  0.50397   1.65528  0.27983  1.801 0.0717
+. 
+. Likelihood ratio test=6.39  on 4 df, p=0.1717
+. n= 180, number of events= 132</code></pre>
+<ul>
+<li>Hazard ratio comparing Q1 to placebo: <code>glue::glue(&quot;{hr1} ({paste(ci,collapse=',')})&quot;)</code></li>
+</ul>
+</div>
+<div id="model-evaluation-for-the-cox-model" class="slide section level1">
+<h1>Model evaluation for the Cox model</h1>
+<ul>
+<li>martingale and deviance residuals</li>
+<li>assessing the PH assumption (coxzph)</li>
+<li>extracting the H0 estimate</li>
+</ul>
+<p>ggadjustedcurves</p>
+</div>
+<div id="workbook-1" class="slide section level1">
+<h1>Workbook</h1>
+<ul>
+<li>Fitting the Cox model</li>
+<li>Extracting parameterestimates and confidence intervals</li>
+<li>Interpreting estimates</li>
+</ul>
+</div>
+<div id="cox-model-as-a-poisson-regression" class="slide section level1">
+<h1>Cox model as a Poisson regression</h1>
+<p>Use survreg</p>
+</div>
+<div id="piecewise-exponential-as-an-approximation-to-this" class="slide section level1">
+<h1>Piecewise exponential as an approximation to this</h1>
+</div>
+<div id="smooth-hazard-function-using-flexsurvreg" class="slide section level1">
+<h1>Smooth hazard function using flexsurvreg</h1>
+<ul>
+<li>bonum material at the end if time</li>
+</ul>
+</div>
+<div id="workbook-semi-parametric-alternatives-to-the-cox-model" class="slide section level1">
+<h1>Workbook: Semi-parametric alternatives to the Cox model</h1>
+</div>
+<div id="extensions-to-standard-cox-model" class="slide section level1">
+<h1>Extensions to standard Cox model</h1>
+<ul>
+<li>Stratified Cox model – different baseline hazard by strata</li>
+<li><p>Time-varying covariates – needs counting process notation – doesn’t allow continuously varying covariates</p></li>
+<li><p>(Demonstrate using supplemental workbook but no explicit hands-on)</p></li>
+</ul>
+</div>
+<div id="intro-to-parametric-models" class="slide section level1">
+<h1>Intro to Parametric models</h1>
+<ul>
+<li>Prop Haz</li>
+<li><p>AFT</p>
+<ul>
+<li>likelihood contributions for censored and observed events</li>
+<li>Terminology: “Cox” model vs “PH” model (hint: no baseline hazard vs yes bl hazard)</li>
+</ul></li>
+</ul>
+</div>
+<div id="good-reading" class="slide section level1">
+<h1>Good reading</h1>
+<ul>
+<li>Nick Holford’s tutorial</li>
+</ul>
+</div>
+<div id="technical-session" class="slide section level1">
+<h1>Technical session</h1>
+<ul>
+<li>muhaz</li>
+<li>Bayes estimation</li>
+</ul>
+</div>
+<div id="references" class="slide section level1">
+<h1>References</h1>
+</div>
+
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "TTE_introduction_files/mathjax-local/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+</body>
+</html>
