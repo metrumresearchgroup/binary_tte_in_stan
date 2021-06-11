@@ -8,7 +8,6 @@ output:
     font_adjustment: 3
     transition: none
     css: slidystyles.css
-    duration: 45
     footer: Metrum Research Group &copy 2021
     mathjax: local
     self_contained: false
@@ -30,6 +29,7 @@ library(survival)
 library(survminer)
 library(survMisc)
 library(texreg)
+library(flexsurv)
 
 set.seed(314159)
 theme_set(theme_bw())
@@ -64,9 +64,6 @@ dat_use <-
 ```
 
 
-# Outline
-
-
 # Key learning objectives for today
 
 * Conceptual understanding of TTE data and the impact of censoring
@@ -77,9 +74,10 @@ dat_use <-
 # Not covered today, but coming soon
 
 * Bayesian analysis of TTE models
-* Repeated time to event
+    - Parametric non-linear effects
 * Effects for covariates that vary continuously with time
-* 
+* Repeated time to event
+
 
 # What is time-to-event data?
   
@@ -254,7 +252,7 @@ $$
 <!-- - importance of survival function -->
 - When estimating S(t), we (almost) always assume censoring is independent of event time
 
-# Workbook
+# Workbook 01: Relationship between functions
 
 Let's look at the relationship between the hazard, cumulative hazard, density, and survival functions for some parametric distributions.
   
@@ -360,9 +358,7 @@ survminer::ggsurvplot(fit0, risk.table = TRUE)
 ```
 
 
-# Workbook: survfit estimation and plotting vs categorical predictors
-
-Let's practice.
+# Workbook 02: Kaplan-Meier estimates and plots
 
 
 # Summary measures of S(t)
@@ -421,9 +417,6 @@ print(fit0, rmean = 4)
 ```
 
 
-
-# Workbook: summary measures from S(t)
-  
 # Comparing two survival curves
 
 - Hazard ratio
@@ -501,9 +494,12 @@ $H_0: S_0(t) = S_1(t)$ vs $H_1: S_0(t) \ne S_1(t)$
    - Gives relatively higher weight to later differences in S(t)
 
 - Generalized Wilcoxan test
-   - A weighted verison of the log-rank test with weights proportional to the number at risk
+   - A weighted version of the log-rank test with weights proportional to the number at risk
    - Gives relatively higher weight to early differences in S(t)
    - Thus, more sensitive when differences in survival occur early
+
+
+# Workbook 03: Summary measures from S(t) and comparing survival functions
 
 
 # Semi-parametric models for TTE data
@@ -511,7 +507,7 @@ $H_0: S_0(t) = S_1(t)$ vs $H_1: S_0(t) \ne S_1(t)$
 * Cox Proportional hazards model (the Cox model)
     - Baseline hazard is not estimated directly
 * Connection to Poisson model
-    - Brelow's formulation
+    - Breslow's formulation
 * Piecewise exponential as a simplification
 * Smooth baseline hazards
     - Provides a similar (though not identical) model with the ability to simulate
@@ -520,7 +516,7 @@ $H_0: S_0(t) = S_1(t)$ vs $H_1: S_0(t) \ne S_1(t)$
 
 # Cox PH model
 
-Proposed by Cox 
+Originally proposed by Cox in 1972 @Cox1972-ul
 
 :::{.notebox}
 $$
@@ -602,6 +598,22 @@ p2
 
 :::
 
+# Parameter estimation
+
+Cox proposed using a partial likelihood approach, treating the baseline hazard as an infinite dimensional nuisance parameter.
+
+This yields the likelihood function (assuming unique event times):
+
+$$
+\ell(\theta | x) =  \prod_{i=1}^k \frac{\exp(x_i^T \theta)}{\sum_{j \in R(i)} \exp(x_j^T \theta)}
+$$
+where 
+
+* there are $k$ unique event times
+* $R(j)$ is the set of subjects at risk for an event at $t(j)$
+
+Note that the product is only over the $k$ events, not over all subjects.
+
 
 # Parameter interpretation
 
@@ -615,7 +627,7 @@ where $x_1$ is binary and $x_2$ is continuous.
     - $\theta_1$ represents the log hazard ratio
 
 * $e^{\theta_2}$ represents the hazard ratio for a one unit difference in $x_2$
-    - $\exp(\theta_1 \times d)$ represents the hazard ratio for a $d$ unit difference in $x_2$
+    - $\exp(\theta_2 \times d)$ represents the hazard ratio for a $d$ unit difference in $x_2$
 
 
 # Example model
@@ -703,6 +715,7 @@ Our primary model evaluation tools will be:
 * Comparing model predicted and observed survival
 * Martingale and deviance residuals for functional form of covariate effects
 * Assessing the PH assumption
+* Concordance / Harrell's C-index
 
 
 # Comparing model predicted and observed survival (1)
@@ -750,7 +763,7 @@ ggsurvplot(survfit(Surv(TTE, AE_any) ~ Quartile, data=dat_use),
 ::::
 
 ::::{.column}
-```{r, ref.label="coxpred", echo=FALSE}
+```{r, ref.label="coxpred", echo=FALSE, out.width="100%"}
 
 ```
 
@@ -847,10 +860,10 @@ print(assess_ph_fit1)
 
 ```
 
-* This is the score test for adding a time-by-covariate interation.
+* This is the score test for adding a time-by-covariate interaction.
   - Indicates a violation of the PH assumption
   - Also suggested by the plot of the standardized Schoenfeld residuals vs time
-  - The observed and predicted S(t) plots didn'
+  - The observed and predicted S(t) plots did not'
   
 ::::
 
@@ -864,10 +877,28 @@ plot(assess_ph_fit1)
 
 :::
 
-# Workbook
+# Concordance as a measure of model fit
+
+Concordance is a measure of how well the predicted risk of an event aligns with the observed risk.
+
+Imagine you have two randomly selected subjects $i$ and $j$ with 
+
+* Covariates $x_i$ and $x_j$
+* Risk scores: $\eta_i = x_i^T \hat{\theta}$ and $\eta_j = x_j^T \hat{\theta}$
+* (True) event times: $T_i$ and $T_j$
+
+Then concordance (c-index) estimates: $P(T_i > T_j ~|~ \eta_i < \eta_j)$
+
+Harrell et al. @Harrell1982-ux proposed a method for handling censored data.
+
+A model with higher c-index should provide better predictions.
+
+
+# Workbook 04: Cox regression
+
    - Fitting the Cox model
-   - Extracting parameter estimates and confidence intervals
-   - Interpreting estimates
+   - Model evaluation
+   - Comparing models
  
 
 
@@ -910,7 +941,7 @@ $$
 * This formulation provides a semi-parametric model from which we can simulate survival data
 
 
-# Smooth non-parametric hazard functions 
+# Smooth non-parametric baseline hazard functions 
 
 * An alternative semi-parametric model is to estimate the baseline hazard using smoothing splines @Royston2002-vc
 
@@ -928,10 +959,6 @@ $$
     - Simplifies calculations
 
 
-# Workbook: Semi-parametric alternatives to the Cox model
-
-
-
 # Extensions to standard Cox model
 
 * Stratified Cox model 
@@ -939,28 +966,124 @@ $$
     - $h(t) = \color{red}{h_{0,s}(t)} \exp(\theta_1 x_1 + \dots + \theta_p x_p)$
     - Often used in primary analysis of TTE endpoints in clinical trials (e.g., stratify by region)
 * Time-varying covariates 
-    - Extension to the standard Cox model
-    - Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)
+xs    - Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)
     - Doesn't allow for continuously varying covariates
     - Frequently used when conditioning on an intermediate event (e.g., Stanford heart transplant data)
     
 
 
-#  Intro to Parametric models
+#  Introduction to Parametric models
+
+* The Cox model was designed to estimate effects of covariates on the time-to-event distribution.
+    - With that focus, the baseline hazard isn't of much interest.
+* However, in PMx modeling we are often interested in modeling the full time-to-event distribution
+    * Both the baseline hazard and covariate effects
+
+* This will be our focus for the rest of the course
+    * Accelerated failure time models in R and Stan
+    * General hazard models in Stan
+
+# Traditional parametric models
+
+Many of the commonly used models fall under the accelerated failure time framework (Wei, @Wei1992-lp)
+
+$$
+\log (T) = \mu + \theta x + \epsilon
+$$
+
+:::{.notebox}
+
+| ***Distribution for $\epsilon$*** |  ***Distribution for T*** |
+|---------------------------------- |---------------------------|
+| Extreme value              | Weibull |
+| Extreme value (scale=1)    | Exponential |
+| Normal                     | Log-normal |
+| Logistic                   | Log-logistic |
+
+:::
+
+
+But any distribution for $T$ that has support on values of $T \ge 0$ is suitable, including Gompertz, Gamma, Generalized Gamma, etc.
+
+Nice, conceptual introductions to (parametric) TTE modeling are by Holford @Holford2013-mh  and Bradburn et al. @Bradburn2003-fg
+
+
+# AFT vs PH models
+
+* Covariate effects in AFT models are fundamentally different than in PH models
+* In a PH model, a covariate scales the hazard function
+    - $h(t) = h_0(t) \exp(\theta x)$
+    - $S(t) = S_0(t)^{\exp(\theta x)}$
+* In an AFT model, a covariate scales time
+    - $\log T = \mu + \theta x + \epsilon$
+    - $S(t) = S_0(ct)$, where $c = \exp(\theta x)$ is the **acceleration factor**
+    - The covariate effect is on the percentiles of the distribution
+    - $\frac{\text{Percentile when } x=1}{\text{Percentile when } x=0} = \frac{1}{c}$ for all percentiles
+
+# Features of common distributions
+
+* Exponential
+  - Hazard is constant
+  - One parameter
+* Weibull, Gompertz, and Gamma
+  - Two parameters (scale/location and shape)
+  - Hazard in monotonically increasing or decreasing
+* Log-logistic and log-normal
+  - Two parameters (scale/location and shape)
+  - Hazard is uni-modal
+  - Falling, or arc (rising then falling)
+* Generalized Gamma
+  - Three parameters (scale/location and shape)
+  - Monotonic (increasing or decreasing); arc; bathtub
+
+
+# Likelihood for parametric survival models
+
+Assuming that censoring times are independent of event times, then the individual contribution to the likelihood function is 
+
+$$
+L_i(\theta) = \begin{cases}
+f(T^*_i) & \text{for } \delta_i = 1 \\
+S(T^*_i) & \text{for } \delta_i = 0
+\end{cases}
+$$
+and the likelihood function is
+
+$$
+\begin{align*}
+L(\theta) &= \prod_{i=1}^n f(T^*_i)^{\delta_i} S(T^*_i)^{1-\delta_i} \\
+          & = \prod_{i=1}^n h(T^*_i)^{\delta_i} S(T^*_i)
+\end{align*}
+$$
+
+# Fitting parametric TTE models in R
+
+* The `survreg()` function in the `survival` package
+* The `flexsurvreg()` function in the `flexsurv` package
+
+We generally use the `flexsurv` package because there are more distributions available
+
+```{r}
+fit_01 <- flexsurvreg(Surv(TTE_SEVERE, AE01) ~ CAVGSS, 
+                      data = dat_use,
+                      dist = 'weibull')
+```
+
+# Model evaluation
+
+* Residual plots
+  - Similar use as with the Cox model
   
-  * Prop Haz
-  * AFT
+* Simulation-based diagnostics
+  - VPCs for survival and hazard functions
+  - NPDEs
 
-    - likelihood contributions for censored and observed events
-    - Terminology: "Cox" model vs "PH" model (hint: no baseline hazard vs yes bl hazard)
+# Numeric model comparison
 
- @Holford2013-mh
- 
- 
- 
-# Technical session
- 
- * muhaz
- * Bayes estimation
- 
+* AIC and friends
+* C-index
+
+# Workbook 5: Parametric models
+
+
 # References

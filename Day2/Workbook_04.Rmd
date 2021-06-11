@@ -1,0 +1,204 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Cox regression"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(flexsurv)
+library(muhaz)
+library(Hmisc)
+
+theme_set(theme_bw())
+```
+
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+
+aedat <-
+  aedat %>% 
+  mutate(AETOXGR = factor(aedat$AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
+         ae_any = AETOXGR != 'None') %>% 
+  group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
+  )
+
+# Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4)))) %>% 
+  ungroup() %>% 
+  mutate(rowid = 1:n())
+
+```
+
+
+# Workbook 4:  Cox regression
+
+We'll start by fitting a model to time to a severe event as a function of CAVGSS
+
+```{r}
+cox_model01 <- coxph(Surv(TTE_SEVERE, AE01) ~ CAVGSS, data=dat_use)
+```
+
+```{r}
+print(cox_model01)
+```
+
+
+Let's look at the deviance residuals
+
+* Versus body weight and patient type, to see if there is a relationship with covariates not in our model
+* Versus CAVGSS to see if we've modeled the relationship reasonably well
+
+```{r}
+dat_use <- dat_use %>%
+  mutate(resid01 = residuals(cox_model01, type='deviance'))
+```
+
+```{r}
+dat_use %>% 
+  ggplot(aes(x=BWT, y=resid01)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x='Body weight', y='Deviance residual')
+```
+
+```{r}
+dat_use %>% 
+  ggplot(aes(x=PTTYPE, y=resid01)) +
+  geom_violin() +
+  geom_point() +
+  labs(x='Patient type', y='Deviance residual')
+```
+
+```{r}
+dat_use %>% 
+  ggplot(aes(x=CAVGSS, y=resid01)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x='Body weight', y='Exposure')
+```
+
+Do you see any evidence that we should modify our model based on these plots?  If so, what leads you to that decision and how might you change the model?
+
+Let's make some predictions and overlay the model fits
+
+```{r}
+preds_mod01 <- survfit(cox_model01, newdata = dat_use) %>% survfit0()
+```
+
+```{r}
+# Make a tall version of the data
+survival_preds_fit1 <- preds_mod01$surv %>% 
+  as.data.frame() %>% 
+  mutate(time = preds_mod01$time) %>% 
+  pivot_longer(cols=-time) %>% 
+  # Add a row id column for merging with the covariate data
+  mutate(rowid = as.numeric(name))
+
+# Merge predictions and covariates for plotting
+survival_preds_fit1 <- survival_preds_fit1 %>% 
+  left_join(dat_use) %>% 
+  # Because CAVGSS is continuous, we need to plot using categories
+  # So, we'll use exposure quartiles
+  group_by(time, Quartile) %>% 
+  # Calculare expected value for S(t) across subjects in each group
+  summarise(est=mean(value))
+
+# Plot the observed data (the Kaplan-Meier estimate)
+ggsurvplot(survfit(Surv(TTE_SEVERE, AE01) ~ Quartile, data=dat_use), 
+           data=dat_use)$plot +
+  # Overlay the predictions
+  geom_step(data=survival_preds_fit1,
+            aes(x=time, y=est), linetype='dashed') +
+  facet_wrap(~Quartile
+             )
+```
+
+Does this plot align with your expectation based on the residual plots?
+
+**Exercise**
+
+* Make similar plots for patient type and body weight.  Do these align with your expectation based on the residual plots?
+   - Hint: you'll need to make a categorical variable from body weight.  The `ntile()` function is a handy tool for this.
+
+```{r}
+# Your code goes here
+```
+
+
+Now, let's fit three more models for comparison
+
+* Surv(TTE_SEVERE,AE01) ~ CAVGSS + PTTYPE
+* Surv(TTE_SEVERE, AE01) ~ Quartile
+* Surv(TTE_SEVERE,AE01) ~ pspline(CAVGSS, df=4)
+
+The last model will fit a non-parametric (smooth) function of CAVGSS using penalized splines with 4 degrees of freedom.
+
+```{r}
+cox_model02 <- update(cox_model01, . ~ . + PTTYPE)
+cox_model03 <- coxph(Surv(TTE_SEVERE, AE01) ~ Quartile, data=dat_use)
+cox_model04 <- coxph(Surv(TTE_SEVERE, AE01) ~ pspline(CAVGSS, df=4), data=dat_use)
+```
+
+To get an idea of how the effects look on the log-hazard scale, we can use the termplot function
+
+```{r}
+termplot(cox_model04,terms = 1)
+```
+
+
+We'll compare these models initially using concordance.
+
+```{r}
+concordance(cox_model01,cox_model02,cox_model03,cox_model04)
+```
+
+
+**Exercise**
+
+1. Based on the c-index, is there one model that is clearly better than the others?  
+
+2. For comparison, 
+    a. Plot the deviannce residuals from model `cox_mod04` vs CAVGSS.  Do they look better than the residuals from model 01?
+    b. Make the observed and predicted plot for model `cox_mod04`.  How do these compare to `cox_mod01`?
+
+3. Based on all of this information, which of these models would you select going forward? Why?
+
+
+

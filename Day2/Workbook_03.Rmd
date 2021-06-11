@@ -1,0 +1,111 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Summary measures from S(t) and comparing survival functions"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(flexsurv)
+library(muhaz)
+library(Hmisc)
+
+theme_set(theme_bw())
+```
+
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+
+aedat <-
+  aedat %>% 
+  mutate(AETOXGR = factor(aedat$AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
+         ae_any = AETOXGR != 'None') %>% 
+  group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE),
+  AE_any = ifelse(AETOXGR!="None",1,0)
+  )
+
+# Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4)))) %>% 
+  ungroup() %>% 
+  mutate(rowid = 1:n())
+
+```
+
+
+Our goal here is to compare time to any AE between placebo and treated subjects.  First, we'll compare summary measures, then we'll compare using the log-rank test.
+
+Let's start by estimating the survival function for time to any AE, stratified by treatment.
+
+```{r}
+km_trt <- survfit(Surv(TTE,AE_any)~PBO, dat=dat_use)
+print(km_trt)
+```
+
+And then plot the estimates
+
+```{r}
+ggsurvplot(km_trt)
+```
+
+* How do the median estimates compare?  Which group is estimated to have the fastest onset of AEs?  Which group is estimated to have the slowest?  If you account for the uncertainty in the estimates, how do you think the medians compare to each other?  
+* Why do you think the upper confidence limit for the placebo group is NA?
+
+Note: You can use the quantile function to estimate other percentiles of the survival distribution. 
+
+```{r}
+quantile(km_trt, probs = 0.25)
+```
+
+How do the 25th percentiles compare?  Does the difference in one percentile (e.g., 25th or 50th) give you a full picture of the differences in the time to AE between these groups?
+
+
+We fit the log-rank test in R using the `survdiff` function:
+
+```{r}
+survdiff(Surv(TTE,AE_any) ~ PBO, data=dat_use)
+```
+
+** Exercise**
+
+1. Repeat the steps abouve but comparing patient type or exposure quartile.
+2. Does it appear that there is a difference between patient types or across exposure quartiles?
+
+```{r}
+# Your code goes here
+```

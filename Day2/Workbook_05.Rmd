@@ -1,0 +1,200 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Parametric TTE models"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(flexsurv)
+library(muhaz)
+library(Hmisc)
+
+theme_set(theme_bw())
+```
+
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+
+aedat <-
+  aedat %>% 
+  mutate(AETOXGR = factor(aedat$AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
+         ae_any = AETOXGR != 'None') %>% 
+  group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
+  )
+
+# Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4)))) %>% 
+  ungroup() %>% 
+  mutate(rowid = 1:n())
+
+```
+
+
+Let's start by getting some idea about the shape of the hazard function.  To do this, we can use the package `muhaz` to get a non-parametric estimate.
+
+```{r}
+np_est = muhaz(times = dat_use$TTE_SEVERE, 
+               delta = dat_use$AE01, 
+               min.time=0, 
+               max.time=6)
+
+plot(np_est)
+```
+
+Using all of the data, the hazard appears to be monotonic - high early and declining sharply.
+Based on this, we can rule out the exponential model.  Which models might be good candidates to fit this shape?
+
+Let's try the Weibull and Gompertz
+
+```{r}
+fit01_weibull <- flexsurvreg(Surv(TTE_SEVERE, AE01) ~ CAVGSS, 
+                             data = dat_use,
+                             dist = 'weibull')
+
+fit01_gompertz <- flexsurvreg(Surv(TTE_SEVERE, AE01) ~ CAVGSS, 
+                             data = dat_use,
+                             dist = 'gompertz')
+
+```
+
+Comparing the two models by AIC, it looks like there isn't much difference between the two models
+
+```{r}
+AIC(fit01_weibull, fit01_gompertz)
+```
+
+Let's compare based on VPCs.  Unfortunately, there is no simple way to simulate from these models.
+
+So, we'll write a short function to do this.  The input will be a dataset with predicted survival function. The default number of simulations will be 100.  For now, we'll assume only administrative censoring.
+
+```{r}
+simulate_TTE <- function(.data, nsims=100) {
+  times <- c(0,.data$time)
+  surv <- c(1,.data$est)
+  surv_fun <- approxfun(x=surv, y=times, yright=max(times), rule=2)
+  u <- runif(nsims)
+  sim_times <- surv_fun(u)
+  delta <- sim_times < max(times)
+  return(data.frame(time=sim_times, event=delta, sim=1:nsims))
+}
+```
+
+
+Let's extract the predicted survival curve from the Weibull model for each subject.
+
+```{r}
+summary_weibull <- summary(fit01_weibull, 
+                           newdata=dat_use, 
+                           ci=FALSE, 
+                           tidy=TRUE) %>% 
+  arrange(time) %>% 
+  mutate(rowid = rep(1:nrow(dat_use), times=length(unique(.$time)))) %>% 
+  arrange(rowid,time)
+
+```
+
+Now, we'll simulate data according to this model.
+
+```{r}
+sims_weibull <- summary_weibull %>% 
+  select(rowid,time,est) %>% 
+  nest(data = c("time","est")) %>% 
+  mutate(sims = map(data, simulate_TTE)) %>% 
+  unnest(cols=sims) %>% 
+  select(-data) %>% 
+  left_join(dat_use)
+```
+
+Our summary statistic is the Kaplan-Meier estimator.  So, we'll calculate the K-M in each group, in this case, exposure quartile.
+
+```{r}
+vpc_stat <- function(.data, pred_times=NULL) {
+  fit <- survfit(Surv(time,event)~Quartile, data=.data)
+  if (is.null(pred_times)) {
+    pred_times <- c(0,sort(fit$time))
+  }
+  preds = summary(fit, times=pred_times)
+  
+  data.frame(pred_times=pred_times, preds = preds$surv, group=preds$strata)
+}
+```
+
+
+Apply the summary statistic to the original data
+
+```{r}
+obs_surv = vpc_stat(dat_use %>% mutate(time=TTE_SEVERE, event=AE01))
+```
+
+Apply the summary statistic to each simulated dataset
+
+```{r}
+sim_surv = sims_weibull %>% 
+  nest(data = -sim) %>% 
+  mutate(km_est = map(data, ~vpc_stat(., pred_times=sort(unique(obs_surv$pred_times))))) %>% 
+  select(-data) %>% 
+  unnest(cols=km_est)
+```
+
+
+Aggregate across simulations and plot
+
+```{r}
+sim_surv %>% group_by(pred_times, group) %>% 
+  summarise(med=mean(preds), 
+            lcl = quantile(preds,probs = 0.05),
+            ucl = quantile(preds, probs=0.95)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_step(data=obs_surv,aes(y=preds)) +
+  facet_wrap(~group) +
+  ylim(0,1) +
+  labs(x='Time (months)', y='Fraction without a severe AE')
+```
+
+***Exercise:***
+
+* How does this look?  How does it compare to the Cox model with a linear effect of exposure?
+
+* Make a similar VPC using the Gompertz model.  Does this look any better?
+
+* Try fitting a parametric model using a smoothing spline for the effect of CAVGSS and plotting the VPC.  Is this better?
+

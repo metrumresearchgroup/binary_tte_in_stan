@@ -21,6 +21,8 @@ Packages:
   - survminer
   - GGally
   - DHARMa
+  - flexsurv
+  - Hmisc
 
 Repos:
   - templ: https://s3.amazonaws.com/mpn.metworx.dev/releases/templ/0.1.0

@@ -146,7 +146,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <script src="TTE_introduction_files/slidy_shiny-1/slidy_shiny.js"></script>
   <link rel="stylesheet" type="text/css" media="screen, projection, print"
    href="slidystyles.css" />
-  <meta name="duration" content="45" />
 </head>
 <body>
 <div class="slide titlepage">
@@ -154,9 +153,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <p class="author">
 
   </p>
-</div>
-<div id="outline" class="slide section level1">
-<h1>Outline</h1>
 </div>
 <div id="key-learning-objectives-for-today" class="slide section level1">
 <h1>Key learning objectives for today</h1>
@@ -170,10 +166,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="not-covered-today-but-coming-soon" class="slide section level1">
 <h1>Not covered today, but coming soon</h1>
 <ul>
-<li>Bayesian analysis of TTE models</li>
-<li>Repeated time to event</li>
+<li>Bayesian analysis of TTE models
+<ul>
+<li>Parametric non-linear effects</li>
+</ul></li>
 <li>Effects for covariates that vary continuously with time</li>
-<li></li>
+<li>Repeated time to event</li>
 </ul>
 </div>
 <div id="what-is-time-to-event-data" class="slide section level1">
@@ -327,8 +325,8 @@ f(t) &amp;= h(t) S(t)
 <li>When estimating S(t), we (almost) always assume censoring is independent of event time</li>
 </ul>
 </div>
-<div id="workbook" class="slide section level1">
-<h1>Workbook</h1>
+<div id="workbook-01-relationship-between-functions" class="slide section level1">
+<h1>Workbook 01: Relationship between functions</h1>
 <p>Let’s look at the relationship between the hazard, cumulative hazard, density, and survival functions for some parametric distributions.</p>
 </div>
 <div id="non-parametric-estimation-of-survival-cumulative-hazard-and-hazard-functions" class="slide section level1">
@@ -442,9 +440,8 @@ f(t) &amp;= h(t) S(t)
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1">survminer<span class="op">::</span><span class="kw">ggsurvplot</span>(fit0, <span class="dt">risk.table =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
 <p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-10-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
-<div id="workbook-survfit-estimation-and-plotting-vs-categorical-predictors" class="slide section level1">
-<h1>Workbook: survfit estimation and plotting vs categorical predictors</h1>
-<p>Let’s practice.</p>
+<div id="workbook-02-kaplan-meier-estimates-and-plots" class="slide section level1">
+<h1>Workbook 02: Kaplan-Meier estimates and plots</h1>
 </div>
 <div id="summary-measures-of-st" class="slide section level1">
 <h1>Summary measures of S(t)</h1>
@@ -500,9 +497,6 @@ f(t) &amp;= h(t) S(t)
 .    180.000    132.000      1.397      0.128      0.320      0.139      0.649 
 .     * restricted mean with upper limit =  4</code></pre>
 </div>
-<div id="workbook-summary-measures-from-st" class="slide section level1">
-<h1>Workbook: summary measures from S(t)</h1>
-</div>
 <div id="comparing-two-survival-curves" class="slide section level1">
 <h1>Comparing two survival curves</h1>
 <ul>
@@ -541,11 +535,14 @@ f(t) &amp;= h(t) S(t)
 </ul></li>
 <li>Generalized Wilcoxan test
 <ul>
-<li>A weighted verison of the log-rank test with weights proportional to the number at risk</li>
+<li>A weighted version of the log-rank test with weights proportional to the number at risk</li>
 <li>Gives relatively higher weight to early differences in S(t)</li>
 <li>Thus, more sensitive when differences in survival occur early</li>
 </ul></li>
 </ul>
+</div>
+<div id="workbook-03-summary-measures-from-st-and-comparing-survival-functions" class="slide section level1">
+<h1>Workbook 03: Summary measures from S(t) and comparing survival functions</h1>
 </div>
 <div id="semi-parametric-models-for-tte-data" class="slide section level1">
 <h1>Semi-parametric models for TTE data</h1>
@@ -556,7 +553,7 @@ f(t) &amp;= h(t) S(t)
 </ul></li>
 <li>Connection to Poisson model
 <ul>
-<li>Brelow’s formulation</li>
+<li>Breslow’s formulation</li>
 </ul></li>
 <li>Piecewise exponential as a simplification</li>
 <li>Smooth baseline hazards
@@ -567,7 +564,7 @@ f(t) &amp;= h(t) S(t)
 </div>
 <div id="cox-ph-model" class="slide section level1">
 <h1>Cox PH model</h1>
-<p>Proposed by Cox</p>
+<p>Originally proposed by Cox in 1972 <span class="citation">[2]</span></p>
 <div class="notebox">
 <p><span class="math display">\[
 h(t) = h_0(t) \exp(\theta_1 x_1 + \dots \theta_p x_p)
@@ -611,6 +608,19 @@ S(t) &amp;= \exp \left\{ -\int_0^t h_0(s) \exp(\theta_1 x_1) ~ ds \right\} \\
 </div>
 </div>
 </div>
+<div id="parameter-estimation" class="slide section level1">
+<h1>Parameter estimation</h1>
+<p>Cox proposed using a partial likelihood approach, treating the baseline hazard as an infinite dimensional nuisance parameter.</p>
+<p>This yields the likelihood function (assuming unique event times):</p>
+<p><span class="math display">\[
+\ell(\theta | x) =  \prod_{i=1}^k \frac{\exp(x_i^T \theta)}{\sum_{j \in R(i)} \exp(x_j^T \theta)}
+\]</span> where</p>
+<ul>
+<li>there are <span class="math inline">\(k\)</span> unique event times</li>
+<li><span class="math inline">\(R(j)\)</span> is the set of subjects at risk for an event at <span class="math inline">\(t(j)\)</span></li>
+</ul>
+<p>Note that the product is only over the <span class="math inline">\(k\)</span> events, not over all subjects.</p>
+</div>
 <div id="parameter-interpretation" class="slide section level1">
 <h1>Parameter interpretation</h1>
 <p>Suppose we have the model <span class="math display">\[
@@ -623,7 +633,7 @@ h(t) = h_0(t) \exp(\theta_1 x_1 + \theta_2 x_2)
 </ul></li>
 <li><span class="math inline">\(e^{\theta_2}\)</span> represents the hazard ratio for a one unit difference in <span class="math inline">\(x_2\)</span>
 <ul>
-<li><span class="math inline">\(\exp(\theta_1 \times d)\)</span> represents the hazard ratio for a <span class="math inline">\(d\)</span> unit difference in <span class="math inline">\(x_2\)</span></li>
+<li><span class="math inline">\(\exp(\theta_2 \times d)\)</span> represents the hazard ratio for a <span class="math inline">\(d\)</span> unit difference in <span class="math inline">\(x_2\)</span></li>
 </ul></li>
 </ul>
 </div>
@@ -708,6 +718,7 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 <li>Comparing model predicted and observed survival</li>
 <li>Martingale and deviance residuals for functional form of covariate effects</li>
 <li>Assessing the PH assumption</li>
+<li>Concordance / Harrell’s C-index</li>
 </ul>
 </div>
 <div id="comparing-model-predicted-and-observed-survival-1" class="slide section level1">
@@ -750,7 +761,7 @@ Q_j = \begin{cases} 1 &amp; \text{CAVGSS in quartile } j \\
 <a class="sourceLine" id="cb21-12" data-line-number="12"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Quartile</a>
 <a class="sourceLine" id="cb21-13" data-line-number="13">             )</a></code></pre></div>
 </div><div class="column">
-<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-24-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
+<p><img src="TTE_introduction_files/figure-slidy/unnamed-chunk-24-1.png" width="100%" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
 </div>
 </div>
@@ -826,11 +837,11 @@ D_i = \text{sign}(M_i) \sqrt{-2 \left( M_i + \delta_i \log \widehat{H_i}(T^*_i)\
 . Quartile  23.3  4 0.00011
 . GLOBAL    23.3  4 0.00011</code></pre>
 <ul>
-<li>This is the score test for adding a time-by-covariate interation.
+<li>This is the score test for adding a time-by-covariate interaction.
 <ul>
 <li>Indicates a violation of the PH assumption</li>
 <li>Also suggested by the plot of the standardized Schoenfeld residuals vs time</li>
-<li>The observed and predicted S(t) plots didn’</li>
+<li>The observed and predicted S(t) plots did not’</li>
 </ul></li>
 </ul>
 </div><div class="column">
@@ -839,17 +850,30 @@ D_i = \text{sign}(M_i) \sqrt{-2 \left( M_i + \delta_i \log \widehat{H_i}(T^*_i)\
 </div>
 </div>
 </div>
-<div id="workbook-1" class="slide section level1">
-<h1>Workbook</h1>
+<div id="concordance-as-a-measure-of-model-fit" class="slide section level1">
+<h1>Concordance as a measure of model fit</h1>
+<p>Concordance is a measure of how well the predicted risk of an event aligns with the observed risk.</p>
+<p>Imagine you have two randomly selected subjects <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> with</p>
+<ul>
+<li>Covariates <span class="math inline">\(x_i\)</span> and <span class="math inline">\(x_j\)</span></li>
+<li>Risk scores: <span class="math inline">\(\eta_i = x_i^T \hat{\theta}\)</span> and <span class="math inline">\(\eta_j = x_j^T \hat{\theta}\)</span></li>
+<li>(True) event times: <span class="math inline">\(T_i\)</span> and <span class="math inline">\(T_j\)</span></li>
+</ul>
+<p>Then concordance (c-index) estimates: <span class="math inline">\(P(T_i &gt; T_j ~|~ \eta_i &lt; \eta_j)\)</span></p>
+<p>Harrell et al. <span class="citation">[3]</span> proposed a method for handling censored data.</p>
+<p>A model with higher c-index should provide better predictions.</p>
+</div>
+<div id="workbook-04-cox-regression" class="slide section level1">
+<h1>Workbook 04: Cox regression</h1>
 <ul>
 <li>Fitting the Cox model</li>
-<li>Extracting parameter estimates and confidence intervals</li>
-<li>Interpreting estimates</li>
+<li>Model evaluation</li>
+<li>Comparing models</li>
 </ul>
 </div>
 <div id="cox-model-as-a-poisson-regression" class="slide section level1">
 <h1>Cox model as a Poisson regression</h1>
-<p>It turns out that we can get the same likelihood if we view the data as arising from a Poisson process with intervals defined by the unique event times. <span class="citation">[2]</span></p>
+<p>It turns out that we can get the same likelihood if we view the data as arising from a Poisson process with intervals defined by the unique event times. <span class="citation">[4]</span></p>
 <ul>
 <li>Divide time into non-overlapping intervals with segments defined by observed event times</li>
 <li>Constant baseline hazard within each interval</li>
@@ -878,33 +902,30 @@ h_0(t) = \lambda_j \text{ for } t \in [\tau_{j-1} ,  \tau_j)
 <ul>
 <li>How to define the time intervals depends on
 <ul>
-<li>Clinical knowledge (e.g., transplant <span class="citation">[3]</span> )</li>
+<li>Clinical knowledge (e.g., transplant <span class="citation">[5]</span> )</li>
 <li>Time-varying predictors</li>
 <li>Expected number and timing of events</li>
 </ul></li>
 <li>This formulation provides a semi-parametric model from which we can simulate survival data</li>
 </ul>
 </div>
-<div id="smooth-hazard-function-using-flexsurvreg" class="slide section level1">
-<h1>Smooth hazard function using flexsurvreg</h1>
+<div id="smooth-non-parametric-baseline-hazard-functions" class="slide section level1">
+<h1>Smooth non-parametric baseline hazard functions</h1>
 <ul>
-<li><p>An alternative semi-parametric model is to estimate the baseline hazard using smoothing splines <span class="citation">[4]</span></p></li>
+<li><p>An alternative semi-parametric model is to estimate the baseline hazard using smoothing splines <span class="citation">[6]</span></p></li>
 <li><p>Can be fitted using the <code>flexsurv</code> R package and in <code>brms</code></p></li>
-<li>Royston and Parmar <span class="citation">[4]</span> propose <span class="math inline">\(g(S(t)) = s(t) + \beta^T x\)</span>
+<li><p>Royston and Parmar <span class="citation">[6]</span> propose <span class="math inline">\(g(S(t)) = s(t) + \beta^T x\)</span></p>
 <ul>
 <li><span class="math inline">\(s(t)\)</span> is a smooth function modeled using cubic smoothing splines</li>
 <li><span class="math inline">\(g(S) = \log( -\log(S))\)</span> corresponds to a proportional hazards model</li>
 <li><span class="math inline">\(g(S) = \log(1/S - 1)\)</span> corresponds to a proportional odds model</li>
 </ul></li>
-<li><code>brms</code> implementation uses M-splines for the baseline hazard
+<li><p><code>brms</code> implementation uses M-splines for the baseline hazard</p>
 <ul>
 <li>M-splines are non-negative and integrate to I-splines</li>
 <li>Simplifies calculations</li>
 </ul></li>
 </ul>
-</div>
-<div id="workbook-semi-parametric-alternatives-to-the-cox-model" class="slide section level1">
-<h1>Workbook: Semi-parametric alternatives to the Cox model</h1>
 </div>
 <div id="extensions-to-standard-cox-model" class="slide section level1">
 <h1>Extensions to standard Cox model</h1>
@@ -912,35 +933,165 @@ h_0(t) = \lambda_j \text{ for } t \in [\tau_{j-1} ,  \tau_j)
 <li>Stratified Cox model
 <ul>
 <li>Allows different baseline hazard by strata</li>
-<li><span class="math inline">\(h(t) = \textcolor{red}{h_{0,s}(t)} \exp(\theta_1 x_1 + \dots + \theta_p x_p)\)</span></li>
+<li><span class="math inline">\(h(t) = \color{red}{h_{0,s}(t)} \exp(\theta_1 x_1 + \dots + \theta_p x_p)\)</span></li>
 <li>Often used in primary analysis of TTE endpoints in clinical trials (e.g., stratify by region)</li>
 </ul></li>
-<li>Time-varying covariates
+<li>Time-varying covariates xs - Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)
 <ul>
-<li>Extension to the standard Cox model</li>
-<li>Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)</li>
-<li>Doesn’t allow for continuously varying covariates Frequently used when conditioning on an intermediate event (e.g., Stanford heart transplant data)</li>
+<li>Doesn’t allow for continuously varying covariates</li>
+<li>Frequently used when conditioning on an intermediate event (e.g., Stanford heart transplant data)</li>
 </ul></li>
 </ul>
 </div>
-<div id="intro-to-parametric-models" class="slide section level1">
-<h1>Intro to Parametric models</h1>
+<div id="introduction-to-parametric-models" class="slide section level1">
+<h1>Introduction to Parametric models</h1>
 <ul>
-<li>Prop Haz</li>
-<li><p>AFT</p>
+<li>The Cox model was designed to estimate effects of covariates on the time-to-event distribution.
 <ul>
-<li>likelihood contributions for censored and observed events</li>
-<li>Terminology: “Cox” model vs “PH” model (hint: no baseline hazard vs yes bl hazard)</li>
+<li>With that focus, the baseline hazard isn’t of much interest.</li>
+</ul></li>
+<li>However, in PMx modeling we are often interested in modeling the full time-to-event distribution
+<ul>
+<li>Both the baseline hazard and covariate effects</li>
+</ul></li>
+<li>This will be our focus for the rest of the course
+<ul>
+<li>Accelerated failure time models in R and Stan</li>
+<li>General hazard models in Stan</li>
 </ul></li>
 </ul>
-<p><span class="citation">[5]</span></p>
 </div>
-<div id="technical-session" class="slide section level1">
-<h1>Technical session</h1>
+<div id="traditional-parametric-models" class="slide section level1">
+<h1>Traditional parametric models</h1>
+<p>Many of the commonly used models fall under the accelerated failure time framework (Wei, <span class="citation">[7]</span>)</p>
+<p><span class="math display">\[
+\log (T) = \mu + \theta x + \epsilon
+\]</span></p>
+<div class="notebox">
+<table>
+<thead>
+<tr class="header">
+<th><strong><em>Distribution for <span class="math inline">\(\epsilon\)</span></em></strong></th>
+<th><strong><em>Distribution for T</em></strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Extreme value</td>
+<td>Weibull</td>
+</tr>
+<tr class="even">
+<td>Extreme value (scale=1)</td>
+<td>Exponential</td>
+</tr>
+<tr class="odd">
+<td>Normal</td>
+<td>Log-normal</td>
+</tr>
+<tr class="even">
+<td>Logistic</td>
+<td>Log-logistic</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>But any distribution for <span class="math inline">\(T\)</span> that has support on values of <span class="math inline">\(T \ge 0\)</span> is suitable, including Gompertz, Gamma, Generalized Gamma, etc.</p>
+<p>Nice, conceptual introductions to (parametric) TTE modeling are by Holford <span class="citation">[8]</span> and Bradburn et al. <span class="citation">[9]</span></p>
+</div>
+<div id="aft-vs-ph-models" class="slide section level1">
+<h1>AFT vs PH models</h1>
 <ul>
-<li>muhaz</li>
-<li>Bayes estimation</li>
+<li>Covariate effects in AFT models are fundamentally different than in PH models</li>
+<li>In a PH model, a covariate scales the hazard function
+<ul>
+<li><span class="math inline">\(h(t) = h_0(t) \exp(\theta x)\)</span></li>
+<li><span class="math inline">\(S(t) = S_0(t)^{\exp(\theta x)}\)</span></li>
+</ul></li>
+<li>In an AFT model, a covariate scales time
+<ul>
+<li><span class="math inline">\(\log T = \mu + \theta x + \epsilon\)</span></li>
+<li><span class="math inline">\(S(t) = S_0(ct)\)</span>, where <span class="math inline">\(c = \exp(\theta x)\)</span> is the <strong>acceleration factor</strong></li>
+<li>The covariate effect is on the percentiles of the distribution</li>
+<li><span class="math inline">\(\frac{\text{Percentile when } x=1}{\text{Percentile when } x=0} = \frac{1}{c}\)</span> for all percentiles</li>
+</ul></li>
 </ul>
+</div>
+<div id="features-of-common-distributions" class="slide section level1">
+<h1>Features of common distributions</h1>
+<ul>
+<li>Exponential
+<ul>
+<li>Hazard is constant</li>
+<li>One parameter</li>
+</ul></li>
+<li>Weibull, Gompertz, and Gamma
+<ul>
+<li>Two parameters (scale/location and shape)</li>
+<li>Hazard in monotonically increasing or decreasing</li>
+</ul></li>
+<li>Log-logistic and log-normal
+<ul>
+<li>Two parameters (scale/location and shape)</li>
+<li>Hazard is uni-modal</li>
+<li>Falling, or arc (rising then falling)</li>
+</ul></li>
+<li>Generalized Gamma
+<ul>
+<li>Three parameters (scale/location and shape)</li>
+<li>Monotonic (increasing or decreasing); arc; bathtub</li>
+</ul></li>
+</ul>
+</div>
+<div id="likelihood-for-parametric-survival-models" class="slide section level1">
+<h1>Likelihood for parametric survival models</h1>
+<p>Assuming that censoring times are independent of event times, then the individual contribution to the likelihood function is</p>
+<p><span class="math display">\[
+L_i(\theta) = \begin{cases}
+f(T^*_i) &amp; \text{for } \delta_i = 1 \\
+S(T^*_i) &amp; \text{for } \delta_i = 0
+\end{cases}
+\]</span> and the likelihood function is</p>
+<p><span class="math display">\[
+\begin{align*}
+L(\theta) &amp;= \prod_{i=1}^n f(T^*_i)^{\delta_i} S(T^*_i)^{1-\delta_i} \\
+          &amp; = \prod_{i=1}^n h(T^*_i)^{\delta_i} S(T^*_i)
+\end{align*}
+\]</span></p>
+</div>
+<div id="fitting-parametric-tte-models-in-r" class="slide section level1">
+<h1>Fitting parametric TTE models in R</h1>
+<ul>
+<li>The <code>survreg()</code> function in the <code>survival</code> package</li>
+<li>The <code>flexsurvreg()</code> function in the <code>flexsurv</code> package</li>
+</ul>
+<p>We generally use the <code>flexsurv</code> package because there are more distributions available</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb26-1" data-line-number="1">fit_<span class="dv">01</span> &lt;-<span class="st"> </span><span class="kw">flexsurvreg</span>(<span class="kw">Surv</span>(TTE_SEVERE, AE01) <span class="op">~</span><span class="st"> </span>CAVGSS, </a>
+<a class="sourceLine" id="cb26-2" data-line-number="2">                      <span class="dt">data =</span> dat_use,</a>
+<a class="sourceLine" id="cb26-3" data-line-number="3">                      <span class="dt">dist =</span> <span class="st">&#39;weibull&#39;</span>)</a></code></pre></div>
+</div>
+<div id="model-evaluation" class="slide section level1">
+<h1>Model evaluation</h1>
+<ul>
+<li>Residual plots
+<ul>
+<li>Similar use as with the Cox model</li>
+</ul></li>
+<li>Simulation-based diagnostics
+<ul>
+<li>VPCs for survival and hazard functions</li>
+<li>NPDEs</li>
+</ul></li>
+</ul>
+</div>
+<div id="numeric-model-comparison" class="slide section level1">
+<h1>Numeric model comparison</h1>
+<ul>
+<li>AIC and friends</li>
+<li>C-index</li>
+</ul>
+</div>
+<div id="workbook-5-parametric-models" class="slide section level1">
+<h1>Workbook 5: Parametric models</h1>
 </div>
 <div id="references" class="slide section level1 unnumbered">
 <h1>References</h1>
@@ -948,17 +1099,29 @@ h_0(t) = \lambda_j \text{ for } t \in [\tau_{j-1} ,  \tau_j)
 <div id="ref-noauthor_2011-gh">
 <p>[1] <span class="smallcaps">Anon</span>. (2011). Appendix 2: An introduction to the counting process approach to survival analysis. In <em>Applied survival analysis</em> pp 359–63. John Wiley &amp; Sons, Inc., Hoboken, NJ, USA.</p>
 </div>
+<div id="ref-Cox1972-ul">
+<p>[2] <span class="smallcaps">Cox</span>, D. R. (1972). Regression models and life-tables. <em>J. R. Stat. Soc.</em> <strong>34</strong> 187–202.</p>
+</div>
+<div id="ref-Harrell1982-ux">
+<p>[3] <span class="smallcaps">Harrell</span>, F. E., Jr, <span class="smallcaps">Califf</span>, R. M., <span class="smallcaps">Pryor</span>, D. B., <span class="smallcaps">Lee</span>, K. L. and <span class="smallcaps">Rosati</span>, R. A. (1982). Evaluating the yield of medical tests. <em>JAMA</em> <strong>247</strong> 2543–6.</p>
+</div>
 <div id="ref-Whitehead1980-fl">
-<p>[2] <span class="smallcaps">Whitehead</span>, J. (1980). Fitting cox’s regression model to survival data using GLIM. <em>J. R. Stat. Soc. Ser. C Appl. Stat.</em> <strong>29</strong> 268–75.</p>
+<p>[4] <span class="smallcaps">Whitehead</span>, J. (1980). Fitting cox’s regression model to survival data using GLIM. <em>J. R. Stat. Soc. Ser. C Appl. Stat.</em> <strong>29</strong> 268–75.</p>
 </div>
 <div id="ref-French2012-qv">
-<p>[3] <span class="smallcaps">French</span>, J. L., <span class="smallcaps">Thomas</span>, N. and <span class="smallcaps">Wang</span>, C. (2012). Using historical data with bayesian methods in early clinical trial monitoring. <em>Stat. Biopharm. Res.</em> <strong>4</strong> 384–94.</p>
+<p>[5] <span class="smallcaps">French</span>, J. L., <span class="smallcaps">Thomas</span>, N. and <span class="smallcaps">Wang</span>, C. (2012). Using historical data with bayesian methods in early clinical trial monitoring. <em>Stat. Biopharm. Res.</em> <strong>4</strong> 384–94.</p>
 </div>
 <div id="ref-Royston2002-vc">
-<p>[4] <span class="smallcaps">Royston</span>, P. and <span class="smallcaps">Parmar</span>, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. <em>Stat. Med.</em> <strong>21</strong> 2175–97.</p>
+<p>[6] <span class="smallcaps">Royston</span>, P. and <span class="smallcaps">Parmar</span>, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. <em>Stat. Med.</em> <strong>21</strong> 2175–97.</p>
+</div>
+<div id="ref-Wei1992-lp">
+<p>[7] <span class="smallcaps">Wei</span>, L. J. (1992). The accelerated failure time model: A useful alternative to the cox regression model in survival analysis. <em>Stat. Med.</em> <strong>11</strong> 1871–9.</p>
 </div>
 <div id="ref-Holford2013-mh">
-<p>[5] <span class="smallcaps">Holford</span>, N. (2013). A time to event tutorial for pharmacometricians. <em>CPT Pharmacometrics Syst Pharmacol</em> <strong>2</strong> e43.</p>
+<p>[8] <span class="smallcaps">Holford</span>, N. (2013). A time to event tutorial for pharmacometricians. <em>CPT Pharmacometrics Syst Pharmacol</em> <strong>2</strong> e43.</p>
+</div>
+<div id="ref-Bradburn2003-fg">
+<p>[9] <span class="smallcaps">Bradburn</span>, M. J., <span class="smallcaps">Clark</span>, T. G., <span class="smallcaps">Love</span>, S. B. and <span class="smallcaps">Altman</span>, D. G. (2003). Survival analysis part II: Multivariate data analysis–an introduction to concepts and methods. <em>Br. J. Cancer</em> <strong>89</strong> 431–6.</p>
 </div>
 </div>
 </div>
