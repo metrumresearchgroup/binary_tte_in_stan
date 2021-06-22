@@ -18,33 +18,31 @@ This content is intended for a course which spans four 3-4 hour sessions.
 
 ## Agenda
 
-1. Day 1
-   a. Study designs and confounded exposure-response
-   b. General theory / background 
-   c. Binary data
-   d. Models for binary data
-   e. Bayesian models for binary data
+1. Day 1 ( [Link to recording](https://metrumrg.zoom.us/rec/share/axJg0GVfaA9PIac1_L-NDeR3MGk2zWKSb76DPEvydq-odFnX4cPJpKjCKld2vgOS.dbKlnJTeOoVcryRr); Password: `Nw738$$X` )
+    * Study designs and confounded exposure-response
+    * General theory / background 
+    * Binary data
+    * Models for binary data
+    * Bayesian models for binary data
    
-2. Day 2
-   a. Time-to-event (TTE) data
-      i. What makes it different?
-         * Describing a distribution w/o censoring (density, CDF)
-         * Describing a distribution w/o censoring (hazard, CDF, survival function)
-         * Non-parametric estimation of S(t), H(t) and h(t)
-         * Study design implications: number of events vs number of subjects
-      ii. Visualizing TTE data vs predictors: K-M plot (session 1)
-         * How to interpret it in general?
-         * Considerations for exposure metrics in TTE analyses
-         * Utility and pitfalls of exposure quartiles
-         * Hands-on example: visualizing TTE endpoint vs treatment or exposure
-
-
-   b. TTE semi-parametric modeling
-   c. Introduction to parametric Survival analysis
+2. Day 2 ( [Link to recording](https://metrumrg.zoom.us/rec/share/nP4CNLd_hH-wTC8ULII3oF9nJBeIOi6G2xNHTmkwKubYgzX_g4Zr_HJXKeaeqhsC.KBM5j5EmX_xa0znd); Password: `*Fi#j2zW` )
+    * Time-to-event (TTE) data
+        * What makes it different?
+             * Describing a distribution w/o censoring (density, CDF)
+             * Describing a distribution w/o censoring (hazard, CDF, survival function)
+             * Non-parametric estimation of S(t), H(t) and h(t)
+             * Study design implications: number of events vs number of subjects
+       * Visualizing TTE data vs predictors: K-M plot (session 1)
+           * How to interpret it in general?
+           * Considerations for exposure metrics in TTE analyses
+           * Utility and pitfalls of exposure quartiles
+           * Hands-on example: visualizing TTE endpoint vs treatment or exposure
+    * TTE semi-parametric modeling
+    * Introduction to parametric Survival analysis
    
 3. Day 3
-   a. TTE parametric modeling (Bayesian)
-   b. Additional topics in TTE modeling
-      1. TTE models with a continuously time-varying hazard
-      2. Repeated time-to-event data
-      3. Markov models for analysis of longitudinal discrete state data
+    * TTE parametric modeling (Bayesian)
+    * Additional topics in TTE modeling
+        * TTE models with a continuously time-varying hazard
+        * Repeated time-to-event data
+        * Markov models for analysis of longitudinal discrete state data
