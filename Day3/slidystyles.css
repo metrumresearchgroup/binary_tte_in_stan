@@ -1,0 +1,92 @@
+body{
+    font-family: Geneva;
+    line-height: 1.25;
+}
+
+
+.sourceCode  {
+  font-family:  Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 95%;
+  background-color: #f6f8fa;
+}
+
+
+.sourceCode.r.small  {
+  font-family:  Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 55%;
+  background-color: #f6f8fa;
+}
+
+
+.sourceCode.c  {
+  font-family:  Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 95%;
+  background-color: #f6f8fa;
+}
+
+red {
+  color: firebrick;
+  font-weight: bold;
+}
+
+grn {
+  color: darkgreen;
+  font-weight: bold;
+}
+
+.notebox {
+  padding: 0.5em;
+  background: LightGray;
+  color: black;
+  border: 2px black;
+  border-radius: 10px;
+}
+
+.center {
+  text-align: center;
+}
+
+
+
+code {
+  font-size: 80%;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: auto;
+  font-size: 80%;
+  line-height: 1.45;
+  border-radius: 5px;
+}
+
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: auto;
+  font-size: 80%;
+  line-height: 1.45;
+  border: 0;
+  padding: 16px;
+  border-radius: 5px;
+  margin-top: 16px;
+  margin-bottom: 18px;
+  padding-top: 12px;
+  padding-bottom: 12px; 
+}
+
+pre:not([class]) {
+  border: 1;
+  color: black;
+  background-color: Azure;
+}
+
+code:not([class]) {
+  font-family:   Consolas, Menlo, Courier, monospace;
+  font-weight: bold;
+  color: green;
+}
+
+.sourceCode.r  {
+  font-family:  Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 90%;
+  background-color: WhiteSmoke;
+}

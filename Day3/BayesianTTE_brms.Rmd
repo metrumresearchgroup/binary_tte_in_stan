@@ -1,0 +1,425 @@
+---
+title: "Exposure-response modeling for time-to-event data using brms"
+output:
+  slidy_presentation:
+#    theme: cerulean
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: slidystyles.css
+    footer: Metrum Research Group &copy 2021
+    mathjax: local
+    self_contained: false
+    df_print: kable
+    variant: markdown+fancy_lists
+bibliography: Day3-references.bib
+csl: statistical-science.csl
+#nocite: | 
+#    @2795, @2192, @3684
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE, echo=FALSE)
+
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(survminer)
+library(survMisc)
+library(texreg)
+library(brms)
+library(tidybayes)
+library(muhaz)
+
+set.seed(314159)
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+``` 
+
+
+
+# Key learning objectives for today
+
+* Analysis of TTE data using `brms` using semi-parametric and parametric models
+* Predictive checks for the hazard and survival functions
+* Example with non-administrative censoring
+
+* Introduction to Stan
+
+* Extending TTE models to include
+    * Non-linear effects
+    * Repeated TTE
+
+* Coming next week
+  - Variables which vary continuously with time
+
+
+# A little notation
+
+* There are two time-to-event processes happening:
+
+   * $T$ = time to event of interest
+   * $C$ = time to censoring
+
+* With right censoring, we observe 
+    * $T^* = \text{min}(T,C)$
+    * $\delta = I(T \leq C)$
+
+* We are trying to estimate the distribution of $T$, but we observe $T^*$
+
+  * We'll return to this when discussing model diagnostics
+
+* Typical to assume that $T$ and $C$ are independent
+  
+
+
+# New dataset
+
+* **Models for change in tumour size, appearance of new lesions and survival probability in patients with advanced epithelial ovarian cancer** @Zecchin2016-rw
+    - DDMORE repository submission IDs: DDMODEL00000217, DDMODEL00000218
+    - Data simulated from these models
+
+* Original study
+    * Patients with platinum-sensitive recurrent ovarian cancer 
+    * Randomly assigned to receive gemcitabine plus carboplatin (Cb+G) or carboplatin alone (Cb), every 21 days
+    * Primary objective was to compare progression-free survival (PFS)
+
+* We will analyze OS and the relationship between tumor changes and OS, using simulated data
+
+
+```{r}
+# OS data
+d <- read_csv('../data/source/DDmodel0218_Simulated_OS.csv', na = c('.','-99'))
+
+# Add week 12 (Day 84) predicted tumor size
+d84 <- d %>% 
+  filter(TIME <= 84) %>% 
+  group_by(ID) %>% 
+  mutate(rate = KG/1000 - KD0/1000*AUC0 - KD1/100*AUC1,
+         prevTIME = lag(TIME,default = 0),
+         change = exp(rate * (TIME-prevTIME)),
+         ipred = IBASE * 1000 * cumprod(change)
+         ) %>% 
+  arrange(ID,TIME) %>% 
+  slice(n()) %>% 
+  mutate(ipred84 = ipred * exp(rate * (84-TIME)),
+         rts84 = ipred84 / ( IBASE * 1000 ) )
+
+dos <- d %>% 
+  filter(TIME>0) %>% 
+  group_by(ID) %>% 
+  mutate(meanGem = mean(AUC1),
+         Group = if_else(meanGem > 0, "Cb+G", "Cb")) %>% 
+  ungroup() %>% 
+  filter(CMT==2, EVID==0) %>% 
+  left_join(d84 %>% select(ID, ipred84, rts84)) %>% 
+  mutate(rts84_f = paste0("Q", ntile(rts84, n = 4)))
+
+
+```
+# OS by treatment group
+
+```{r, out.width='90%'}
+ggsurvplot(survfit(Surv(TIME,DV)~Group, data=dos), palette = 'nejm', xlab='Time (days)', risk.table = TRUE)
+```
+
+# Landmark OS at Day 84 by change in tumor size and group
+
+```{r, out.width='90%'}
+dos84 <- dos %>% 
+  filter(TIME>84) %>% 
+  mutate(TIME = TIME-84)
+
+ggsurvplot(survfit(Surv(TIME,DV)~rts84_f, data=dos84), facet.by = 'Group', data = dos84, palette='nejm')
+```
+
+# What hazard function might make sense?
+
+```{r, out.width='90%'}
+plot(muhaz(times=dos84$TIME, delta = dos84$DV, subset=dos84$Group=='Cb'))
+lines(muhaz(times=dos84$TIME, delta = dos84$DV, subset=dos84$Group=='Cb+G'), col='red')
+legend(x='topleft',legend=c("Cb","Cb+G"), lty=1, col=c("black","red"))
+
+```
+
+# Let's start by fitting a Weibull model as a function of RTS
+
+* Note: LHS of model specified as `TIME | cens(DV)`
+
+```{r, echo=TRUE, results='hide'}
+weibull_prior <- c(prior(lognormal(0,3), class='shape'),
+                   prior(normal(0,3), class='b'))
+
+fit_weibull <- brm(TIME | cens(1-DV) ~ rts84, 
+                   data = dos84,
+                   prior = weibull_prior,
+                   family  = weibull())
+```
+
+# Output from Weibull model
+
+```{r}
+fit_weibull
+```
+
+
+# Convergence assessments
+
+* Rhat values all look good (previous slide)
+* Trace plots look good
+
+```{r, out.height='67%'}
+mcmc_plot(fit_weibull, type='trace')
+```
+
+# Model evaluation
+
+* Residual plots
+  - Similar use as with the Cox model
+  
+* Simulation-based diagnostics
+  - VPCs for survival and hazard functions
+  - NPDEs
+
+
+# Posterior predictive checks
+
+Remeber our recipe
+
+* Simulate many replicates of the DV using the estimated model and observed predictors
+* Determine summary statistic(s) of interest
+    * K-M estimate of S(t)
+    * Non-parametric estimate of h(t)
+* Calculate summary statistic for observed data
+* Calculate summary statistic for each simulated replicate
+* Plot distribution(s) of summary statistics
+* Overlay observed value
+
+# Simulate survival times from model
+
+```{r}
+weibull_sims <- add_predicted_draws(model=fit_weibull, 
+                                    newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+                                    prediction = 'survival_time')
+```
+
+```{r}
+head(weibull_sims %>% select(-c(.chain,.iteration)))
+```
+
+These are simulations of $T$.
+
+To reflect the changing risk-set it is often advisable to also simulate censoring times to get to $T^* = \min(T,C)$
+
+
+# Options for distribution of $C$
+
+* Kaplan-Meier estimator
+* Cox model
+* Parametric model
+
+* Do not use observed times to censor simulated times
+    - Mixture of event and censoring distributions
+
+# Time to censoring of OS
+
+```{r, echo=TRUE, out.height='67%'}
+ggsurvplot(survfit(Surv(TIME, 1-DV) ~ ECOG, data=dos84), 
+           fun='event', 
+           ylab='Proportion censored')
+```
+
+# Fit log-logistic model for censoring distribution
+
+```{r, echo=TRUE, results='hide'}
+fit_censoring <- brm(TIME | cens(1-DV) ~ ECOG, data=dos84, family=lognormal())
+```
+
+```{r}
+fit_censoring
+```
+
+# Simulate censoring times and derive the event time
+
+```{r, echo=TRUE, results='hide'}
+censoring_sims <- add_predicted_draws(model=fit_censoring, 
+                                      newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+                                      prediction = 'censoring_time')
+
+event_sims <- weibull_sims %>% left_join(censoring_sims) %>% 
+  mutate(event_time = pmin(survival_time, censoring_time),
+         delta = survival_time < censoring_time)
+```
+
+```{r}
+head(event_sims %>% select(-c(.chain,.iteration)))
+```
+
+# Summary statistic: Kaplan-Meier estimate of S(t) stratified by RTS quartile
+
+```{r, echo=TRUE}
+vpc_stat_km <- function(.data, pred_times=NULL) {
+  fit <- survfit(Surv(time,event)~rts84_f, data=.data)
+  if (is.null(pred_times)) {
+    pred_times <- c(0,sort(unique(fit$time)))
+  }
+  preds = summary(fit, times=pred_times)
+  
+  data.frame(pred_times=preds$time, preds = preds$surv, group=preds$strata)
+}
+```
+
+# Calculate K-M estimator for observed and simulated data
+
+```{r, echo=TRUE, results='hide'}
+obs_surv = vpc_stat_km(dos84 %>% mutate(time=TIME, event=DV))
+```
+
+Apply the summary statistic to each simulated dataset
+
+```{r, echo=TRUE, results='hide'}
+sim_surv = event_sims %>% 
+  mutate(time=event_time, event=as.numeric(delta)) %>% 
+  nest(data = -.draw) %>% 
+  mutate(km_est = map(data, ~vpc_stat_km(., pred_times=sort(unique(obs_surv$pred_times))))) %>% 
+  select(-data) %>% 
+  unnest(cols=km_est)
+```
+
+# Plot survival function VPC
+
+```{r, echo=TRUE, out.height='50%'}
+sim_surv %>% group_by(pred_times, group) %>% 
+  summarise(med=mean(preds), 
+            lcl = quantile(preds,probs = 0.05),
+            ucl = quantile(preds, probs=0.95)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_step(data=obs_surv,aes(y=preds)) +
+  facet_wrap(~group) +
+  ylim(0,1) + labs(x='Time (days)', y='Surviving fraction')
+```
+
+# Summary statistic: hazard function
+
+```{r, echo=TRUE}
+vpc_stat_hazard <- function(.data, .maxtime=NULL) {
+  grid = seq(0,.maxtime, length=101)
+  
+  if (!is.null(.maxtime)) {
+    fit <- with(.data, muhaz(time,event, min.time = 0, max.time = .maxtime))
+  } else {
+    fit <- with(.data, muhaz(time,event, min.time = 0))
+  }
+  
+  # Impute at grid times in case muhaz uses different estimation points
+  # -- Impute NA if .maxtime is beyond last event time
+  haz = approx(x=fit$est.grid, y=fit$haz.est, xout=grid, rule=1)
+  
+  data.frame(pred_times=grid, preds = haz$y)
+}
+```
+
+
+# Apply to observed and simulated data
+
+We will estimate the hazard until only 5% of subjects remain at risk.
+
+```{r, echo=TRUE}
+endtime = dos84 %>% arrange(TIME) %>% slice(floor(.95*n())) %>% pull(TIME)
+```
+
+```{r, echo=TRUE, results='hide'}
+obs_hazard = dos84 %>% 
+  rename(time=TIME, event=DV) %>% 
+  nest(data= -rts84_f) %>% 
+  mutate(hazard = map(data, ~vpc_stat_hazard(.data=., .maxtime = endtime))) %>% 
+  select(-data) %>% 
+  unnest(hazard)
+
+```
+
+Apply the summary statistic to each simulated dataset
+
+```{r, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+sim_hazard = event_sims %>% 
+  mutate(time=event_time, event=as.numeric(delta)) %>% 
+  filter(.draw <= 500) %>% 
+  arrange(.draw, rts84_f) %>% 
+  nest(data = -c(.draw, rts84_f)) %>% 
+  mutate(hazard = map(data, ~vpc_stat_hazard(., .maxtime = endtime))) %>% 
+  select(-data) %>% 
+  unnest(cols=hazard)
+```
+
+# Plot hazard function VPC
+
+```{r, echo=TRUE, out.height='50%'}
+sim_hazard %>% 
+  group_by(pred_times, rts84_f) %>% 
+  summarise(med=mean(preds, na.rm = TRUE), 
+            lcl = quantile(preds,probs = 0.05, na.rm = TRUE),
+            ucl = quantile(preds, probs=0.95, na.rm = TRUE)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_line(data=obs_hazard,aes(y=preds)) +
+  facet_wrap(~rts84_f) +
+  labs(x='Time (days)', y='Hazard')
+```
+
+# Stan model for overall survival
+
+```{r, echo=TRUE}
+stancode(fit_weibull)
+```
+
+# Stan blocks
+
+* `functions`
+* </red>`data`</red>
+* `transformed data`
+* `parameters`
+* `transformed parameters`
+* `model`
+* `generated quantities`
+
+
+
+# Likelihood for parametric survival models
+
+Assuming that censoring times are independent of event times, then the individual contribution to the likelihood function is 
+
+$$
+L_i(\theta) = \begin{cases}
+f(T^*_i) & \text{for } \delta_i = 1 \\
+S(T^*_i) & \text{for } \delta_i = 0
+\end{cases}
+$$
+and the likelihood function is
+
+$$
+\begin{align*}
+L(\theta) &= \prod_{i=1}^n f(T^*_i)^{\delta_i} S(T^*_i)^{1-\delta_i} \\
+          & = \prod_{i=1}^n h(T^*_i)^{\delta_i} S(T^*_i)
+\end{align*}
+$$
+
+# Numeric model comparison
+
+* AIC and friends
+* C-index
+
+# Workbook 5: Parametric models
+
+
+
+# Stan
+
+* Every variable used in a Stan program must have a declared data type.
+
+# References
