@@ -372,22 +372,203 @@ sim_hazard %>%
   labs(x='Time (days)', y='Hazard')
 ```
 
-# Stan model for overall survival
+# Workbook 01
 
-```{r, echo=TRUE}
-stancode(fit_weibull)
+Using brms to fit and evaluate a survival model.
+
+
+# Stan is a probabilistic programming language
+
+Links to the
+
+* [Stan webpage](https://mc-stan.org/)
+* [Stan reference manual](https://mc-stan.org/docs/2_21/reference-manual/)
+* [Stan user's guide](https://mc-stan.org/docs/2_21/stan-users-guide/index.html)
+* [Stan function reference](https://mc-stan.org/docs/2_21/functions-reference/index.html)
+
+# HMC and NUTS
+
+
+
+# Stan programs
+
+A Stan program is organized into <red>a sequence of named blocks</red>. 
+
+In each block:
+
+    * variable declarations
+    * followed by programming statements
+
+All block types are optional but they must enter the model in a specific order.
+
+Variables declared in each block have scope over all subsequent statements (including statements in other blocks)
+
+    * One excepton: variables declared in model block are local to the model block
+
+# Code blocks
+
+The following are valid code blocks and must appear in this order:
+
+* functions
+* </red>data</red>
+* transformed data
+* <red>parameters </red>
+* transformed parameters
+* <red> model </red>
+* generated quantities
+
+```
+<block type>{
+... declarations ...
+... statements ...
+}
 ```
 
-# Stan blocks
+# Data block
 
-* `functions`
-* </red>`data`</red>
-* `transformed data`
-* `parameters`
-* `transformed parameters`
-* `model`
-* `generated quantities`
+* Declaration of variables that are read in as data
+* Allows only declarations, no programming statements
 
+```
+data {
+  int<lower=1> N;  // total number of observations
+  vector[N] Y;  // response variable
+  int<lower=-1,upper=2> cens[N];  // indicates censoring
+  int<lower=1> K;  // number of population-level effects
+  matrix[N, K] X;  // population-level design matrix
+  int prior_only;  // should the likelihood be ignored?
+}
+```
+
+# Transformed parameters block
+
+* For declaring and defining variables that that are functions of the data and that do not need to be changed
+* Variables are defined in programming statements statements
+
+```
+transformed data {
+  int Kc = K - 1;
+  matrix[N, Kc] Xc;  // centered version of X without an intercept
+  vector[Kc] means_X;  // column means of X before centering
+  for (i in 2:K) {
+    means_X[i - 1] = mean(X[, i]);
+    Xc[, i - 1] = X[, i] - means_X[i - 1];
+  }
+}
+```
+
+# Parameters block
+
+* The variables defined in this block are the parameters being sampled by Stan
+* HMC and NUTS are implemented over a multivariate probability density that has support on all of $\mathbb{R}^n$
+
+* Hamiltonian Monte Carlo requires the gradient of the (unnormalized) log probability function with respect to the unconstrained parameters 
+    * the unconstrained version of the parameters is what’s sampled or optimized.
+
+```
+parameters {
+  vector[Kc] b;  // population-level effects
+  real Intercept;  // temporary intercept for centered predictors
+  real<lower=0> shape;  // shape parameter
+}
+```
+
+
+# Transformed parameters block
+
+* Similar to the `transformed parameters` block but for parameters
+* Variables defined in terms of data and parameters 
+
+
+
+# Model block
+
+* Where the log probability function is defined. 
+* All variables defined here are local to the model block
+    * May not be defined with constraints 
+
+```
+model {
+  // Declare and initialize linear predictor term
+    vector[N] mu = Intercept + Xc * b;
+
+  // priors including all constants
+  b ~ normal(0, 3);
+  Intercept ~ student_t(3, 5.9, 2.5);
+  shape ~ lognormal( | 0, 3);
+
+  // likelihood including all constants
+
+    for (n in 1:N) {
+      // apply the inverse link function
+      mu[n] = exp(mu[n]) / tgamma(1 + 1 / shape);
+    }
+    
+    for (n in 1:N) {
+    // special treatment of censored data
+      if (cens[n] == 0) {
+        target += weibull_lpdf(Y[n] | shape, mu[n]);
+      } else if (cens[n] == 1) {
+        target += weibull_lccdf(Y[n] | shape, mu[n]);
+      } else if (cens[n] == -1) {
+        target += weibull_lcdf(Y[n] | shape, mu[n]);
+      }
+    }
+
+}
+```
+
+# Generated quantities block
+
+* Derived quantities based on parameters, data, and (optionally) random number generation
+
+
+* Applications of posterior inference that can be coded in the generated quantities block include:
+    * forward sampling to generate simulated data for model testing,
+    * generating predictions for new data,
+    * calculating posterior event probabilities
+    * calculating posterior expectations
+    * calculating log likelihoods, deviances, etc. for model comparison.
+
+
+# Functions block
+
+* A block to declare user-defined functions
+* Function definitions and declarations may appear in any order, subject to the condition that a function must be declared before it is used. 
+
+For example,
+
+```
+real cv(real mu, real sigma) { return(mu/sigma)};
+```
+
+A function that returns a `real`
+Two agruments of types `real` and `real`
+
+# Example
+
+```{r, eval=FALSE}
+
+stan_data <- list(N = nrow(dos84),
+                  Y = dos84$TIME,
+                  cens = 1 - dos84$DV,
+                  K = 2,
+                  X = model.matrix(~rts84, data=dos84),
+                  prior_only = 0
+                  )
+
+stan_inits <- function() {
+  list(
+  # Give initial values that avoid numerical issues at t=0
+    shape = runif(1, 1, 3)
+  )
+}
+
+fit = stan(file='../model/stan/weibull_integrated_hazard.stan', 
+           data = stan_data,
+           init = stan_inits,
+           chains=3, iter=1000)
+```
 
 
 # Likelihood for parametric survival models
