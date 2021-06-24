@@ -8,10 +8,10 @@ functions {
                     real[] x_r,      // data (real)
                     int[] x_i) {
                       
-                      real alpha = theta[2];
-                      real sigma = theta[1];
+                      real llambda = theta[1];
+                      real lshape = theta[2];
                       
-                      return( (alpha/sigma) * pow(x/sigma, alpha-1) );
+                      return( lshape * llambda * pow(x, lshape-1) );
                       
                     }
 }
@@ -21,48 +21,43 @@ data {
   vector[N] Y;  // response variable
   int<lower=-1,upper=2> cens[N];  // indicates censoring
   int<lower=1> K;  // number of population-level effects
+  vector[N] RTS; // RTS
   matrix[N, K] X;  // population-level design matrix
   int prior_only;  // should the likelihood be ignored?
 }
-transformed data {
-  int Kc = K - 1;
-  matrix[N, Kc] Xc;  // centered version of X without an intercept
-  vector[Kc] means_X;  // column means of X before centering
-  for (i in 2:K) {
-    means_X[i - 1] = mean(X[, i]);
-    Xc[, i - 1] = X[, i] - means_X[i - 1];
-  }
 
-}
+
 parameters {
-  vector[Kc] b;  // population-level effects
-  real Intercept;  // temporary intercept for centered predictors
+  // haz(t) = lambda0 * shape * t^(shape-1) * exp(eta)
+  vector[K] b;  // population-level effects
+  real slope;  // maximum effect of RTS
+  real<lower=0> lambda0;  // 
   real<lower=0> shape;  // shape parameter
 }
-transformed parameters {
-}
+
+
 model {
-  
-  real hazard[N];
-  real cumulative_hazard[N];
-  
-  // likelihood including all constants
-  if (!prior_only) {
-    // initialize linear predictor term
-    vector[N] mu = Intercept + Xc * b;
+
+    vector[N] mu ;
+    vector[N] lambda ;
+    vector[N] hazard;
+    vector[N] cumulative_hazard;
+    
     for (n in 1:N) {
-      // apply the inverse link function
-      mu[n] = exp(mu[n]) / tgamma(1 + 1 / shape);
-    }
-    for (n in 1:N) {
+      mu[n]  =  (slope * RTS[n])  + (X * b)[n];
+      lambda[n] = lambda0 * exp(mu[n]);
+
       // Evaluate hazard function
-      hazard[n] = weibull_hazard(Y[n], 0.0, {mu[n],shape}, {0.0}, {0}  );
+      hazard[n] = weibull_hazard(Y[n], 0.0, {lambda[n],shape}, {0.0}, {0}  );
       
       // Integrate hazard function
-      //print({mu[n],shape});
-                            
-      cumulative_hazard[n] = integrate_1d(weibull_hazard, 1E-06, Y[n], {mu[n],shape}, {0.0}, {0}, 1E-08 ) ;
-      
+      cumulative_hazard[n] = integrate_1d(weibull_hazard, 1E-06, Y[n], {lambda[n],shape}, {0.0}, {0}, 1E-08 ) ;
+    
+    }
+
+  // likelihood including all constants
+  if (!prior_only) {
+    for (n in 1:N) {
     // special treatment of censored data
       if (cens[n] == 0) {
         // Log-likelihood contributions in target +=
@@ -73,13 +68,44 @@ model {
     }
   }
   // priors including all constants
-  b ~ normal(0, 3);
-  Intercept ~ student_t(3, 5.9, 2.5);
+  b ~ normal(0,3); 
+  slope ~ normal(0,2);
+  lambda0 ~ lognormal(0,5);
   shape ~ lognormal(0, 3);
 }
 
 generated quantities {
-  // actual population-level intercept
-  real b_Intercept = Intercept - dot_product(means_X, b);
+  vector[N] Ysim;  // response variable
+  real u; 
+  vector[N] log_lik;
+  vector[N] mu ;
+  vector[N] lambda ;
+  vector[N] hazard;
+  vector[N] cumulative_hazard;
+  
+  for (n in 1:N) {
+    mu[n]  =  (slope * RTS[n])  + (X * b)[n];
+    lambda[n] = lambda0 * exp(mu[n]);
+    
+    // Evaluate hazard function
+    hazard[n] = weibull_hazard(Y[n], 0.0, {lambda[n],shape}, {0.0}, {0}  );
+    
+    // Integrate hazard function
+    cumulative_hazard[n] = integrate_1d(weibull_hazard, 1E-06, Y[n], {lambda[n],shape}, {0.0}, {0}, 1E-08 ) ;
+    
+  }
+  
+  for (n in 1:N) {
+    u = uniform_rng(0,1);
+    Ysim[n] = pow(-log(u)/lambda[n], 1/shape);
+    
+    if (cens[n] == 0) { // Event
+    log_lik[n] = log(hazard[n]) - cumulative_hazard[n];
+    } else if (cens[n] == 1) { // Right censoring
+    log_lik[n] = -cumulative_hazard[n];
+    } 
+    
+  }
+  
 }
 

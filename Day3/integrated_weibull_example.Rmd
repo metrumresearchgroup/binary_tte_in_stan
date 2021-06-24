@@ -1,0 +1,221 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Integrating the hazard funtion in Stan"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(muhaz)
+library(rstan)
+library(bayesplot)
+library(tidybayes)
+
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+
+```
+
+
+```{r}
+# OS data
+d <- read_csv('../data/source/DDmodel0218_Simulated_OS.csv', na = c('.','-99'))
+
+# Add week 12 (Day 84) predicted tumor size
+d84 <- d %>% 
+  filter(TIME <= 84) %>% 
+  group_by(ID) %>% 
+  mutate(rate = KG/1000 - KD0/1000*AUC0 - KD1/100*AUC1,
+         prevTIME = lag(TIME,default = 0),
+         change = exp(rate * (TIME-prevTIME)),
+         ipred = IBASE * 1000 * cumprod(change)
+         ) %>% 
+  arrange(ID,TIME) %>% 
+  slice(n()) %>% 
+  mutate(ipred84 = ipred * exp(rate * (84-TIME)),
+         rts84 = ipred84 / ( IBASE * 1000 ) )
+
+dos <- d %>% 
+  filter(TIME>0) %>% 
+  group_by(ID) %>% 
+  mutate(meanGem = mean(AUC1),
+         Group = if_else(meanGem > 0, "Cb+G", "Cb")) %>% 
+  ungroup() %>% 
+  filter(CMT==2, EVID==0) %>% 
+  left_join(d84 %>% select(ID, ipred84, rts84)) %>% 
+  mutate(rts84_f = paste0("Q", ntile(rts84, n = 4)))
+
+dos84 <- dos %>% 
+  filter(TIME>84) %>% 
+  mutate(TIME = TIME-84)
+
+
+```
+
+
+# Working with traditional pharmacometric parameterization of Weibull model
+
+
+$$
+\begin{align*}
+h_i(t) &= h_0(t) \times \exp(\beta \times \text{RTS}_i)  \\
+h_0(t) &= \lambda_0 \times \alpha \ \times t^{\alpha-1}\\
+\\
+H_i(t) &= \lambda_i t^\alpha \\
+S_i(t) &= \exp(-\lambda_i t^\alpha)
+\end{align*}
+$$
+Under this parameterization, 
+
+* median OS = $\left( \frac{\log 2}{\lambda_0 \exp(\beta \times RTS)} \right)^{1/\alpha}$
+* mean OS = $\left\{ \lambda_0 \exp(\beta \times RTS) \right\}^{-1/\alpha} ~~\Gamma(1 + 1/\alpha)$
+
+
+Set-up the data
+
+```{r}
+tte_emax_data <- list(
+  N = nrow(dos84),
+  Y = dos84$TIME/365,  # Use years instead of days
+  cens = 1-dos84$DV,
+  K = 1,
+  X = model.matrix(~-1 + ECOG, data=dos84),
+  RTS = dos84$rts84,
+  prior_only = 0
+)
+```
+
+
+
+```{r, results='hide'}
+fit_weibull_int <- stan(file = '../model/stan/weibull_integrated_hazard.stan',
+                        data = tte_emax_data, 
+                        chains = 4,
+                        cores = 2,
+                        seed = 76341
+                        )
+```
+
+```{r}
+print(fit_weibull_int, pars=c('slope','lambda0','b','shape'))
+```
+
+```{r}
+samples_int <- spread_draws(fit_weibull_int, slope,b[i],lambda0,shape) %>% 
+  rename(Chain=.chain)
+```
+
+```{r}
+mcmc_trace(samples_emax, pars=c('slope','b','lambda0','shape'))
+```
+
+```{r}
+mcmc_pairs(samples_emax, pars=c('slope','b','lambda0','shape'))
+```
+
+Compare models using loo
+
+
+```{r}
+loo_pmx <- loo::loo(extract(fit_weibull_pmx, pars='log_lik')$log_lik)
+loo_emax <- loo::loo(extract(fit_weibull_emax, pars='log_lik')$log_lik)
+
+loo_compare(loo_pmx, loo_emax)
+
+```
+Plot estimated relationship with RTS
+
+```{r}
+RTS_grid <- seq(min(dos84$rts84), max(dos84$rts84), length=100)
+
+samples_emax %>% crossing(rts = RTS_grid) %>% 
+  mutate(log_hr = emax*rts / (e50+rts)) %>% 
+  group_by(rts) %>% 
+  summarise(est = median(log_hr), 
+            lcl=quantile(log_hr,probs=0.05),
+            ucl = quantile(log_hr, probs = 0.95)) %>% 
+  ggplot(aes(x=rts, y=est)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  labs(x='Relative change in tumor size to week 12', y='log hazard ratio') 
+```
+
+Simple VPCs without censoring
+
+```{r}
+os_sims_emax <- gather_draws(fit_weibull_emax, Ysim[ID]) %>% 
+  left_join(dos84)
+head(os_sims_emax)
+```
+
+Survival VPC by ECOG status 
+
+```{r, echo=TRUE, out.height='50%'}
+# Apply to observed data
+obs_surv = vpc_stat_km(dos84 %>% mutate(time=TIME/365, event=DV), group='ECOG')
+
+# Apply to simulated data
+sim_surv = os_sims_emax %>% 
+  filter(.draw <= 500) %>%   # For speed in the class
+  mutate(time=.value, event=rep(1,n())) %>% 
+  nest(data = -.draw) %>% 
+  mutate(km_est = map(data, ~vpc_stat_km(., pred_times=sort(unique(obs_surv$pred_times)), group='ECOG'))) %>% 
+  select(-data) %>% 
+  unnest(cols=km_est)
+
+sim_surv %>% group_by(pred_times, group) %>% 
+  summarise(med=mean(preds), 
+            lcl = quantile(preds,probs = 0.05),
+            ucl = quantile(preds, probs=0.95)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_step(data=obs_surv,aes(y=preds)) +
+  facet_wrap(~group) +
+  ylim(0,1) + labs(x='Time (years)', y='Surviving fraction')
+```
+
+Survival VPC by RTS  quartile status 
+
+```{r, echo=TRUE, out.height='50%'}
+# Apply to observed data
+obs_surv = vpc_stat_km(dos84 %>% mutate(time=TIME/365, event=DV), group='rts84_f')
+
+# Apply to simulated data
+sim_surv = os_sims_emax %>% 
+  filter(.draw <= 500) %>%   # For speed in the class
+  mutate(time=.value, event=rep(1,n())) %>% 
+  nest(data = -.draw) %>% 
+  mutate(km_est = map(data, ~vpc_stat_km(., pred_times=sort(unique(obs_surv$pred_times)), group='rts84_f'))) %>% 
+  select(-data) %>% 
+  unnest(cols=km_est)
+
+sim_surv %>% group_by(pred_times, group) %>% 
+  summarise(med=mean(preds), 
+            lcl = quantile(preds,probs = 0.05),
+            ucl = quantile(preds, probs=0.95)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_step(data=obs_surv,aes(y=preds)) +
+  facet_wrap(~group) +
+  ylim(0,1) + labs(x='Time (years)', y='Surviving fraction')
+```
