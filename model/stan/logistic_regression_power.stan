@@ -9,17 +9,24 @@ data {
 
 parameters {
   real alpha;  // intercept
-  real beta ;  // slope
+  real<lower=0> beta ;  // slope
+  real<lower=0> gamma; // power parameter
 }
 
 model {
+  vector[N] eta;
+  
   // log-likelihood contributions
   if (prior_only==0) {
-    Y ~ bernoulli_logit(alpha + beta*x);
+    for (n in 1:N) {
+      eta[n] = alpha + beta*pow(x[n],gamma);
+    }
+    Y ~ bernoulli_logit(eta);
   }
   // prior didstributions
-  beta ~ normal(0,3);
-  alpha ~ normal(0,3);
+  beta ~ normal(0,1);
+  alpha ~ normal(0,1);
+  gamma ~ normal(1,1);
 }
 
 generated quantities {
@@ -27,8 +34,8 @@ generated quantities {
   vector[N] log_lik; // log-likelihood, for calculating LOO
   
   for (n in 1:N) {
-    Ysim[n] = bernoulli_logit_rng(alpha + beta*x[n]);
-    log_lik[n] = bernoulli_logit_lpmf(Y[n] | alpha + beta*x[n]);
+    Ysim[n] = bernoulli_logit_rng(alpha + beta*pow(x[n],gamma));
+    log_lik[n] = bernoulli_logit_lpmf(Y[n] | alpha + beta*pow(x[n],gamma));
   }
   
 }

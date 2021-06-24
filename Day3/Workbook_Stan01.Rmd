@@ -1,0 +1,288 @@
+---
+title: "Workbook for Introduction to modeling with Stan"
+author: "Logistic regression models"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(mgcv)
+library(rstan)
+library(tidybayes)
+library(bayesplot)
+
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+```
+
+
+We'll continue to use the simulated data from Zecchin et al., as posted on the DDMoRe repository.
+
+The objective of this analysis is to explore the relationship between ECOG status (0 vs 1) and baseline tumor size.  We will fit two models, compare them using LOO-IC and VPCs.
+
+We'll start by reading the data
+
+```{r}
+# OS data
+d <- read_csv('../data/source/DDmodel0218_Simulated_OS.csv', na = c('.','-99'))
+
+# Add week 12 (Day 84) predicted tumor size
+d84 <- d %>% 
+  filter(TIME <= 84) %>% 
+  group_by(ID) %>% 
+  mutate(rate = KG/1000 - KD0/1000*AUC0 - KD1/100*AUC1,
+         prevTIME = lag(TIME,default = 0),
+         change = exp(rate * (TIME-prevTIME)),
+         ipred = IBASE * 1000 * cumprod(change)
+         ) %>% 
+  arrange(ID,TIME) %>% 
+  slice(n()) %>% 
+  mutate(ipred84 = ipred * exp(rate * (84-TIME)),
+         rts84 = ipred84 / ( IBASE * 1000 ) )
+
+dos <- d %>% 
+  filter(TIME>0) %>% 
+  group_by(ID) %>% 
+  mutate(meanGem = mean(AUC1),
+         Group = if_else(meanGem > 0, "Cb+G", "Cb")) %>% 
+  ungroup() %>% 
+  filter(CMT==2, EVID==0) %>% 
+  left_join(d84 %>% select(ID, ipred84, rts84)) %>% 
+  mutate(rts84_f = paste0("Q", ntile(rts84, n = 4)))
+
+dos84 <- dos %>% 
+  filter(TIME>84) %>% 
+  mutate(TIME = TIME-84)
+
+
+```
+
+Next we'll fit the model from the slides, namely
+
+$$
+\text{logit}\left(P(\text{ECOG}=1 | x)\right) = \alpha + \beta  x
+$$
+
+Open the file `../model/stan/logistic_regression_example.stan`.  Look over the four code blocks.  Do you understand what each of these is doing?  If not, ask :)
+
+We'll start by doing a prior-predictive check to see if our prior distributions make sense.  To do this, we'll set `prior_only=1` in out data.  Based on your review of the code, what do you expect this to do?
+
+Use the code below to put together the data for the model, set up the initial values and run the model.  
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+stan_data <- list(N = nrow(dos),
+                  Y = dos$ECOG,
+                  x = dos$SLD0/10,
+                  prior_only = 1)
+
+stan_inits <- function() {
+  list(
+    alpha = rnorm(1, mean=0, sd=2),
+    beta = rnorm(1, mean=0, sd = 1)
+  )
+}
+
+fit_lr <- stan(file = '../model/stan/logistic_regression_example.stan',
+               data = stan_data,
+               chains = 4,iter = 2000, warmup = 1000, 
+               init = stan_inits, 
+               cores = 2)
+```
+
+
+To assess the prior predictive relationship, we've just simulated from the prior distribution.  Now we'll plot some of the sampled relationships between baseline tumor size and the probability of ECOG=1.
+
+```{r}
+prior_samples = spread_draws(fit_lr, alpha, beta)
+head(prior_samples)
+```
+ Let's plot 100 curves
+ 
+```{r}
+prior_samples %>% 
+  sample_n(size=200) %>% 
+  crossing(SLD0 = seq(min(dos$SLD0), max(dos$SLD0), length=100)) %>% 
+  ggplot(aes(x=SLD0, y=plogis(alpha + beta*SLD0), group=.draw)) + 
+  geom_line(alpha=0.5) +
+  labs(x='Baseline tumor size', y='P(ECOG=1)')
+```
+ Does this seem reasonable?  If not, how might you modify the prior distributions to get something that seems more reasonable to you?  Try modifying the priors and re-running the prior predictive check.
+ 
+Once you're happy with your priors, we'll fit the model to the data (to get samples from the posterior distribution).  Note the change of `prior_only` from 1 to 0.
+
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+stan_data <- list(N = nrow(dos),
+                  Y = dos$ECOG,
+                  x = dos$SLD0/10,
+                  prior_only = 0)
+
+fit_lr <- stan(file = '../model/stan/logistic_regression_example.stan',
+               data = stan_data,
+               chains = 4,iter = 2000, warmup = 1000, 
+               init = stan_inits, 
+               cores = 2)
+```
+
+```{r}
+posterior_samples = spread_draws(fit_lr, alpha, beta) %>% 
+  rename(Chain = .chain)  # The bayesplot functions look for a variable `Chain`
+head(posterior_samples)
+```
+First, we'll check for convergence of the Markov chains by looking at the Rhat values and trace plots
+
+```{r}
+print(fit_lr, pars=c('alpha','beta'))
+```
+
+```{r}
+mcmc_trace(posterior_samples, pars=c('alpha','beta'))
+```
+Based on these diagnostics, do you think the sampler has converged?
+
+Let's look at a VPC as a function of baseline tumor size.  First, we'll define our summary function.
+
+```{r}
+summary_function <- function(.data, .x_name, .y_name='value') {
+  .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
+  x_grid <- with(.data, seq(from = min(xvar),
+                           to = quantile(xvar,probs = 0.95), 
+                           length = 100))
+  fit <- gam(yvar ~ s(xvar), family=binomial(link='logit'), data=.data)
+  predictions <- predict(fit, newdata = data.frame(xvar=x_grid), type='response')
+  return( data.frame(xvar=x_grid, prediction = predictions))
+}
+```
+
+Next, we'll compute the summary statistics for the observed data
+
+```{r}
+obs_summary <- summary_function(dos, .x_name = 'SLD0', .y_name='ECOG') %>% 
+  mutate(type='Observed')
+
+head(obs_summary)
+```
+
+Next, we'll extract the posterior predictive samples and calculate the smooth relationship for each simulated dataset
+
+```{r}
+posterior_predictive_samples = gather_draws(fit_lr, Ysim[ID]) %>% 
+  rename(Chain = .chain)
+
+head(posterior_predictive_samples)
+```
+
+
+```{r}
+sim_summary <- posterior_predictive_samples %>% 
+  # Join original data
+  left_join(dos %>% select(ID,SLD0)) %>% 
+  # Nest everying except the simulation name
+  nest(cols=-.draw) %>% 
+  # Use 200 sims for demonstration
+  sample_n(size=200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, 
+                                                   .x_name='SLD0',
+                                                   .y_name='.value'))) %>% 
+  select(.draw,predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+```
+
+# Plot VPC
+
+```{r, 'cont-vpc'}
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='Baseline SLD', y='P(ECOG=1)')
+
+```
+
+Let's plot 100 curves from the posterior
+ 
+```{r}
+posterior_samples %>% 
+  sample_n(size=200) %>% 
+  crossing(SLD0 = seq(min(dos$SLD0), max(dos$SLD0), length=100)) %>% 
+  ggplot(aes(x=SLD0, y=plogis(alpha + beta*SLD0/10), group=.draw)) + 
+  geom_line(alpha=0.5) +
+  labs(x='Baseline tumor size', y='P(ECOG=1)')
+```
+
+Let's plot the estimated relationship and pointwise 90% credible interval
+
+```{r}
+posterior_samples %>% 
+  sample_n(size=500) %>% 
+  crossing(SLD0 = seq(min(dos$SLD0), max(dos$SLD0), length=100)) %>% 
+  # NB: We passed SLD0 in cm into the Stan model...
+  mutate(phat = plogis(alpha + beta*SLD0/10)) %>% 
+  group_by(SLD0) %>% 
+  mutate(est = median(phat), lcl=quantile(phat, probs = 0.05), ucl=quantile(phat, probs=0.95)) %>% 
+  ggplot(aes(x=SLD0, y=est)) + 
+  geom_line() +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.30) +
+  ylim(0,1) +
+  labs(x='Baseline tumor size', y='P(ECOG=1)')
+```
+
+*** Exercise: ***
+
+1. Copy the Stan model file to `../model/stan/logistic_regression_power.stan`
+
+2. Modify the code to use a power model for SLD0 i.e., $\text{logit}\left(P(\text{ECOG}=1 | x)\right) = \alpha + \beta  x$.  You'll need to modify the parameters, model, and generated quantities blocks
+
+3. did you get some post-warmup divergent transitions?  Follow the link provided by the Stan output (http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup) to read more.
+  a. Look at the pairs plot for alpha, beta and the power parameter.  What do you see?  Try increasing the `adapt_delta` option to 0.95.  Does that fix the problem?
+
+```{r}
+fit_lr_power <- stan(file = '../model/stan/logistic_regression_power.stan',
+               data = stan_data,
+               chains = 4,iter = 2000, warmup = 1000, 
+               cores = 2, control = list(adapt_delta = 0.95))
+```
+
+  b. Try a model which forces $\beta > 0$, does that fix the problem?  Do you think this is a reasonable solution, or would you try a different functional form?
+
+4. Check convergence and model fit using a VPC.  For the VPC, you can use the code above with no changes.
+
+5. Compare models using LOO-IC.  Which model do you think will provide better predictions for future patients?
+
+```{r}
+loo_base <- loo(fit_lr)
+loo_power <- loo(fit_lr_power)
+
+print(loo_base)
+print(loo_power)
+
+loo::loo_compare(loo_base, loo_power)
+```
