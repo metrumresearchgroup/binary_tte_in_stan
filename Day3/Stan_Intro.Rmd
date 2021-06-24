@@ -167,11 +167,13 @@ knitr::include_graphics('graphics/Betancourt_fig29.png')
 The HMC algorithm has three parameters, and the sampling efficiency is sensitive to their choice:
 
 * step size, $\epsilon$
-    - optimized during warm-up to match an acceptance-rate target
+    - automatically optimized during warm-up to match an acceptance-rate target
 * metric, $M$, an approximation of the covariance (curvature) of the posterior
-    - estimated during warm-up sample iterations
+    - automatically estimated during warm-up sample iterations
 * number of steps taken, $L$
     - adaptively tuned using the No U-Turn Sampler (NUTS)   
+    
+Stan automatically optimizes $\epsilon$ and $M$, but (if really necessary) other setting can influence the automatic selection of them.
 
 
 # Divergent transitions
@@ -209,7 +211,7 @@ In each block:
 
 All block types are optional but they must enter the model in a specific order.
 
-Every variable used in a Stan program must have a declared data type
+Every variable used in a Stan program must have a declared data type (like c++)
 
 Variables declared in each block have scope over all subsequent statements (including statements in other blocks)
 
@@ -289,7 +291,7 @@ NB: Array declaration is clearer in Version 2.26.
 ::::
 :::
 
-# Transformed parameters block
+# Transformed data block
 
 * For declaring and defining variables that that are functions of the data and that do not need to be changed
 * Variables are defined in programming statements statements
@@ -380,7 +382,7 @@ generated quantities {
 For example,
 
 ```
-real cv(real mu, real sigma) { return(mu/sigma) };
+real cv(real mu, real sigma) { return(mu/sigma); }
 ```
 
 A function that returns a `real` with two arguments of types `real` and `real` named `mu` and `sigma`.
@@ -391,7 +393,7 @@ A function that returns a `real` with two arguments of types `real` and `real` n
 * As an example, let's model the probability of ECOG status=1 as a function of observed baseline tumor size
 
 $$
-\text{logit}\left(P(\text{ECOG}=1 | x)\right) = \alpha + \beta  x
+\text{logit}\left(P(\text{ECOG}=1 ~|~ x)\right) = \alpha + \beta  x
 $$
 
 * Stan code for this model is in `../model/stan/logistic_regression_example.stan`
@@ -545,8 +547,8 @@ functions {
                     real[] x_r,      // data (real)
                     int[] x_i) {     // data (integers)
                       
-                      real sigma = theta[1];
-                      real alpha = theta[2];
+                      real llambda = theta[1];
+                      real lshape = theta[2];
                       
                       return( lshape * llambda * pow(x, lshape-1) );
                       

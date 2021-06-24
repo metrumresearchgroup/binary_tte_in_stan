@@ -74,15 +74,18 @@ dos84 <- dos %>%
 # Working with traditional pharmacometric parameterization of Weibull model
 
 
-$$
 \begin{align*}
 h_i(t) &= h_0(t) \times \exp(\beta \times \text{RTS}_i)  \\
 h_0(t) &= \lambda_0 \times \alpha \ \times t^{\alpha-1}\\
-\\
+\end{align*}
+
+
+\begin{align*}
 H_i(t) &= \lambda_i t^\alpha \\
 S_i(t) &= \exp(-\lambda_i t^\alpha)
 \end{align*}
-$$
+
+
 Under this parameterization, 
 
 * median OS = $\left( \frac{\log 2}{\lambda_0 \exp(\beta \times RTS)} \right)^{1/\alpha}$
@@ -295,7 +298,7 @@ Compare models using loo
 loo_pmx <- loo::loo(extract(fit_weibull_pmx, pars='log_lik')$log_lik)
 loo_emax <- loo::loo(extract(fit_weibull_emax, pars='log_lik')$log_lik)
 
-loo_compare(loo_pmx, loo_emax)
+loo::loo_compare(loo_pmx, loo_emax)
 
 ```
 Plot estimated relationship with RTS

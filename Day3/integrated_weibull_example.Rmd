@@ -74,7 +74,6 @@ dos84 <- dos %>%
 # Working with traditional pharmacometric parameterization of Weibull model
 
 
-$$
 \begin{align*}
 h_i(t) &= h_0(t) \times \exp(\beta \times \text{RTS}_i)  \\
 h_0(t) &= \lambda_0 \times \alpha \ \times t^{\alpha-1}\\
@@ -82,7 +81,8 @@ h_0(t) &= \lambda_0 \times \alpha \ \times t^{\alpha-1}\\
 H_i(t) &= \lambda_i t^\alpha \\
 S_i(t) &= \exp(-\lambda_i t^\alpha)
 \end{align*}
-$$
+
+
 Under this parameterization, 
 
 * median OS = $\left( \frac{\log 2}{\lambda_0 \exp(\beta \times RTS)} \right)^{1/\alpha}$
@@ -109,6 +109,7 @@ tte_emax_data <- list(
 fit_weibull_int <- stan(file = '../model/stan/weibull_integrated_hazard.stan',
                         data = tte_emax_data, 
                         chains = 4,
+                        iter=1000,
                         cores = 2,
                         seed = 76341
                         )
@@ -124,98 +125,26 @@ samples_int <- spread_draws(fit_weibull_int, slope,b[i],lambda0,shape) %>%
 ```
 
 ```{r}
-mcmc_trace(samples_emax, pars=c('slope','b','lambda0','shape'))
+mcmc_trace(samples_int, pars=c('slope','b','lambda0','shape'))
 ```
 
 ```{r}
-mcmc_pairs(samples_emax, pars=c('slope','b','lambda0','shape'))
+mcmc_pairs(samples_int, pars=c('slope','b','lambda0','shape'))
 ```
 
-Compare models using loo
+** Exercise: **
+
+How does this compare to the closed-form model?  Re-fit the closed-form model and compare parameter estimates.
+
+Try coding a model with a 'hockey stick' hazard:
+
+$$
+h(t) = \begin{cases} \alpha_1 + \beta_1 t & 0 \leq t < \tau_1 \\
+                     \alpha_1 + \beta_1 \tau_1 + \beta_2 (t-\tau_1) & t \geq \tau_1
+\end{cases}
+$$
+where you can either pick a fixed value of $\tau_1$ or estimate it.
+
+How does this compare to the Weibull model fit?
 
 
-```{r}
-loo_pmx <- loo::loo(extract(fit_weibull_pmx, pars='log_lik')$log_lik)
-loo_emax <- loo::loo(extract(fit_weibull_emax, pars='log_lik')$log_lik)
-
-loo_compare(loo_pmx, loo_emax)
-
-```
-Plot estimated relationship with RTS
-
-```{r}
-RTS_grid <- seq(min(dos84$rts84), max(dos84$rts84), length=100)
-
-samples_emax %>% crossing(rts = RTS_grid) %>% 
-  mutate(log_hr = emax*rts / (e50+rts)) %>% 
-  group_by(rts) %>% 
-  summarise(est = median(log_hr), 
-            lcl=quantile(log_hr,probs=0.05),
-            ucl = quantile(log_hr, probs = 0.95)) %>% 
-  ggplot(aes(x=rts, y=est)) +
-  geom_line() +
-  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
-  labs(x='Relative change in tumor size to week 12', y='log hazard ratio') 
-```
-
-Simple VPCs without censoring
-
-```{r}
-os_sims_emax <- gather_draws(fit_weibull_emax, Ysim[ID]) %>% 
-  left_join(dos84)
-head(os_sims_emax)
-```
-
-Survival VPC by ECOG status 
-
-```{r, echo=TRUE, out.height='50%'}
-# Apply to observed data
-obs_surv = vpc_stat_km(dos84 %>% mutate(time=TIME/365, event=DV), group='ECOG')
-
-# Apply to simulated data
-sim_surv = os_sims_emax %>% 
-  filter(.draw <= 500) %>%   # For speed in the class
-  mutate(time=.value, event=rep(1,n())) %>% 
-  nest(data = -.draw) %>% 
-  mutate(km_est = map(data, ~vpc_stat_km(., pred_times=sort(unique(obs_surv$pred_times)), group='ECOG'))) %>% 
-  select(-data) %>% 
-  unnest(cols=km_est)
-
-sim_surv %>% group_by(pred_times, group) %>% 
-  summarise(med=mean(preds), 
-            lcl = quantile(preds,probs = 0.05),
-            ucl = quantile(preds, probs=0.95)) %>% 
-  ggplot(aes(x=pred_times)) +
-  geom_step(aes(y=med), color='red') +
-  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
-  geom_step(data=obs_surv,aes(y=preds)) +
-  facet_wrap(~group) +
-  ylim(0,1) + labs(x='Time (years)', y='Surviving fraction')
-```
-
-Survival VPC by RTS  quartile status 
-
-```{r, echo=TRUE, out.height='50%'}
-# Apply to observed data
-obs_surv = vpc_stat_km(dos84 %>% mutate(time=TIME/365, event=DV), group='rts84_f')
-
-# Apply to simulated data
-sim_surv = os_sims_emax %>% 
-  filter(.draw <= 500) %>%   # For speed in the class
-  mutate(time=.value, event=rep(1,n())) %>% 
-  nest(data = -.draw) %>% 
-  mutate(km_est = map(data, ~vpc_stat_km(., pred_times=sort(unique(obs_surv$pred_times)), group='rts84_f'))) %>% 
-  select(-data) %>% 
-  unnest(cols=km_est)
-
-sim_surv %>% group_by(pred_times, group) %>% 
-  summarise(med=mean(preds), 
-            lcl = quantile(preds,probs = 0.05),
-            ucl = quantile(preds, probs=0.95)) %>% 
-  ggplot(aes(x=pred_times)) +
-  geom_step(aes(y=med), color='red') +
-  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
-  geom_step(data=obs_surv,aes(y=preds)) +
-  facet_wrap(~group) +
-  ylim(0,1) + labs(x='Time (years)', y='Surviving fraction')
-```

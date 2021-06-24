@@ -43,18 +43,9 @@ bayesplot::color_scheme_set("viridis")
 
 # Key learning objectives for today
 
-* Analysis of TTE data using `brms` using semi-parametric and parametric models
+* Analysis of TTE data using `brms` using parametric models
 * Predictive checks for the hazard and survival functions
 * Example with non-administrative censoring
-
-* Introduction to Stan
-
-* Extending TTE models to include
-    * Non-linear effects
-    * Repeated TTE
-
-* Coming next week
-  - Variables which vary continuously with time
 
 
 # A little notation
@@ -126,7 +117,7 @@ dos <- d %>%
 ggsurvplot(survfit(Surv(TIME,DV)~Group, data=dos), palette = 'nejm', xlab='Time (days)', risk.table = TRUE)
 ```
 
-# Landmark OS at Day 84 by change in tumor size and group
+# Landmarked OS at Day 84 by change in tumor size and group
 
 ```{r, out.width='90%'}
 dos84 <- dos %>% 
@@ -134,6 +125,16 @@ dos84 <- dos %>%
   mutate(TIME = TIME-84)
 
 ggsurvplot(survfit(Surv(TIME,DV)~rts84_f, data=dos84), facet.by = 'Group', data = dos84, palette='nejm')
+```
+
+# Distribution of change in tumor size to Day 84
+
+```{r, out.width='90%'}
+dos %>% 
+  ggplot(aes(x=Group, y=rts84)) + 
+  geom_violin() +
+  labs(y='Relative tumor size at Day 84 (TS/Baseline)')
+
 ```
 
 # What hazard function might make sense?
@@ -147,17 +148,26 @@ legend(x='topleft',legend=c("Cb","Cb+G"), lty=1, col=c("black","red"))
 
 # Let's start by fitting a Weibull model as a function of RTS
 
-* Note: LHS of model specified as `TIME | cens(DV)`
+* Note: LHS of model specified as `TIME | cens(1-DV)`
 
 ```{r, echo=TRUE, results='hide'}
 weibull_prior <- c(prior(lognormal(0,3), class='shape'),
                    prior(normal(0,3), class='b'))
 
-fit_weibull <- brm(TIME | cens(1-DV) ~ rts84, 
+fit_weibull <- brm(TIME | cens(1-DV) ~ I(rts84-1), 
                    data = dos84,
                    prior = weibull_prior,
                    family  = weibull())
 ```
+
+The model is 
+$$
+\log \text{TIME}_i = \theta_0 + \theta_1 \times (RTS_i - 1) + \epsilon_i
+$$
+where $\epsilon \sim \text{extreme value distribution}$
+
+$\theta_0$ corresponds to the mean OS on the log scale when RTS=1 ($\exp(\theta_0)$ is the median OS)
+$\theta_1$ is the acceleration factor
 
 # Output from Weibull model
 
@@ -182,7 +192,7 @@ mcmc_plot(fit_weibull, type='trace')
   
 * Simulation-based diagnostics
   - VPCs for survival and hazard functions
-  - NPDEs
+  - NPDEs (will look at these next week)
 
 
 # Posterior predictive checks
@@ -190,6 +200,7 @@ mcmc_plot(fit_weibull, type='trace')
 Remeber our recipe
 
 * Simulate many replicates of the DV using the estimated model and observed predictors
+    * Accounting for censoring process
 * Determine summary statistic(s) of interest
     * K-M estimate of S(t)
     * Non-parametric estimate of h(t)
@@ -200,7 +211,7 @@ Remeber our recipe
 
 # Simulate survival times from model
 
-```{r}
+```{r, echo=TRUE}
 weibull_sims <- add_predicted_draws(model=fit_weibull, 
                                     newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
                                     prediction = 'survival_time')
@@ -221,7 +232,7 @@ To reflect the changing risk-set it is often advisable to also simulate censorin
 * Cox model
 * Parametric model
 
-* Do not use observed times to censor simulated times
+* Do not use observed event times to censor simulated times
     - Mixture of event and censoring distributions
 
 # Time to censoring of OS
@@ -232,7 +243,7 @@ ggsurvplot(survfit(Surv(TIME, 1-DV) ~ ECOG, data=dos84),
            ylab='Proportion censored')
 ```
 
-# Fit log-logistic model for censoring distribution
+# Fit log-normal model for censoring distribution
 
 ```{r, echo=TRUE, results='hide'}
 fit_censoring <- brm(TIME | cens(1-DV) ~ ECOG, data=dos84, family=lognormal())
@@ -374,7 +385,7 @@ sim_hazard %>%
 
 # Workbook 01
 
-Using brms to fit and evaluate a survival model.
+Using brms to fit and compare survival models.
 
 
 # References

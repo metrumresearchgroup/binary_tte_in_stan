@@ -1,0 +1,240 @@
+---
+title: "Workbook for Introduction to TTE modeling usin brms"
+author: "Parametric TTE models using brms"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(flexsurv)
+library(muhaz)
+library(Hmisc)
+library(brms)
+library(tidybayes)
+library(bayesplot)
+
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+
+```
+
+
+
+We'll use the simulated data from Zecchin et al., as posted on the DDMoRe repository.
+
+The objective of this analysis is to explore the relationship between change in tumor size through 12 weeks and overall survival landmarked at 12 weeks. We will fit two models, compare them using LOO-IC and VPCs.
+
+We'll start by reading the data
+
+```{r}
+# OS data
+d <- read_csv('../data/source/DDmodel0218_Simulated_OS.csv', na = c('.','-99'))
+
+# Add week 12 (Day 84) predicted tumor size
+d84 <- d %>% 
+  filter(TIME <= 84) %>% 
+  group_by(ID) %>% 
+  mutate(rate = KG/1000 - KD0/1000*AUC0 - KD1/100*AUC1,
+         prevTIME = lag(TIME,default = 0),
+         change = exp(rate * (TIME-prevTIME)),
+         ipred = IBASE * 1000 * cumprod(change)
+         ) %>% 
+  arrange(ID,TIME) %>% 
+  slice(n()) %>% 
+  mutate(ipred84 = ipred * exp(rate * (84-TIME)),
+         rts84 = ipred84 / ( IBASE * 1000 ) )
+
+dos <- d %>% 
+  filter(TIME>0) %>% 
+  group_by(ID) %>% 
+  mutate(meanGem = mean(AUC1),
+         Group = if_else(meanGem > 0, "Cb+G", "Cb")) %>% 
+  ungroup() %>% 
+  filter(CMT==2, EVID==0) %>% 
+  left_join(d84 %>% select(ID, ipred84, rts84)) %>% 
+  mutate(rts84_f = paste0("Q", ntile(rts84, n = 4)))
+
+# Create landmarked dataset and event times
+dos84 <- dos %>% 
+  filter(TIME>84) %>% 
+  mutate(TIME = TIME-84)
+
+
+```
+
+Let's start by getting some idea about the shape of the hazard function.  To do this, we can use the package `muhaz` to get a non-parametric estimate.
+
+```{r}
+np_est = muhaz(times = dos84$TIME, 
+               delta = dos$DV, 
+               min.time=0,
+               max.time = 800)
+
+plot(np_est)
+```
+
+Using all of the data, the hazard appears to be monotonic - increasing at a roughly constant rate.
+Based on this, we can rule out the exponential model.  Which models might be good candidates to fit this shape?
+
+Let's try the Weibull and Gamma
+
+```{r}
+fit01_weibull <- brm(TIME | cens(1-DV) ~ rts84 + ECOG, 
+                             data = dos84,
+                             family = 'weibull')
+```
+
+```{r}
+fit01_weibull
+```
+
+```{r}
+mcmc_trace(fit01_weibull)
+```
+
+
+
+Let's look at the LOO-IC
+
+```{r}
+loo_weibull = loo(fit01_weibull)
+loo_weibull
+```
+
+Now, let's look at  on VPCs.  Fortunately, it is easy to simulate from these models.
+
+We'll simulate death times from the Weibull model.  Following the slides, we'll simulate censoring times from a log-normal model.
+
+```{r}
+weibull_sims <- add_predicted_draws(model=fit01_weibull, 
+                                    newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+                                    prediction = 'survival_time')
+```
+
+We'll use t-distribution priors with relatively low degrees of freedom.  
+
+```{r}
+censoring_priors <- prior('student_t(3,0,2.5)',class='b')
+
+fit_censoring <- brm(TIME | cens(1-DV) ~ ECOG, data=dos84, prior = censoring_priors, family=lognormal())
+```
+
+* Check Rhat values - has the sampler converged?
+* Do you know how to interpret the parameter values?
+
+```{r}
+fit_censoring
+```
+
+Next we'll simulate censoring  times
+
+```{r}
+censoring_sims <- add_predicted_draws(model=fit_censoring, 
+                                      newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+                                      prediction = 'censoring_time')
+```
+
+Finally, we'll censor the death times.
+
+```{r}
+event_sims <- weibull_sims %>% left_join(censoring_sims) %>% 
+  mutate(event_time = pmin(survival_time, censoring_time),
+         delta = survival_time < censoring_time)
+```
+
+
+To make the VPC, we'll write a function to accept any factor variable.  That will let us make plots for RTS and ECOG.
+
+```{r, echo=TRUE}
+vpc_stat_km <- function(.data, 
+                        group.var = NULL,
+                        pred_times=NULL) {
+  if (is.null(group.var)) stop("Must specify a grouping variable.")
+  
+  .data$group <- .data[[group.var]]
+  
+  fit <- survfit(Surv(time,event)~group, data=.data)
+  if (is.null(pred_times)) {
+    pred_times <- c(0,sort(unique(fit$time)))
+  }
+  preds = summary(fit, times=pred_times)
+  
+  data.frame(pred_times=preds$time, preds = preds$surv, group=preds$strata)
+}
+```
+
+Calculate K-M estimator for observed data
+
+```{r, echo=TRUE, results='hide'}
+obs_surv = vpc_stat_km(dos84 %>% mutate(time=TIME, event=DV), group.var = 'rts84_f')
+
+tail(obs_surv)
+```
+
+Apply the summary statistic to each simulated dataset
+
+```{r, echo=TRUE, results='hide'}
+sim_surv = event_sims %>% 
+  mutate(time=event_time, event=as.numeric(delta)) %>% 
+  nest(data = -.draw) %>% 
+  mutate(km_est = map(data, ~vpc_stat_km(., group.var='rts84_f',pred_times=sort(unique(obs_surv$pred_times))))) %>% 
+  select(-data) %>% 
+  unnest(cols=km_est)
+
+tail(sim_surv)
+```
+
+
+ Plot survival function VPC
+
+```{r}
+sim_surv %>% group_by(pred_times, group) %>% 
+  summarise(med=mean(preds), 
+            lcl = quantile(preds,probs = 0.05),
+            ucl = quantile(preds, probs=0.95)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_step(data=obs_surv,aes(y=preds)) +
+  facet_wrap(~group) +
+  ylim(0,1) + labs(x='Time (days)', y='Surviving fraction')
+```
+
+
+***Exercise:***
+
+* Make VPCs for the censoring model by RTS quartile and ECOG status.  Do you need to update the censoring model?
+
+* Fit a model or two using alternative parametric families (Gamma, lognormal, or frechet).  Include both relative tumor size at Day 84 and baseline ECOG status.
+
+* Compare to the Weibull model using LOO.  Which model do you think would be better at predicting OS for future patients?  Does it appear that you need a non-linear effect of RTS?
+
+Hint: 
+```{r}
+#loo_compare(loo_weibull, loo_gamma)
+
+```
