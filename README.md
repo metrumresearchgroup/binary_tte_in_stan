@@ -40,9 +40,10 @@ This content is intended for a course which spans four 3-4 hour sessions.
     * TTE semi-parametric modeling
     * Introduction to parametric Survival analysis
    
-3. Day 3
+3. Day 3 ( [Link to recording](https://metrumrg.zoom.us/rec/share/6gd3F7JLlAo5LuUGTvs-6jvXorPxny_l874ms7YFNLYcCqz5m1K5hbo0O_IpfF5C.XlvqcChk3SXhMxwG); Password: 8&p!Fd#t)
     * TTE parametric modeling (Bayesian)
     * Additional topics in TTE modeling
+  
+4. Day 4
         * TTE models with a continuously time-varying hazard
         * Repeated time-to-event data
-        * Markov models for analysis of longitudinal discrete state data
