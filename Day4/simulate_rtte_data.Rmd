@@ -1,0 +1,164 @@
+---
+title: "RTTE Notes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+RTTE TOPICS
+
+* Inclusion of random effects / frailties
+
+* log-likelihood depends on cumulative hazard between events
+  - first event = $\delta_i \log h(t1_i) -H(t1)$ = $\delta_i \log h(t1_i) - \int_0^{t1_i} h(s) ds$
+  - second event = $\delta_i \log h(t2_i) -(H(t2_i) - H(t1))$ = $\delta_i \log h(t2) - \int_{t1}^{t2} h(s) ds$
+* 
+* Does the hazard re-set after the event?
+  - Insert picture of hazard not/re-setting
+  - Examples Time to sleep
+
+* Risk set
+  - Subjects may be  out of risk set if 'event' has a period of time 
+      - time to sleep onset (not at 'risk' again until awake)
+      - time relapse in MS
+  - If event is instantaneous, then not out of risk set
+
+* Multi-state models if interest falls on both 'events'/states
+
+
+Simulating from time to bleeding model in
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7193498/
+
+
+```{r}
+library(mrgsolve)
+library(tidyverse)
+library(survival)
+library(survminer)
+```
+
+```{r}
+# mod <- modlib(model='pk2cmt')
+mod <- mread('../model/mrgsolve/rtte_sim.cpp')
+# dose = 20 IU/kg Q3D (50 IU/kg Q3D)
+set.seed(9642)
+idata <- data.frame(ID=1:100) %>% 
+  mutate(BWT = rnorm(n(), 76, 13),
+         TIME=0,
+         AMT=rep(c(20,50),each=50)*BWT,  # IU
+         CMT='CENT',
+         EVID=1,
+         ADDL = 30,  # 90 days of dosing
+         II = 3 * 24,  # 3 days
+         CL = 1.93 * exp(rnorm(n(),0,.307)),  # Table 
+         VC = 30.3 * exp(rnorm(n(),0,.151)),
+         Q = 1.69,
+         VP = 6.29,
+         lambda = exp(rnorm(n(), 2.96, 1.36))
+         )
+
+```
+
+```{r}
+sims = mod %>% data_set(idata) %>% carry_out(CL) %>% mrgsim(tgrid = 1:(24*90))
+```
+
+```{r}
+sims %>% as.data.frame() %>% 
+  filter(TIME<24*7) %>% 
+  ggplot(aes(x=TIME, y=exp(-hazard), group=ID)) +
+  geom_line()
+```
+
+```{r}
+sims %>% as.data.frame() %>% 
+#  filter(TIME<24*7) %>% 
+  group_by(TIME) %>% summarise(p = mean(exp(-hazard))) %>% 
+  ggplot(aes(x=TIME, y=p)) +
+  geom_line()
+```
+
+```{r}
+sims <- sims %>% 
+  as.data.frame() %>% 
+  left_join(idata %>% 
+              select(ID,AMT,BWT) %>% 
+              # Induce 30% censoring
+              mutate(censoring_time = if_else(runif(n())<0.30, 90*24*runif(n()), 90*24))
+            ) %>% 
+  mutate(u = runif(n())) %>% 
+  filter(TIME <= censoring_time) %>% 
+  group_by(ID) %>% 
+  mutate(prev_hazard = lag(hazard, default = 0),
+         event = as.numeric(u < (hazard - prev_hazard)),
+         cumulative_events = cumsum(event)) %>% 
+  # Truncate data at 25th event
+  filter(cumulative_events < 25 | (cumulative_events==25 & event==TRUE)) %>% 
+  # Filter to event and censoring record
+  filter(event==TRUE | event==F & TIME==max(TIME)) %>% 
+  ungroup() %>% 
+  # Keep only relevant variables for modeling
+  select(ID, BWT, AMT, CL, TIME, event, cumulative_events) %>% 
+  mutate(CAVGSS = AMT/CL/(24*3),
+         DOSE = AMT/BWT) %>% 
+  select(-AMT)
+```
+Save simulated data
+
+```{r}
+sims %>% 
+  mutate(CL = signif(CL,3),
+         BWT = signif(BWT,3),
+         CAVGSS = signif(CAVGSS, 3),
+         DOSE = round(DOSE)) %>% 
+  write_csv(file='../data/derived/rtte_example.csv', na='.')
+```
+
+```{r}
+sims %>% group_by(ID) %>% summarise(n=sum(event)) %>% count(n)
+```
+
+Time to first bleeding event
+
+```{r}
+d1 = sims %>% 
+  group_by(ID,DOSE) %>% 
+  slice(1)
+
+fit1 <- survfit(Surv(TIME,event)~1, data=d1)
+
+```
+
+Time to second bleeding event
+
+```{r}
+d2 = sims %>% 
+  filter(cumulative_events <= 2) %>% 
+  group_by(ID,DOSE) %>%
+  summarise(TIME=max(TIME),
+            event2 = max(cumulative_events)==2)
+
+fit2 <- survfit(Surv(TIME,event2)~1, data=d2)
+
+```
+Time to third bleeding event
+
+```{r}
+d3 = sims %>% 
+  filter(cumulative_events <= 3) %>% 
+  group_by(ID,DOSE) %>%
+  summarise(TIME=max(TIME),
+            event3 = max(cumulative_events)==3)
+
+fit3 <- survfit(Surv(TIME,event3)~1, data=d3)
+
+```
+
+Plot time to first, second, and third bleeding events
+
+```{r}
+ggsurvplot_combine(list(First=fit1, Second=fit2, Third=fit3))
+```
+

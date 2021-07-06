@@ -1,0 +1,456 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Integrating the hazard funtion in Stan"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(muhaz)
+library(rstan)
+library(bayesplot)
+library(tidybayes)
+library(survminer)
+
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+
+```
+
+# Data exploration
+
+The data are simulated from a PK-PD model for time to bleeding events [@Abrantes2020-yd].
+
+* PK model for a full-length recombinant human FVIII product
+  * Dosed at levels of 20-50 IU/kg
+  
+* Repeated time to bleeding event model
+  * Gompertz TTE model with an inhibitory Emax effect of FVIII(t)
+  
+* We will investigate the relationship of steady-state Caverage on repeated time to bleeding
+  * Predict effect on bleeding events at a 100 IU/kg dose
+  * Not considering other potential side effects or personalized dosing
+  
+
+```{r}
+# Time to bleeding data
+d <- read_csv('../data/derived/rtte_example.csv', na = c('.'))
+
+d <- d %>% 
+  group_by(ID) %>% 
+  mutate(TIME = TIME/24,  # Convert from hours to days
+         PREVTIME = lag(TIME, default = 0))
+
+# Extract one record per subject.  The last record will indicate the number of bleeding events.
+d_ind = d %>% group_by(ID) %>% slice_tail() %>% ungroup() %>% arrange(ID)
+
+```
+
+## Exposures
+
+To get a sense of the range of exposures, let's plot them.
+
+```{r}
+d_ind %>% ggplot(aes(x=CAVGSS, group=DOSE, col=as.factor(DOSE))) + geom_density()
+```
+
+Numerically, it looks like there is minimal overlap between the FX VIII levels at the 20 and 50 IU/kg dose levels.
+
+```{r}
+d_ind %>% group_by(DOSE) %>% 
+  summarise(q05 = quantile(CAVGSS,probs=0.05),
+            median = quantile(CAVGSS,probs=0.5),
+            q95 = quantile(CAVGSS,probs=0.95))
+```
+
+
+## Bleeding events
+First we'll plot time to first, second, and third bleeding events.  This is similar to Figure 1 in [@Abrantes2020-yd].
+
+```{r}
+d_first = d %>% group_by(ID) %>% filter(TIME == min(TIME)) %>% ungroup()
+
+d_second = d %>% 
+  group_by(ID) %>% 
+  filter((cumulative_events==2 & event==1) | (cumulative_events < 2 & TIME == max(TIME) & event==0)) %>% 
+  ungroup()
+
+d_third = d %>% 
+  group_by(ID) %>% 
+  filter((cumulative_events==3 & event==1) | (cumulative_events < 3 & TIME == max(TIME) & event==0)) %>% 
+  ungroup()
+
+fit1 <- survfit(Surv(TIME,event)~1, data = d_first)
+fit2 <- survfit(Surv(TIME,event)~1, data = d_second)
+fit3 <- survfit(Surv(TIME,event)~1, data = d_third)
+
+ggsurvplot_combine(list(First=fit1, Second=fit2, Third=fit3))
+```
+When we're modeling the hazard of repeated events, we don't usually model the marginal hazard.  Instead, we're modeling the inter-event hazard.  So, let's plot the time to the first event, the time between first and second events (among subjects with one or more events), and the time between second and third events (among subjects with two or more events).
+
+
+```{r}
+d_first = d %>% group_by(ID) %>% filter(TIME == min(TIME)) %>% ungroup()
+
+d_second = d %>% 
+  group_by(ID) %>% 
+  filter((cumulative_events==2 & event==1) | (cumulative_events == 1 & TIME == max(TIME) & event==0)) %>% 
+  ungroup()
+
+d_third = d %>% 
+  group_by(ID) %>% 
+  filter((cumulative_events==3 & event==1) | (cumulative_events == 2 & TIME == max(TIME) & event==0)) %>% 
+  ungroup()
+
+fit1 <- survfit(Surv(TIME,event)~1, data = d_first)
+fit2 <- survfit(Surv(TIME-PREVTIME,event)~1, data = d_second)
+fit3 <- survfit(Surv(TIME-PREVTIME,event)~1, data = d_third)
+
+ggsurvplot_combine(list(First=fit1, Second=fit2, Third=fit3), risk.table = TRUE)
+```
+
+Now, let's plot the non-parametric estimates of the hazards for these same events.  
+
+```{r}
+hazard1 = with(d_first, muhaz(TIME,event, min.time=0, max.time=90))
+hazard2 = with(d_second, muhaz(TIME-PREVTIME, event, min.time = 0))
+hazard3 = with(d_third, muhaz(TIME-PREVTIME, event, min.time = 0))
+
+plot(hazard1, ylim=range(pretty(c(hazard1$haz.est, hazard2$haz.est,hazard3$haz.est))))
+lines(hazard2, col='red')
+lines(hazard3, col='red', lty=2)
+legend(x='topright',
+       legend = c('First','First -> second','Second -> third'),
+       col=c('black','red','red'), lty=c(1,1,2))
+
+
+```
+
+The shape generally looks similar, with a shift upward for subsequent events.  What do you think might be causing this upward shift?  Hazard increasing with subsequent events?  Subjects with higher hazard are likeliy to have more events and hence be in the 'second -> third' risk set?
+
+
+
+# Fitting an RTTE model
+
+Given this shape for the hazard function, what basic hazard functions might be good places to investigate (or rule out)?
+
+Both the Weibull ($h(t) = \alpha \gamma^\alpha t^{\alpha-1}$) and Gompertz ($h(t) = \alpha e^{\gamma t}$) can give us this shape.  
+
+Let's start with the Gompertz model to get our grounding with RTTE models, then we'll compare to the Weibull model.
+
+First, we'll set-up the data for modeling.
+
+```{r}
+
+stan_data = list(Nobs=nrow(d),
+                 Nsubj = nrow(d_ind),
+                 delta = d$event,
+                 time = d$TIME,
+                 prev_time = d$PREVTIME,
+                 ID = d$ID )
+```
+
+
+## Base model: No IIV, no exposure
+
+
+
+```{r}
+fit_base_noiiv <- stan(file = '../model/stan/Day4/rtte_gompertz_noiiv.stan',
+            data = stan_data, 
+            chains = 4, 
+            iter = 2000, 
+            cores = 4)
+```
+
+
+Check convergence of the Markov chains
+
+```{r}
+print(fit_base_noiiv, pars=c('log_alpha_pop','gamma'))
+```
+
+
+## Base model 2: With IIV, no exposure
+
+### Centered vs non-centered parameterization for hierarchical models
+
+***Centered parameterization:***
+
+$$\log \alpha_i \sim \text{normal}(\mu_\alpha, \omega)$$
+
+Efficient when there are many groups and the data are very informative about the parameters (low shrinkage).
+
+
+***Non-centered parameterization:***
+
+$$
+\begin{align}
+\log \alpha_i &= \mu_\alpha + \omega \times \eta_i \\
+\eta_i &\sim \text{normal}(0,1)
+\end{align}
+$$
+
+More efficient when there are not many groups, when the inter-group variation is high, or when there is high shrinkage.
+
+Let's compare formulations in this model.  First, we'll start with the centered parameterization.
+
+```{r}
+fit_base_centered_iiv <- stan(file = '../model/stan/Day4/rtte_gompertz_withiiv_centered.stan',
+            data = stan_data, 
+            chains = 4, 
+            iter = 2000, 
+            cores = 4)
+```
+
+The divergent transition is a little troubling, but we can often fix a small numver of divergent transitions by increasing the `adapt_delta` parameter.  A larger number of divergent transitions indicates the geometry of the problem is problematic and you should reparameterize the model.
+
+
+```{r}
+print(fit_base_centered_iiv, pars=c('log_alpha_pop','gamma','omega'))
+```
+
+Next, we'll fit the model with the non-centered parameterization
+
+
+```{r}
+fit_base_noncentered_iiv <- stan(file = '../model/stan/Day4/rtte_gompertz_withiiv_noncentered.stan',
+            data = stan_data, 
+            chains = 4, 
+            iter = 2000, 
+            cores = 4, control = list(max_treedepth=11))
+```
+
+```{r}
+print(fit_base_noncentered_iiv, pars=c('log_alpha_pop','gamma','omega'))
+```
+
+
+Plot etas vs CAVG
+
+
+```{r}
+eta_sample <- spread_draws(fit_base_noncentered_iiv,eta[ID], omega)
+```
+
+```{r}
+d_post = eta_sample %>% 
+  group_by(ID) %>% 
+  summarise(est = median(eta*omega)) %>% 
+  left_join(d_ind)
+
+d_post %>% ggplot(aes(x=CAVGSS,y=est, col=cumulative_events))+geom_point() + geom_smooth()
+
+```
+
+```{r}
+d_post %>% 
+  ggplot(aes(x=est)) +
+  geom_density()
+```
+
+## Exposure-response model
+
+Let's try fitting a log-linear model for the effect of steady-state Cavg on the scale parameter ($\alpha$).
+
+$$
+\begin{align}
+h_i(t) &= \alpha_i \exp(-\gamma \cdot t)\\
+\alpha_i &= \alpha_{pop} \exp(\beta \cdot \text{CAVGSS}_i) 
+\end{align}
+$$
+
+```{r}
+
+stan_data = list(Nobs=nrow(d),
+                 Nsubj = nrow(d_ind),
+                 delta = d$event,
+                 time = d$TIME,
+                 prev_time = d$PREVTIME,
+                 ID = d$ID ,
+                 CAVGSS = d_ind$CAVGSS)
+
+fit_expresp <- stan(file = '../model/stan/Day4/rtte_gompertz_expresp_linear.stan',
+            data = stan_data, 
+            chains = 4, 
+            iter = 2000, 
+            cores = 4,
+            control = list(adapt_delta=0.90))
+```
+
+
+```{r}
+print(fit_expresp, pars=c('log_alpha_pop','gamma','omega','beta'))
+```
+
+
+```{r}
+bayesplot::mcmc_trace(fit_expresp,pars=c('log_alpha_pop','gamma','omega','beta'))
+```
+
+
+```{r}
+pairs(fit_expresp, pars=c('log_alpha_pop','omega','log_gamma','beta'))
+```
+
+Convergence looks good, but there is a high posterior correlation  between `log_alpha_pop` and `beta`.  How might you address this?
+
+Let's plot the estimated exposure-response:
+
+```{r}
+draws <- spread_draws(fit_expresp, log_alpha_pop, beta, gamma, omega) %>% 
+  filter(.draw <= 1000) %>% 
+  crossing(CAVGSS = seq(from=0, to=50, by=1)) %>% 
+  ungroup() %>% 
+  mutate(log_alpha_i = log_alpha_pop + beta*CAVGSS, #rnorm(n(),log_alpha_pop + beta*CAVGSS, omega ),
+         alpha_i = exp(log_alpha_i),
+         median_tte = -90/gamma * log(1-(gamma/90)/alpha_i * log(2)),
+         expected_events = alpha_i / (gamma/90) * exp(-gamma * 90/90)) 
+
+draws_pbo = draws %>% 
+  filter(CAVGSS==0) %>% 
+  select(.draw,median_tte_pbo=median_tte, expected_events_pbo=expected_events)
+
+draws = draws %>% left_join(draws_pbo) %>% 
+  mutate(rel_median_tte = median_tte/median_tte_pbo,
+         rel_expected_events = expected_events/expected_events_pbo)
+```
+
+
+```{r}
+draws %>% 
+  group_by(CAVGSS) %>% 
+  summarise(median = median(rel_expected_events),
+            lcl = quantile(rel_expected_events,probs = 0.10),
+            ucl = quantile(rel_expected_events, probs = 0.90)) %>% 
+  ggplot(aes(x=CAVGSS, y=median)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.3) +
+  ylim(c(0,NA)) +
+  labs(x='Steady state Cavg (IU/dL)', y='Number of bleeding events relaative to baseline')
+
+```
+
+
+```{r}
+draws %>% 
+  group_by(CAVGSS) %>% 
+  summarise(median = median(median_tte, na.rm = TRUE),
+            lcl = quantile(median_tte,probs = 0.05, na.rm = TRUE),
+            ucl = quantile(median_tte, probs = 0.95, na.rm = TRUE)) %>% 
+  ggplot(aes(x=CAVGSS, y=median)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.3) +
+  ylim(c(0,NA)) +
+  labs(x='Steady state Cavg (IU/dL)', y='Median time to first event (days)')
+
+```
+
+
+
+
+***Exercise: Code a model which replaces the log-linear effect of CAVGSS with an inhibitory Emax model.***
+
+
+# Predicting to a 100 IU/kg dose
+
+1. Simulate exposures at the 100 IU/g dose
+  a. Assume similar population -> similar distribution of CL
+2. Given exposure distribution, compute
+  a. Expected number of events over 90 days by dose (20, 50 100 IU/kg)
+  b. Time to first event by dose 
+  
+## Simulate exposures
+
+```{r}
+nsim = 500
+
+d_sims = d_ind %>% select(BWT,CL) %>% slice_sample(n=nsim, replace = TRUE) %>% 
+  mutate(ID=1:n()) %>% 
+  crossing(DOSE=c(20,50,100)) %>% 
+  mutate(CAVGSS = DOSE*BWT/CL/(24*3))
+```
+
+
+```{r}
+
+num_events_function <- function(.omega,.log_alpha_pop, .beta, .gamma, .data=d_sims) {
+  .data = .data %>% 
+    mutate(eta = rnorm(n(), 0, .omega),
+           alpha = exp(.log_alpha_pop + .beta*CAVGSS + eta),
+           cumulative_hazard = alpha/(.gamma/90)*(1-exp(-.gamma*90/90))) %>% 
+    group_by(DOSE) %>% 
+    summarise(median_events = median(cumulative_hazard))
+}
+
+survival_function <- function(.omega,.log_alpha_pop, .beta, .gamma, .data=d_sims) {
+  .data = .data %>% 
+    mutate(eta = rnorm(n(), 0, .omega),
+           alpha = exp(.log_alpha_pop + .beta*CAVGSS + eta)) %>% 
+    crossing(time = 0:90) %>% 
+    mutate(cumulative_hazard = alpha/(.gamma/90)*(1-exp(-.gamma*time/90)),
+           surv = exp(-cumulative_hazard)) %>% 
+    group_by(DOSE,time) %>% 
+    summarise(median_surv = median(surv))
+}
+
+
+draws = spread_draws(fit_expresp, omega, log_alpha_pop, beta, gamma) %>% 
+  filter(.draw <= 500) %>% 
+  mutate(mean_num_events = pmap(list(omega,log_alpha_pop,beta,gamma), .f=num_events_function),
+         survival = pmap(list(omega,log_alpha_pop,beta,gamma), .f=survival_function)
+  )
+```
+
+Plot distribution of time to first event
+
+```{r}
+summary = draws %>% 
+  select(.draw,survival) %>% 
+  unnest(survival) %>% 
+  group_by(DOSE,time) %>% 
+  summarise(lcl = quantile(median_surv,probs = 0.05),
+            pred = quantile(median_surv,probs = 0.50),
+            ucl = quantile(median_surv,probs = 0.95)) 
+
+summary %>% 
+  ggplot(aes(x=time, group=DOSE)) +
+  geom_line(aes(y=pred, col=as.factor(DOSE))) +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl,fill=as.factor(DOSE)), alpha=0.2) +
+  labs(x='Time (days)', y='Probability of event-free')
+```
+
+
+
+Plot distributions of expected number of events
+
+```{r}
+summary = draws %>% 
+  select(.draw,mean_num_events) %>% 
+  unnest(mean_num_events)
+
+summary %>% 
+  ggplot(aes(x=as.factor(DOSE), y=median_events)) + 
+  geom_violin() +
+  labs(y='Medidn number of events over 90 days', x='Dose (IU/kg)')
+```
+ 
+ 
