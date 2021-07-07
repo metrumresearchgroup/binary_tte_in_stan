@@ -165,7 +165,8 @@ stan_data = list(Nobs=nrow(d),
                  delta = d$event,
                  time = d$TIME,
                  prev_time = d$PREVTIME,
-                 ID = d$ID )
+                 ID = d$ID,
+                 CAVGSS = d$CAVGSS)
 ```
 
 
@@ -391,8 +392,8 @@ d_sims = d_ind %>% select(BWT,CL) %>% slice_sample(n=nsim, replace = TRUE) %>%
 
 
 ```{r}
-
-num_events_function <- function(.omega,.log_alpha_pop, .beta, .gamma, .data=d_sims) {
+# MW: This function doesn't return anything?
+num_events_function <- function(.omega, .log_alpha_pop, .beta, .gamma, .data=d_sims) {
   .data = .data %>% 
     mutate(eta = rnorm(n(), 0, .omega),
            alpha = exp(.log_alpha_pop + .beta*CAVGSS + eta),
@@ -450,7 +451,7 @@ summary = draws %>%
 summary %>% 
   ggplot(aes(x=as.factor(DOSE), y=median_events)) + 
   geom_violin() +
-  labs(y='Medidn number of events over 90 days', x='Dose (IU/kg)')
+  labs(y='Median number of events over 90 days', x='Dose (IU/kg)')
 ```
  
  
