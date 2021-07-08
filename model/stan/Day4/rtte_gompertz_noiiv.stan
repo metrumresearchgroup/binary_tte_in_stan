@@ -39,3 +39,11 @@ model {
   }
 }
 
+generated quantities {
+  vector[Nsubj] log_like = rep_vector(0.0, Nsubj);
+  
+  for (n in 1:Nobs) {
+    log_like[ID[n]] += delta[n] * (log_alpha_pop - gamma*(time[n]/90)) - cumulative_hazard[n];
+  }
+}
+
