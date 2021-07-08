@@ -40,14 +40,21 @@ bayesplot::color_scheme_set("viridis")
 The data are simulated from a PK-PD model for time to bleeding events [@Abrantes2020-yd].
 
 * PK model for a full-length recombinant human FVIII product
-  * Dosed at levels of 20-50 IU/kg
+  * Dosed at levels of 20 - 50 IU/kg
   
 * Repeated time to bleeding event model
   * Gompertz TTE model with an inhibitory Emax effect of FVIII(t)
   
+* The simulated data are from a hypothetical trial in 100 patients
+  * Randomly allocated to doses of 20 and 50 IU/kg
+  * Follow-up for 90 days
+
+
 * We will investigate the relationship of steady-state Caverage on repeated time to bleeding
   * Predict effect on bleeding events at a 100 IU/kg dose
   * Not considering other potential side effects or personalized dosing
+
+
   
 
 ```{r}
@@ -83,7 +90,19 @@ d_ind %>% group_by(DOSE) %>%
 
 
 ## Bleeding events
-First we'll plot time to first, second, and third bleeding events.  This is similar to Figure 1 in [@Abrantes2020-yd].
+
+To understand how many events subjects experience, let's start with a barplot of the number of events stratified by dose.  While the modal value is 0 events, most patients experience at least one bleeding event. There is a long tail, with some patients experiencing ovet 10 events.  
+
+```{r}
+d_ind %>% 
+  ggplot(aes(x=cumulative_events)) + 
+  geom_bar() + 
+  facet_grid(~DOSE)
+```
+
+
+
+Next, we'll plot time to first, second, and third bleeding events.  This is similar to Figure 1 in [@Abrantes2020-yd].
 
 ```{r}
 d_first = d %>% group_by(ID) %>% filter(TIME == min(TIME)) %>% ungroup()
@@ -104,6 +123,7 @@ fit3 <- survfit(Surv(TIME,event)~1, data = d_third)
 
 ggsurvplot_combine(list(First=fit1, Second=fit2, Third=fit3))
 ```
+
 When we're modeling the hazard of repeated events, we don't usually model the marginal hazard.  Instead, we're modeling the inter-event hazard.  So, let's plot the time to the first event, the time between first and second events (among subjects with one or more events), and the time between second and third events (among subjects with two or more events).
 
 
