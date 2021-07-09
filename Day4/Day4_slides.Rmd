@@ -1,0 +1,402 @@
+---
+title: "Repeated time-to-event and integrated hazard models"
+output:
+  slidy_presentation:
+#    theme: cerulean
+    fig_width: 9
+    fig_height: 5
+    font_adjustment: 3
+    transition: none
+    css: slidystyles.css
+    footer: Metrum Research Group &copy 2021
+    mathjax: local
+    self_contained: false
+    df_print: kable
+    variant: markdown+fancy_lists
+bibliography: Day4-references.bib
+csl: statistical-science.csl
+#nocite: | 
+#    @2795, @2192, @3684
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE, echo=FALSE)
+
+library(tidyverse)
+library(stringr)
+library(haven)
+library(survival)
+library(survminer)
+library(survMisc)
+library(texreg)
+library(tidybayes)
+library(bayesplot)
+library(muhaz)
+library(rstan)
+
+set.seed(314159)
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+``` 
+
+
+
+# Key learning objectives for today
+
+* Review questions from previous weeks
+
+* Coding models which require integration
+   - Hazards without closed-form integrals
+   - Variables which vary continuously with time
+  
+* Repeated time-to-event models
+
+# Why do we need to integrate when fitting TTE models?
+
+* The likelihood in a TTE model depends on
+  - Hazard at the time of an event: $h(t)$
+  - Cumulative hazard up to the event/censoring time: $H(t) = \int_0^t h(s)~ds$
+  
+* Thus, we need to be able to integrate the hazard function
+
+* For 'simple' TTE models, the hazard in integreble
+
+* As we move away from simple TTE models, we may be working with hazard functions that don't have closed-form integrals
+
+# Examples
+
+* Continuously time-varying predictors
+  - PK-driven TTE model
+  - PD-driven TTE model
+
+* Non-standard hazard models
+  - The hazard function can take any form as long as $h(t) \geq 0$
+
+* Cure-rate models
+  - Will return to these later
+  
+# Specifying the models in Stan
+
+* We will focus on one-dimensional integrals here
+  - Integrate hazard only
+  - Assuming the continuous-time covariate is available as a closed-form function of time
+
+* More complex (joint) models are feasible in Stan using ODE solver
+  - Could cover as a follow-up class
+  
+  
+# One-dimensional integrals in Stan
+
+* We will use the `integrate_1d` function in Stan
+
+* Suppose we want to calculate $H(t) = \int_a^b h(y | \theta, x_r, x_i) ~ dy$
+
+* Inputs to `integrate_1d`
+  - function to integrate (must have a strict signature): $h(y~|~\theta, x_r, x_i)$
+  - left limit: $a$
+  - right limit: $b$
+  - parameters: $\theta$
+  - real-valued covariates: $x_r$
+  - integer valued covariates: $x_i$
+
+# Integrating a Weibull hazard
+
+For example,
+
+```
+real cum_hazard[Nsubj];
+
+for (i in 1:Nsubj) {
+    cum_haz[i] = integrate_1d(weibull_hazard,   // function to integrate
+                             0.0,               // integrate from 0
+                             event_time[i],    // integrate to the event time
+                             { alpha, gamma, beta1, beta2 }, // parameter array
+                             {AGE[i]},  // array of real-valued data
+                             {ECOG[i]}  // array of integer-valued data
+                             );
+}
+```
+
+# The `weibull_hazard` function
+
+Must follow a strict function signature and be defined in the function block in a Stan program.
+
+```
+real weibull_hazard(real x,          // Function argument
+                    real xc,         // Complement of function argument on the domain (not used in this class)
+                    real[] theta,    // parameters
+                    real[] x_r,      // data (real)
+                    int[] x_i) {     // data (integer)
+
+    real alpha = theta[1];
+    real gamma = theta[2];
+    real beta1 = theta[3];
+    real beta2 = theta[4];
+    
+    real hazard = (alpha/gamma) * pow(x/gamma, alpha-1) * exp(beta1*x_r[1] + beta2*x_i[1]);
+
+    return hazard;
+}
+```
+
+# Example
+
+* We'll work through an analysis using the simulated survival data from the last class. 
+
+* **Models for change in tumor size, appearance of new lesions and survival probability in patients with advanced epithelial ovarian cancer** @Zecchin2016-rw
+    - DDMORE repository submission IDs: DDMODEL00000217, DDMODEL00000218
+    - Data simulated from these models
+
+* Original study
+    * Patients with platinum-sensitive recurrent ovarian cancer 
+    * Randomly assigned to receive gemcitabine plus carboplatin (Cb+G) or carboplatin alone (Cb), every 21 days
+    * Primary objective was to compare progression-free survival (PFS)
+
+* We will analyze OS and the relationship between tumor changes and OS, using simulated data
+
+
+```{r}
+# OS data
+d <- read_csv('../data/source/DDmodel0218_Simulated_OS.csv', na = c('.','-99'))
+
+dos <- d %>% 
+  filter(TIME>0) %>% 
+    group_by(ID) %>% 
+  mutate(meanGem = mean(AUC1),
+         Group = if_else(meanGem > 0, "Cb+G", "Cb")) %>% 
+  ungroup() %>% 
+  filter(CMT==2, EVID==0)
+
+dts <-  read_csv('../data/source/DDmodel0217_Simulated_SLD.csv', na = c('.','-99')) %>% 
+  filter(!is.na(DV)) %>% 
+  left_join(dos %>% select(ID,Group))
+```
+
+# OS by treatment group
+
+```{r, out.width='90%'}
+ggsurvplot(survfit(Surv(TIME,DV)~Group, data=dos), palette = 'nejm', xlab='Time (days)', risk.table = TRUE)
+```
+
+# Tumor growth by treatment group
+
+```{r, out.width='90%'}
+dts %>% 
+ ggplot(aes(x=TIME, y=DV, group=ID, col=Group)) +
+  geom_line(alpha=0.3) +
+  facet_wrap(~Group) +
+  labs(x='Time (days)', y='Tumor size (mm)')
+```
+
+# Modeling approach 
+
+* To keep the example manageable, we assume that the following tumor dynamic model has been fitted
+
+\[
+\frac{d}{dt} TS(t) = \left(KG_i - (KD0_{i} \cdot \overline{AUC0}_i + KD1_{i} \cdot \overline{AUC1}_i \right) TS(t)
+\]
+
+where $AUC0_i$ and $AUC1_i$ are model-predicted time-averaged AUC values for carboplatin and gemcitabine, respectively
+
+* We use the post-hoc estimated parameters for $KG_i$, $KD0_i$, $KD1_i$ and $IBASE_i$.
+
+# Modeling approach 
+We'll include effects for the model-predicted baseline tumor size and the tumor size relative to baseline (RTS).
+
+$$
+h_i(t) = \alpha / \lambda_0  \times (t / \lambda_0)^{\alpha-1} \exp(\beta_1 \times RTS(t) + \beta_2 BTS_i)
+$$
+
+where $TS_i(t)$ comes from the tumor model predictions and
+
+$$
+RTS_i(t) = \frac{TS_i(t)}{BTS_i} 
+$$
+
+# Workbook
+
+We'll try a few models in Workbook_time_varying.Rmd
+
+
+
+# Models for repeated times to event (RTTE)
+
+* Also known as recurrent event data
+
+* Examples
+  - Time to sleep onset in a sleep study
+  - Time to falls in elderly subjects
+  - Time to ear infection in children
+  - Time to asthma exacerbation
+  - Time to hospital admission in schizophrenia patients
+
+# Time to bleeding event in patients with hemophilia A
+
+Data were simulated from a PK-RTTE model by Abrantes et. al [@Abrantes2020-yd]
+
+* PK model for a full-length recombinant human FVIII product
+  * Dosed at levels of 20 - 50 IU/kg
+  
+* Repeated time to bleeding event model
+  * Gompertz TTE model with an inhibitory Emax effect of FVIII(t)
+  * Follow-up for one year
+  
+Simulated data:
+
+* Hypothetical trial in 100 patients
+* Randomly allocated 1:1 to doses of 20 and 50 IU/kg
+* Follow-up for 90 days
+
+
+```{r}
+# Time to bleeding data
+d <- read_csv('../data/derived/rtte_example.csv', na = c('.'))
+
+d <- d %>% 
+  group_by(ID) %>% 
+  mutate(TIME = TIME/24,  # Convert from hours to days
+         PREVTIME = lag(TIME, default = 0))
+
+# Extract one record per subject.  The last record will indicate the number of bleeding events.
+d_ind = d %>% group_by(ID) %>% slice_tail() %>% ungroup() %>% arrange(ID)
+
+```
+
+
+# Number of bleeding events
+
+Number of events stratified by dose.   
+
+```{r, out.width='80%'}
+d_ind %>% 
+  ggplot(aes(x=cumulative_events)) + 
+  geom_bar() + 
+  facet_grid(~DOSE)
+```
+
+# Time to bleeding 
+
+Time to first, second, and third bleeding events.
+
+```{r, out.width='80%'}
+d_first = d %>% group_by(ID) %>% filter(TIME == min(TIME)) %>% ungroup()
+
+d_second = d %>% 
+  group_by(ID) %>% 
+  filter((cumulative_events==2 & event==1) | (cumulative_events < 2 & TIME == max(TIME) & event==0)) %>% 
+  ungroup()
+
+d_third = d %>% 
+  group_by(ID) %>% 
+  filter((cumulative_events==3 & event==1) | (cumulative_events < 3 & TIME == max(TIME) & event==0)) %>% 
+  ungroup()
+
+fit1 <- survfit(Surv(TIME,event)~1, data = d_first)
+fit2 <- survfit(Surv(TIME,event)~1, data = d_second)
+fit3 <- survfit(Surv(TIME,event)~1, data = d_third)
+
+ggsurvplot_combine(list(First=fit1, Second=fit2, Third=fit3))
+```
+
+# Key feature of RTTE data: correlation within subjects
+
+* To model this correlation, we typically include a random subject effect.  For example,
+
+$$
+h_i(t) = h_0(t) \exp(x_i \beta) \times Z_i
+$$
+where
+$$
+Z_i \in (0,+\infty) \sim G(z ~ | ~ \omega) 
+$$
+
+* Common distributions
+  * $Z_i \sim \text{log-normal}(0,\omega)$ (common in pharmacometrics)
+     * Median = 1, mean = $\exp(\omega^2/2)$
+  * $Z_i \sim \text{Gamma}(\omega,\omega)$ (common in statistics)
+     * Mean = 1
+  * In practice, difficult to differentiate frailty distributions [@Balan2020-wv] 
+  
+# Other uses for frailties
+
+Frailties are also used for modeling other correlations/clustering
+
+* Within centers in a multi-center trial
+* Shared random effects models for joint longitudinal-TTE models
+
+# Model fitting
+
+* Need to carefully consider if and how the hazard changes fare an event
+  * Does the hazard completely reset after an event?
+  * Does the hazard depend on the number of events preceding $t$?
+  
+* Is the subject at-risk for another event immediately after experiencing an event?
+    - Subjects may be  out of risk set if 'event' has a period of time 
+      - time to sleep onset (not at 'risk' again until awake)
+      - time to hospitalization (not at risk while in the hospital)
+  - If event is instantaneous, then not out of risk set
+  - Use multi-state models, if interest is in time in each state
+
+
+# Likelihood function
+
+* The likelihood depends on
+  - Hazard at the time of an event
+  - Accumulated hazard between events
+  
+* Conditional on the random effect, events are assumed to be independent
+
+# Likelihood function example
+
+* Suppose a subject experienced events at times $t_1$ and $t_2$ and is event-free until $t_3$ when she is out of the risk set
+
+* The likelihood contribution is
+
+$$
+\begin{align*}
+L_i(\theta) &= \int_0^\infty \left( h_i(t_1~|~Z) ~S_i(t_1~|~Z) \right) \times \left( h_i(t_2~|~Z) \frac{S_i(t_2~|~Z)}{S_i(t_1~|~Z)} \right) \times \frac{S_i(t_3~|~Z)}{S_i(t_2~|~Z)} f(Z) dZ \\
+  &= \int_0^\infty h_i(t_1~|~Z) \times h_i(t_2~|~Z) \times S_i(t_3~|~Z) ~ f(Z) ~ dZ
+\end{align*}
+$$
+Conditional on $Z$, the log-likelihood contribution would be
+
+$$
+\begin{align*}
+\ell_i(\theta) &= \log h_i(t_1~|~Z) - H_i(t_1~|~Z) + \log h_i(t_2~|~Z) - \left(H_i(t_2~|~Z) - H_i(t_1~|~Z) \right) - \left( H_i(t_3~|~Z) - H_i(t_2~|~Z) \right) \\
+  &= \log h_i(t_1~|~Z) + \log h_i(t_2~|~Z) - H_i(t_3~|~Z)
+\end{align*}
+$$
+
+# Bayesian analysis of RTTE models
+
+* Similar to previous modeling, but with the added random effect distribution
+
+* Prior distribution on $\omega$
+
+* We'll model using log-normal distributions for $Z$, but try using a Gamma model for homework
+
+# Simulating from an RTTE model
+
+* Much more complicated than single TTE simulation
+  * Simulate $T1$ - time to first event
+  * Simulate $T2$ - time to second event, given first event
+  * Etc.
+  
+* Inter-event intervals depend on accumulated hazard following previous event
+  * Easiest with closed-form cumulative hazard functions
+  
+* Use inverse CDF method for simulating TTE
+  - $T_1 = S^{-1}(u_1)$ where $u_1 \sim U(0,1)$
+  - $T_2 = T_1 + \bar{S}^{-1}(u_2)$ where $\bar{S}(u) = \frac{S(u)}{S(T1)}$ and $u_2 \sim U(0,1)$
+  - Etc.
+  - Simulate until $T_k > \text{follow-up time}$
+
+* For more details see [@Jahn-Eimermacher2015-rz]
+
+# Workbook_rtte
+
+We'll work through these using a workbook.
+
+
+# References

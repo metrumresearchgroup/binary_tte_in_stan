@@ -1,4 +1,93 @@
 
+@ARTICLE{Jahn-Eimermacher2015-rz,
+  title    = "Simulating recurrent event data with hazard functions defined on
+              a total time scale",
+  author   = "Jahn-Eimermacher, Antje and Ingel, Katharina and Ozga,
+              Ann-Kathrin and Preussler, Stella and Binder, Harald",
+  abstract = "BACKGROUND: In medical studies with recurrent event data a total
+              time scale perspective is often needed to adequately reflect
+              disease mechanisms. This means that the hazard process is defined
+              on the time since some starting point, e.g. the beginning of some
+              disease, in contrast to a gap time scale where the hazard process
+              restarts after each event. While techniques such as the
+              Andersen-Gill model have been developed for analyzing data from a
+              total time perspective, techniques for the simulation of such
+              data, e.g. for sample size planning, have not been investigated
+              so far. METHODS: We have derived a simulation algorithm covering
+              the Andersen-Gill model that can be used for sample size planning
+              in clinical trials as well as the investigation of modeling
+              techniques. Specifically, we allow for fixed and/or random
+              covariates and an arbitrary hazard function defined on a total
+              time scale. Furthermore we take into account that individuals may
+              be temporarily insusceptible to a recurrent incidence of the
+              event. The methods are based on conditional distributions of the
+              inter-event times conditional on the total time of the preceeding
+              event or study start. Closed form solutions are provided for
+              common distributions. The derived methods have been implemented
+              in a readily accessible R script. RESULTS: The proposed
+              techniques are illustrated by planning the sample size for a
+              clinical trial with complex recurrent event data. The required
+              sample size is shown to be affected not only by censoring and
+              intra-patient correlation, but also by the presence of risk-free
+              intervals. This demonstrates the need for a simulation algorithm
+              that particularly allows for complex study designs where no
+              analytical sample size formulas might exist. CONCLUSIONS: The
+              derived simulation algorithm is seen to be useful for the
+              simulation of recurrent event data that follow an Andersen-Gill
+              model. Next to the use of a total time scale, it allows for
+              intra-patient correlation and risk-free intervals as are often
+              observed in clinical trial data. Its application therefore allows
+              the simulation of data that closely resemble real settings and
+              thus can improve the use of simulation studies for designing and
+              analysing studies.",
+  journal  = "BMC Med. Res. Methodol.",
+  volume   =  15,
+  pages    = "16",
+  month    =  mar,
+  year     =  2015,
+  language = "en"
+}
+
+@ARTICLE{Balan2020-wv,
+  title    = "A tutorial on frailty models",
+  author   = "Balan, Theodor A and Putter, Hein",
+  abstract = "The hazard function plays a central role in survival analysis. In
+              a homogeneous population, the distribution of the time to event,
+              described by the hazard, is the same for each individual.
+              Heterogeneity in the distributions can be accounted for by
+              including covariates in a model for the hazard, for instance a
+              proportional hazards model. In this model, individuals with the
+              same value of the covariates will have the same distribution. It
+              is natural to think that not all covariates that are thought to
+              influence the distribution of the survival outcome are included
+              in the model. This implies that there is unobserved
+              heterogeneity; individuals with the same value of the covariates
+              may have different distributions. One way of accounting for this
+              unobserved heterogeneity is to include random effects in the
+              model. In the context of hazard models for time to event
+              outcomes, such random effects are called frailties, and the
+              resulting models are called frailty models. In this tutorial, we
+              study frailty models for survival outcomes. We illustrate how
+              frailties induce selection of healthier individuals among
+              survivors, and show how shared frailties can be used to model
+              positively dependent survival outcomes in clustered data. The
+              Laplace transform of the frailty distribution plays a central
+              role in relating the hazards, conditional on the frailty, to
+              hazards and survival functions observed in a population.
+              Available software, mainly in R, will be discussed, and the use
+              of frailty models is illustrated in two different applications,
+              one on center effects and the other on recurrent events.",
+  journal  = "Stat. Methods Med. Res.",
+  volume   =  29,
+  number   =  11,
+  pages    = "3424--3454",
+  month    =  nov,
+  year     =  2020,
+  keywords = "Correlated failure times; frailty models; random effects models;
+              survival analysis; unobserved heterogeneity",
+  language = "en"
+}
+
 @ARTICLE{Abrantes2020-yd,
   title    = "Relationship between factor {VIII} activity, bleeds and
               individual characteristics in severe hemophilia A patients",

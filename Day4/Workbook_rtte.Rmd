@@ -1,6 +1,6 @@
 ---
 title: "Workbook for Introduction to TTE modeling"
-author: "Integrating the hazard funtion in Stan"
+author: "Repeated time to event analysis in Stan"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
@@ -144,7 +144,7 @@ fit1 <- survfit(Surv(TIME,event)~1, data = d_first)
 fit2 <- survfit(Surv(TIME-PREVTIME,event)~1, data = d_second)
 fit3 <- survfit(Surv(TIME-PREVTIME,event)~1, data = d_third)
 
-ggsurvplot_combine(list(First=fit1, Second=fit2, Third=fit3), risk.table = TRUE)
+ggsurvplot_combine(list(First=fit1, 'First -> second'=fit2, 'Second -> third'=fit3), risk.table = TRUE)
 ```
 
 Now, let's plot the non-parametric estimates of the hazards for these same events.  
@@ -209,6 +209,119 @@ Check convergence of the Markov chains
 print(fit_base_noiiv, pars=c('log_alpha_pop','gamma'))
 ```
 
+Let's simulate from this model to see if we get back a similar distribution of number of events and event times.
+
+```{r}
+sim_base = function(.ingredients, .max_time=90) {
+  # Gompertz cumulative hazard
+  alpha = exp(.ingredients$log_alpha_pop)
+  gamma = .ingredients$gamma
+  
+  ev_times = numeric()
+  t1 = 0
+  while(t1 < .max_time) {
+    u = runif(1)
+    x = exp(gamma*t1/90)+(-gamma/90/alpha)*log(u)
+    if (x > 0) {
+      new_t1 = t1 + (90/gamma)*log(x)
+      if (new_t1 > .max_time) new_t1 = .max_time
+    } else {
+      new_t1 = .max_time
+    }
+    ev_times = c(ev_times,new_t1)
+    t1 = new_t1
+  }
+  data.frame(ev_times=ev_times, event=as.numeric(ev_times < .max_time))
+}
+```
+
+
+```{r}
+draws <- spread_draws(fit_base_noiiv, log_alpha_pop, gamma) %>% 
+  slice_sample(n=500)
+
+dind = d %>% filter(!duplicated(ID))
+
+simulations = draws %>%
+  nest(samples=-.draw) %>% 
+  mutate(sims = map(samples, function(.draws, .data=dind) {
+    bind_cols(.data,.draws) %>% 
+      nest(.tmp = -ID) %>% 
+      mutate(sims = map(.tmp, sim_base)) %>% 
+      select(ID,sims) %>% 
+      unnest(sims)
+  }))
+
+```
+
+Predictive check for number of events
+
+```{r}
+foo=simulations %>% 
+  mutate(event_table = map(sims, ~.x %>% group_by(ID) %>% summarise(n=sum(event)) %>% count(num=n))) %>% 
+  select(.draw,event_table) %>% 
+  unnest(event_table) %>% 
+  complete(num,nesting(.draw),fill=list(n=0)) %>% 
+  arrange(.draw,num)
+```
+
+Mean number of events
+
+```{r}
+summ_stats = foo %>% 
+  group_by(.draw) %>% 
+  summarise(wt_mean = sum(n*num)/sum(n),
+         wt_sd = sqrt(sum(n*num^2)/sum(n) - wt_mean^2))
+```
+
+```{r}
+summ_stats %>% 
+  ggplot(aes(x=wt_mean)) + 
+  geom_density() +
+  geom_vline(xintercept = mean(d_ind$cumulative_events), col='red') +
+  labs(x='Mean number of events')
+```
+
+
+Distribution of number of subjects with no events
+
+```{r}
+foo %>% 
+  filter(num==0) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==0)),
+             aes(xintercept=n), col='red') +
+  labs(x='Number of subjects with no events')
+
+```
+
+Distribution of number of subjects with one events
+
+```{r}
+foo %>% 
+  filter(num==1) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==1)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with one event')
+
+```
+Distribution of number of subjects with for or more events
+
+```{r}
+foo %>% 
+  filter(num>=4) %>% 
+  group_by(.draw) %>% 
+  summarise(n=sum(n)) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events>=4)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with four or more events')
+
+```
 
 ## Base model 2: With IIV, no exposure
 
@@ -223,12 +336,10 @@ Efficient when there are many groups and the data are very informative about the
 
 ***Non-centered parameterization:***
 
-$$
 \begin{align}
 \log \alpha_i &= \mu_\alpha + \omega \times \eta_i \\
 \eta_i &\sim \text{normal}(0,1)
 \end{align}
-$$
 
 More efficient when there are not many groups, when the inter-group variation is high, or when there is high shrinkage.
 
@@ -242,12 +353,19 @@ fit_base_centered_iiv <- stan(file = '../model/stan/Day4/rtte_gompertz_withiiv_c
             cores = 4)
 ```
 
-The divergent transition is a little troubling, but we can often fix a small numver of divergent transitions by increasing the `adapt_delta` parameter.  A larger number of divergent transitions indicates the geometry of the problem is problematic and you should reparameterize the model.
+You may get one or two divergent transitions, but we can often fix a small numver of divergent transitions by increasing the `adapt_delta` parameter.  A larger number of divergent transitions indicates the geometry of the problem is problematic and you should reparameterize the model.
 
 
 ```{r}
 print(fit_base_centered_iiv, pars=c('log_alpha_pop','gamma','omega'))
 ```
+
+```{r}
+mcmc_trace(fit_base_centered_iiv, pars=c('log_alpha_pop', 'gamma', 'omega'))
+
+```
+
+
 
 Next, we'll fit the model with the non-centered parameterization
 
@@ -264,18 +382,158 @@ fit_base_noncentered_iiv <- stan(file = '../model/stan/Day4/rtte_gompertz_withii
 print(fit_base_noncentered_iiv, pars=c('log_alpha_pop','gamma','omega'))
 ```
 
+Note that for this model, the centered parameterization is more efficient in terms of effective sample sizes.
+
+
+
+Let's simulate from this model to see if we get back a similar distribution of number of events and event times.
+
+```{r}
+sim_base_iiv = function(.ingredients, .max_time=90) {
+  # Gompertz cumulative hazard
+  alpha = exp(.ingredients$log_alpha)
+  gamma = .ingredients$gamma
+  
+  ev_times = numeric()
+  t1 = 0
+  while(t1 < .max_time) {
+    u = runif(1)
+    x = exp(gamma*t1/90)+(-gamma/90/alpha)*log(u)
+    if (x > 0) {
+      new_t1 = t1 + (90/gamma)*log(x)
+      if (new_t1 > .max_time) new_t1 = .max_time
+    } else {
+      new_t1 = .max_time
+    }
+    ev_times = c(ev_times,new_t1)
+    t1 = new_t1
+  }
+  data.frame(ev_times=ev_times, event=as.numeric(ev_times < .max_time))
+}
+```
+
+
+```{r, message=FALSE}
+draws <- spread_draws(fit_base_centered_iiv, log_alpha_pop, omega, gamma) %>% 
+  filter(.draw <= 500)
+
+simulations = draws %>%
+  nest(samples=-.draw) %>% 
+  mutate(sims = map(samples, function(.draws, .data=dind) {
+    bind_cols(.data,.draws) %>% 
+      ungroup() %>% 
+      mutate(log_alpha = rnorm(n(),log_alpha_pop, omega)) %>% 
+      nest(.tmp = -ID) %>% 
+      mutate(sims = map(.tmp, sim_base_iiv)) %>% 
+      select(ID,sims) %>% 
+      unnest(sims)
+  }))
+
+```
+
+
+Predictive check for number of events
+
+```{r}
+num_event_summary = simulations %>% 
+  mutate(event_table = map(sims, ~.x %>% group_by(ID) %>% summarise(n=sum(event)) %>% count(num=n))) %>% 
+  select(.draw,event_table) %>% 
+  unnest(event_table) %>% 
+  complete(num,nesting(.draw),fill=list(n=0)) %>% 
+  arrange(.draw,num)
+```
+
+
+
+Mean number of events
+
+```{r}
+summ_stats = num_event_summary %>% 
+  group_by(.draw) %>% 
+  summarise(wt_mean = sum(n*num)/sum(n),
+         wt_sd = sqrt(sum(n*num^2)/sum(n) - wt_mean^2))
+```
+
+```{r}
+summ_stats %>% 
+  ggplot(aes(x=wt_mean)) + 
+  geom_density() +
+  geom_vline(xintercept = mean(d_ind$cumulative_events), col='red') +
+  labs(x='Mean number of events')
+```
+
+
+Distribution of number of subjects with no events
+
+```{r}
+num_event_summary %>% 
+  filter(num==0) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==0)),
+             aes(xintercept=n), col='red') +
+  labs(x='Number of subjects with no events')
+
+```
+
+Distribution of number of subjects with one event
+
+```{r}
+num_event_summary %>% 
+  filter(num==1) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==1)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with one event')
+
+```
+
+
+Distribution of number of subjects with two events
+
+```{r}
+num_event_summary %>% 
+  filter(num==2) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==2)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with two events')
+
+```
+
+
+Distribution of number of subjects with for or more events
+
+```{r}
+num_event_summary %>% 
+  filter(num>=4) %>% 
+  group_by(.draw) %>% 
+  summarise(n=sum(n)) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events>=4)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with four or more events')
+
+```
+
+
+The model isn't perfect, but let's look at incorporating exposure.
+
 
 Plot etas vs CAVG
 
 
 ```{r}
-eta_sample <- spread_draws(fit_base_noncentered_iiv,eta[ID], omega)
+eta_sample <- spread_draws(fit_base_centered_iiv,log_alpha[ID], log_alpha_pop,omega)
 ```
 
 ```{r}
 d_post = eta_sample %>% 
   group_by(ID) %>% 
-  summarise(est = median(eta*omega)) %>% 
+  summarise(est = median(log_alpha-log_alpha_pop)) %>% 
   left_join(d_ind)
 
 d_post %>% ggplot(aes(x=CAVGSS,y=est, col=cumulative_events))+geom_point() + geom_smooth()
@@ -292,12 +550,12 @@ d_post %>%
 
 Let's try fitting a log-linear model for the effect of steady-state Cavg on the scale parameter ($\alpha$).
 
-$$
+
 \begin{align}
 h_i(t) &= \alpha_i \exp(-\gamma \cdot t)\\
 \alpha_i &= \alpha_{pop} \exp(\beta \cdot \text{CAVGSS}_i) 
 \end{align}
-$$
+
 
 ```{r}
 
@@ -329,10 +587,85 @@ bayesplot::mcmc_trace(fit_expresp,pars=c('log_alpha_pop','gamma','omega','beta')
 
 
 ```{r}
-pairs(fit_expresp, pars=c('log_alpha_pop','omega','log_gamma','beta'))
+pairs(fit_expresp, pars=c('log_alpha_pop','omega','gamma','beta'))
 ```
 
 Convergence looks good, but there is a high posterior correlation  between `log_alpha_pop` and `beta`.  How might you address this?
+
+
+Let's look at some predictive checks
+
+
+```{r, message=FALSE}
+draws <- spread_draws(fit_expresp, log_alpha_pop, beta, omega, gamma) %>% 
+  filter(.draw <= 500)
+
+simulations = draws %>%
+  nest(samples=-.draw) %>% 
+  mutate(sims = map(samples, function(.draws, .data=d_ind) {
+    bind_cols(.data,.draws) %>% 
+      ungroup() %>% 
+      mutate(log_alpha = rnorm(n(),log_alpha_pop + beta*CAVGSS, omega)) %>% 
+      nest(.tmp = -ID) %>% 
+      mutate(sims = map(.tmp, sim_base_iiv)) %>% 
+      select(ID,sims) %>% 
+      unnest(sims)
+  }))
+
+```
+
+
+Predictive check for number of events
+
+```{r}
+num_event_summary = simulations %>% 
+  mutate(event_table = map(sims, ~.x %>% group_by(ID) %>% summarise(n=sum(event)) %>% count(num=n))) %>% 
+  select(.draw,event_table) %>% 
+  unnest(event_table) %>% 
+  complete(num,nesting(.draw),fill=list(n=0)) %>% 
+  arrange(.draw,num)
+```
+
+Distribution of number of subjects with no events
+
+```{r}
+num_event_summary %>% 
+  filter(num==0) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==0)),
+             aes(xintercept=n), col='red') +
+  labs(x='Number of subjects with no events')
+
+```
+
+Distribution of number of subjects with one events
+
+```{r}
+num_event_summary %>% 
+  filter(num==1) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events==1)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with one event')
+
+```
+Distribution of number of subjects with four or more events
+
+```{r}
+num_event_summary %>% 
+  filter(num>=4) %>% 
+  group_by(.draw) %>% 
+  summarise(n=sum(n)) %>% 
+  ggplot(aes(n)) +
+  geom_bar() +
+  geom_vline(data=d_ind %>% summarise(n=sum(cumulative_events>=4)),
+             aes(xintercept=n), col='red') +
+    labs(x='Number of subjects with four or more events')
+
+```
+
 
 Let's plot the estimated exposure-response:
 
@@ -411,10 +744,10 @@ d_sims = d_ind %>% select(BWT,CL) %>% slice_sample(n=nsim, replace = TRUE) %>%
 ```
 
 
-```{r}
-# MW: This function doesn't return anything?
+```{r, message=FALSE}
+
 num_events_function <- function(.omega, .log_alpha_pop, .beta, .gamma, .data=d_sims) {
-  .data = .data %>% 
+  .data %>% 
     mutate(eta = rnorm(n(), 0, .omega),
            alpha = exp(.log_alpha_pop + .beta*CAVGSS + eta),
            cumulative_hazard = alpha/(.gamma/90)*(1-exp(-.gamma*90/90))) %>% 
@@ -423,7 +756,7 @@ num_events_function <- function(.omega, .log_alpha_pop, .beta, .gamma, .data=d_s
 }
 
 survival_function <- function(.omega,.log_alpha_pop, .beta, .gamma, .data=d_sims) {
-  .data = .data %>% 
+  .data %>% 
     mutate(eta = rnorm(n(), 0, .omega),
            alpha = exp(.log_alpha_pop + .beta*CAVGSS + eta)) %>% 
     crossing(time = 0:90) %>% 

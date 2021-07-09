@@ -7,26 +7,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-RTTE TOPICS
-
-* Inclusion of random effects / frailties
-
-* log-likelihood depends on cumulative hazard between events
-  - first event = $\delta_i \log h(t1_i) -H(t1)$ = $\delta_i \log h(t1_i) - \int_0^{t1_i} h(s) ds$
-  - second event = $\delta_i \log h(t2_i) -(H(t2_i) - H(t1))$ = $\delta_i \log h(t2) - \int_{t1}^{t2} h(s) ds$
-* 
-* Does the hazard re-set after the event?
-  - Insert picture of hazard not/re-setting
-  - Examples Time to sleep
-
-* Risk set
-  - Subjects may be  out of risk set if 'event' has a period of time 
-      - time to sleep onset (not at 'risk' again until awake)
-      - time relapse in MS
-  - If event is instantaneous, then not out of risk set
-
-* Multi-state models if interest falls on both 'events'/states
-
 
 Simulating from time to bleeding model in
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7193498/
@@ -56,7 +36,8 @@ idata <- data.frame(ID=1:100) %>%
          VC = 30.3 * exp(rnorm(n(),0,.151)),
          Q = 1.69,
          VP = 6.29,
-         lambda = exp(rnorm(n(), 2.96, 1.36))
+         lambda = exp(rnorm(n(), 2.96, 1.36)),
+         gamma=-0.566
          )
 
 ```

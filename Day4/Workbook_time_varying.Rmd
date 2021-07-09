@@ -1,0 +1,246 @@
+---
+title: "Workbook for Introduction to TTE modeling"
+author: "Integrating the hazard function in Stan"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(muhaz)
+library(rstan)
+library(bayesplot)
+library(tidybayes)
+
+theme_set(theme_bw())
+bayesplot::color_scheme_set("viridis")
+
+```
+
+
+```{r}
+# OS data
+d <- read_csv('../data/source/DDmodel0218_Simulated_OS.csv', na = c('.','-99'))  %>% 
+  group_by(ID) %>% 
+  mutate(pTIME = lag(TIME,default=0)) 
+
+# Pull out the on-treatment records
+d_on_trt = d %>% 
+  filter(EVID==2 & (AUC0>0 | AUC1 > 0)) 
+
+# Pull out the off-treatment records
+d_off_trt = d %>% 
+  filter(TIME>0 & CMT==2)
+
+# Calculate time-weighted AYC values for driving the model
+auc_means = d_on_trt %>% 
+  group_by(ID) %>% 
+  summarise(auc0bar = sum(AUC0*(TIME-pTIME))/sum(TIME-pTIME), 
+            auc1bar = sum(AUC1*(TIME-pTIME))/sum(TIME-pTIME))
+
+# Combine data
+model_data = d_on_trt %>% group_by(ID) %>% slice_tail() %>%
+  bind_rows(d_off_trt) %>% 
+  left_join(auc_means) %>% 
+  arrange(ID,TIME) %>% 
+  group_by(ID) %>% 
+  mutate(pTIME = lag(TIME,default=0.04),
+         mauc0 = if_else(!is.na(CMT),AUC0,auc0bar),
+         mauc1 = if_else(!is.na(CMT),AUC1,auc1bar),
+         TSBASE = IBASE*1000) %>% 
+  select(ID,TIME,pTIME,mauc0,mauc1,KG,KD0,KD1,TSBASE)
+
+new_lesion_data <- d %>% 
+  filter(NWLSCOV==1) %>% 
+  group_by(ID) %>%
+  summarise(NLIND = 1,
+            NLTIME = min(TIME))
+
+model_data <- model_data %>% 
+  left_join(new_lesion_data) %>% 
+  ungroup() %>% 
+  mutate(NLIND = if_else(is.na(NLIND), 0, NLIND),
+         NLTIME = if_else(is.na(NLTIME), 10000, NLTIME),
+         row = 1:n())
+
+model_data_subject <- d %>% filter(CMT==2, TIME>0) %>% 
+  select(ID, event=DV, event_time=TIME) %>% 
+  # Add first and last row values 
+  left_join(model_data %>% group_by(ID) %>% 
+              summarise(row_first = min(row),
+                        row_last = max(row))) %>% 
+  # Add last observation time
+  left_join(d_on_trt %>% 
+              arrange(ID,TIME) %>% 
+              group_by(ID) %>% 
+              slice_tail() %>% 
+              select(ID,last_obs_time=TIME))
+```
+
+For faster run times, lets cut down to 100 subjects
+
+```{r}
+model_data <- model_data %>% filter(ID <= 100)
+model_data_subject <- model_data_subject %>% filter(ID <= 100)
+```
+
+```{r}
+stan_data = list(
+  N = nrow(model_data),
+  Nsubj = nrow(model_data_subject),
+  
+  ID = model_data$ID,
+  TIME = model_data$TIME,
+  PREVTIME = model_data$pTIME,
+  AUC0 = model_data$mauc0,
+  AUC1 = model_data$mauc1,
+  KG = model_data$KG,
+  KD0 = model_data$KD0,
+  KD1 = model_data$KD1,
+  TSBASE = model_data$TSBASE,
+  NLTIME = model_data$NLTIME,
+  NLIND = model_data$NLIND,
+  
+  IDsubj = model_data_subject$ID,
+  event = model_data_subject$event,
+  event_time = model_data_subject$event_time,
+  row_first = model_data_subject$row_first,
+  row_last = model_data_subject$row_last,
+  last_obs_time = model_data_subject$last_obs_time
+)
+```
+
+
+# Working with traditional statistics parameterization of Weibull model
+
+
+\begin{align*}
+h_0(t) &= \alpha / \lambda_0  \times (t / \lambda0)^{\alpha-1}\\
+\\
+H_i(t) &= ( t / \lambda0 )^\alpha \\
+S_i(t) &= \exp(-(t/\lambda0)^\alpha)
+\end{align*}
+
+
+Under this parameterization, 
+
+* median OS = $\left( \frac{\log 2}{\lambda_0} \right)^{1/\alpha}$
+* mean OS = $ \lambda_0^{-1/\alpha} ~~\Gamma(1 + 1/\alpha)$
+
+
+
+```{r, results='hide'}
+fit_weibull_base <- stan(file = '../model/stan/Day4/timevarying_weibull_base.stan',
+                        data = stan_data, 
+                        chains = 4,
+                        iter=800,
+                        cores = 4,
+                        seed = 76341
+                        )
+```
+
+
+```{r}
+print(fit_weibull_base, pars=c('log_lambda0','log_shape'))
+```
+
+
+## Adding effect of tumor size to the model
+
+For the sake of simplicity, let's assume that we're fitting this model in a two-stage approach, and that we already have estimates from the tumor modeling.
+
+The tumor model is of the form:
+
+\[
+\frac{d}{dt} TS(t) = \left(KG_i - (KD0_{i} \cdot \overline{AUC0}_i + KD1_{i} \cdot \overline{AUC1}_i \right) TS(t)
+\]
+ where $AUC0_i$ and $AUC1_i$ are model-predicted time-averaged AUC values for carboplatin and gemcitabine, respectively.
+
+
+We'll include effects for the model-predicted baseline tumor size and the tumor size relative to baseline (RTS).
+
+
+
+$$
+h_i(t) = \alpha / \lambda_0  \times (t / \lambda_0)^{\alpha-1} \exp\left(\beta_1 \times \log RTS(t) + \beta_2 \times \log (BTS_i - \overline{BTS}) \right)
+$$
+
+where $TS_i(t)$ comes from the tumor model predictions and
+
+$$
+RTS_i(t) = \frac{TS_i(t)}{BTS_i} 
+$$
+
+
+```{r, results='hide'}
+fit_weibull_ts <- stan(file = '../model/stan/Day4/timevarying_weibull_nl.stan',
+                        data = stan_data, 
+                        chains = 4,
+                        iter=800,
+                        cores = 4,
+                        seed = 76341
+                        )
+```
+
+```{r}
+print(fit_weibull_ts, pars=c('log_lambda0','log_shape','beta1','beta2'))
+```
+
+```{r}
+samples_int <- spread_draws(fit_weibull_ts, beta1,beta2, log_lambda0,log_shape) %>% 
+  rename(Chain=.chain)
+```
+
+```{r}
+mcmc_trace(samples_int, pars=c('beta1','beta2','log_lambda0','log_shape'))
+```
+
+```{r}
+mcmc_pairs(samples_int, pars=c('beta1','beta2','log_lambda0','log_shape'))
+```
+
+Let's look at and compare the model fits
+
+```{r}
+loo_base = loo(fit_weibull_base,pars='log_like', save_psis=TRUE)
+loo_base
+```
+
+```{r}
+loo_ts = loo(fit_weibull_ts,pars='log_like', save_psis=TRUE)
+loo_ts
+```
+
+```{r}
+loo::loo_compare(loo_base,loo_ts)
+```
+
+The `loo` output for the covariate model indicates that the model fits some subjects poorly.  Let's investigate:
+
+```{r}
+ids_to_check = which(loo_ts$diagnostics$pareto_k > 0.5)
+loo_ts$diagnostics$pareto_k[ids_to_check]
+```
+
+```{r}
+model_data %>% filter(ID %in% ids_to_check)
+```
+
+

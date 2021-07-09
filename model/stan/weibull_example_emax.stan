@@ -11,7 +11,7 @@ data {
 
 
 parameters {
-  // haz(t) = lambda0 * shape * t^(shape-1) * exp(eta)
+  // haz(t) = lambda0 * shape * t^(shape-1) * exp(b*ECOG + emax*RTS / (e50 + RTS))
   vector[K] b;  // population-level effects
   real emax;  // maximum effect of RTS
   real<lower=0> e50; // E50
