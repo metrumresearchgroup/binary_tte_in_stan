@@ -16,7 +16,8 @@ output:
 bibliography: Day4-references.bib
 csl: statistical-science.csl
 #nocite: | 
-#    @2795, @2192, @3684
+editor_options: 
+  chunk_output_type: console
 ---
 
 

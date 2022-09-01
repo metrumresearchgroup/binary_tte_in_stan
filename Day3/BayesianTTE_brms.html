@@ -1,0 +1,694 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="copyright" content="Metrum Research Group &copy 2021"/>
+  <meta name="font-size-adjustment" content="3"/>
+  <title>Exposure-response modeling for time-to-event data using brms</title>
+  <style type="text/css">
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+            pre > code.sourceCode { white-space: pre; position: relative; }
+            pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+            pre > code.sourceCode > span:empty { height: 1.2em; }
+            .sourceCode { overflow: visible; }
+            code.sourceCode > span { color: inherit; text-decoration: inherit; }
+            div.sourceCode { margin: 1em 0; }
+            pre.sourceCode { margin: 0; }
+            @media screen {
+            div.sourceCode { overflow: auto; }
+            }
+            @media print {
+            pre > code.sourceCode { white-space: pre-wrap; }
+            pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+            }
+            pre.numberSource code
+              { counter-reset: source-line 0; }
+            pre.numberSource code > span
+              { position: relative; left: -4em; counter-increment: source-line; }
+            pre.numberSource code > span > a:first-child::before
+              { content: counter(source-line);
+                position: relative; left: -1em; text-align: right; vertical-align: baseline;
+                border: none; display: inline-block;
+                -webkit-touch-callout: none; -webkit-user-select: none;
+                -khtml-user-select: none; -moz-user-select: none;
+                -ms-user-select: none; user-select: none;
+                padding: 0 4px; width: 4em;
+                color: #aaaaaa;
+              }
+            pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+            div.sourceCode
+              {   }
+            @media screen {
+            pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+            }
+            code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+            code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+            code span.at { color: #7d9029; } /* Attribute */
+            code span.bn { color: #40a070; } /* BaseN */
+            code span.bu { } /* BuiltIn */
+            code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+            code span.ch { color: #4070a0; } /* Char */
+            code span.cn { color: #880000; } /* Constant */
+            code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+            code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+            code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+            code span.dt { color: #902000; } /* DataType */
+            code span.dv { color: #40a070; } /* DecVal */
+            code span.er { color: #ff0000; font-weight: bold; } /* Error */
+            code span.ex { } /* Extension */
+            code span.fl { color: #40a070; } /* Float */
+            code span.fu { color: #06287e; } /* Function */
+            code span.im { } /* Import */
+            code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+            code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+            code span.op { color: #666666; } /* Operator */
+            code span.ot { color: #007020; } /* Other */
+            code span.pp { color: #bc7a00; } /* Preprocessor */
+            code span.sc { color: #4070a0; } /* SpecialChar */
+            code span.ss { color: #bb6688; } /* SpecialString */
+            code span.st { color: #4070a0; } /* String */
+            code span.va { color: #19177c; } /* Variable */
+            code span.vs { color: #4070a0; } /* VerbatimString */
+            code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+          </style>
+  <style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <script src="BayesianTTE_brms_files/header-attrs-2.14/header-attrs.js"></script>
+  <link href="BayesianTTE_brms_files/slidy-2/styles/slidy.css" rel="stylesheet" />
+  <script src="BayesianTTE_brms_files/slidy-2/scripts/slidy.js"></script>
+  <script src="BayesianTTE_brms_files/slidy_shiny-1/slidy_shiny.js"></script>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+   href="slidystyles.css" />
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Exposure-response modeling for time-to-event data
+using brms</h1>
+  <p class="author">
+
+  </p>
+</div>
+<div id="key-learning-objectives-for-today"
+class="slide section level1">
+<h1>Key learning objectives for today</h1>
+<ul>
+<li>Analysis of TTE data using <code>brms</code> using parametric
+models</li>
+<li>Predictive checks for the hazard and survival functions</li>
+<li>Example with non-administrative censoring</li>
+</ul>
+</div>
+<div id="a-little-notation" class="slide section level1">
+<h1>A little notation</h1>
+<ul>
+<li><p>There are two time-to-event processes happening:</p>
+<ul>
+<li><span class="math inline">\(T\)</span> = time to event of
+interest</li>
+<li><span class="math inline">\(C\)</span> = time to censoring</li>
+</ul></li>
+<li><p>With right censoring, we observe</p>
+<ul>
+<li><span class="math inline">\(T^* = \text{min}(T,C)\)</span></li>
+<li><span class="math inline">\(\delta = I(T \leq C)\)</span></li>
+</ul></li>
+<li><p>We are trying to estimate the distribution of <span
+class="math inline">\(T\)</span>, but we observe <span
+class="math inline">\(T^*\)</span></p>
+<ul>
+<li>We’ll return to this when discussing model diagnostics</li>
+</ul></li>
+<li><p>Typical to assume that <span class="math inline">\(T\)</span> and
+<span class="math inline">\(C\)</span> are independent</p></li>
+</ul>
+</div>
+<div id="new-dataset" class="slide section level1">
+<h1>New dataset</h1>
+<ul>
+<li><strong>Models for change in tumour size, appearance of new lesions
+and survival probability in patients with advanced epithelial ovarian
+cancer</strong> <span class="citation">[1]</span>
+<ul>
+<li>DDMORE repository submission IDs: DDMODEL00000217,
+DDMODEL00000218</li>
+<li>Data simulated from these models</li>
+</ul></li>
+<li>Original study
+<ul>
+<li>Patients with platinum-sensitive recurrent ovarian cancer</li>
+<li>Randomly assigned to receive gemcitabine plus carboplatin (Cb+G) or
+carboplatin alone (Cb), every 21 days</li>
+<li>Primary objective was to compare progression-free survival
+(PFS)</li>
+</ul></li>
+<li>We will analyze OS and the relationship between tumor changes and
+OS, using simulated data</li>
+</ul>
+</div>
+<div id="os-by-treatment-group" class="slide section level1">
+<h1>OS by treatment group</h1>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-3-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="landmarked-os-at-day-84-by-change-in-tumor-size-and-group"
+class="slide section level1">
+<h1>Landmarked OS at Day 84 by change in tumor size and group</h1>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-4-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="distribution-of-change-in-tumor-size-to-day-84"
+class="slide section level1">
+<h1>Distribution of change in tumor size to Day 84</h1>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-5-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="what-hazard-function-might-make-sense"
+class="slide section level1">
+<h1>What hazard function might make sense?</h1>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-6-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="lets-start-by-fitting-a-weibull-model-as-a-function-of-rts"
+class="slide section level1">
+<h1>Let’s start by fitting a Weibull model as a function of RTS</h1>
+<ul>
+<li>Note: LHS of model specified as <code>TIME | cens(1-DV)</code></li>
+</ul>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>weibull_prior <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">lognormal</span>(<span class="dv">0</span>,<span class="dv">3</span>), <span class="at">class=</span><span class="st">&#39;shape&#39;</span>),</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>                   <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>,<span class="dv">3</span>), <span class="at">class=</span><span class="st">&#39;b&#39;</span>))</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fit_weibull <span class="ot">&lt;-</span> <span class="fu">brm</span>(TIME <span class="sc">|</span> <span class="fu">cens</span>(<span class="dv">1</span><span class="sc">-</span>DV) <span class="sc">~</span> <span class="fu">I</span>(rts84<span class="dv">-1</span>), </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">data =</span> dos84,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">prior =</span> weibull_prior,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">family  =</span> <span class="fu">weibull</span>())</span></code></pre></div>
+<p>The model is <span class="math display">\[
+\log \text{TIME}_i = \theta_0 + \theta_1 \times (RTS_i - 1) + \epsilon_i
+\]</span> where <span class="math inline">\(\epsilon \sim \text{extreme
+value distribution}\)</span></p>
+<p><span class="math inline">\(\theta_0\)</span> corresponds to the mean
+OS on the log scale when RTS=1 (<span
+class="math inline">\(\exp(\theta_0)\)</span> is the median OS) <span
+class="math inline">\(\theta_1\)</span> is the acceleration factor</p>
+</div>
+<div id="output-from-weibull-model" class="slide section level1">
+<h1>Output from Weibull model</h1>
+<pre><code>.  Family: weibull 
+.   Links: mu = log; shape = identity 
+. Formula: TIME | cens(1 - DV) ~ I(rts84 - 1) 
+.    Data: dos84 (Number of observations: 336) 
+.   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+.          total post-warmup draws = 4000
+. 
+. Population-Level Effects: 
+.           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+. Intercept     6.18      0.04     6.10     6.26 1.00     3811     2813
+. Irts84M1     -0.42      0.08    -0.58    -0.25 1.00     2859     2658
+. 
+. Family Specific Parameters: 
+.       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+. shape     2.05      0.12     1.82     2.28 1.00     3398     3145
+. 
+. Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+. and Tail_ESS are effective sample size measures, and Rhat is the potential
+. scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+</div>
+<div id="convergence-assessments" class="slide section level1">
+<h1>Convergence assessments</h1>
+<ul>
+<li>Rhat values all look good (previous slide)</li>
+<li>Trace plots look good</li>
+</ul>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-9-1.png" width="864" height="67%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="model-evaluation" class="slide section level1">
+<h1>Model evaluation</h1>
+<ul>
+<li>Residual plots
+<ul>
+<li>Similar use as with the Cox model</li>
+</ul></li>
+<li>Simulation-based diagnostics
+<ul>
+<li>VPCs for survival and hazard functions</li>
+<li>NPDEs (will look at these next week)</li>
+</ul></li>
+</ul>
+</div>
+<div id="posterior-predictive-checks" class="slide section level1">
+<h1>Posterior predictive checks</h1>
+<p>Remeber our recipe</p>
+<ul>
+<li>Simulate many replicates of the DV using the estimated model and
+observed predictors
+<ul>
+<li>Accounting for censoring process</li>
+</ul></li>
+<li>Determine summary statistic(s) of interest
+<ul>
+<li>K-M estimate of S(t)</li>
+<li>Non-parametric estimate of h(t)</li>
+</ul></li>
+<li>Calculate summary statistic for observed data</li>
+<li>Calculate summary statistic for each simulated replicate</li>
+<li>Plot distribution(s) of summary statistics</li>
+<li>Overlay observed value</li>
+</ul>
+</div>
+<div id="simulate-survival-times-from-model"
+class="slide section level1">
+<h1>Simulate survival times from model</h1>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>weibull_sims <span class="ot">&lt;-</span> <span class="fu">add_predicted_draws</span>(<span class="at">newdata =</span> dos84 <span class="sc">%&gt;%</span> <span class="fu">select</span>(ID, rts84, rts84_f, ECOG),</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                                    fit_weibull, </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">prediction =</span> <span class="st">&#39;survival_time&#39;</span>)</span></code></pre></div>
+<div class="kable-table">
+<table>
+<thead>
+<tr class="header">
+<th align="right">ID</th>
+<th align="right">rts84</th>
+<th align="left">rts84_f</th>
+<th align="right">ECOG</th>
+<th align="right">.row</th>
+<th align="right">.draw</th>
+<th align="right">survival_time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">657.3854</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">391.6466</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">588.8692</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">631.8280</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="right">392.1557</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">1223.0761</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>These are simulations of <span class="math inline">\(T\)</span>.</p>
+<p>To reflect the changing risk-set it is often advisable to also
+simulate censoring times to get to <span class="math inline">\(T^* =
+\min(T,C)\)</span></p>
+</div>
+<div id="options-for-distribution-of-c" class="slide section level1">
+<h1>Options for distribution of <span
+class="math inline">\(C\)</span></h1>
+<ul>
+<li><p>Kaplan-Meier estimator</p></li>
+<li><p>Cox model</p></li>
+<li><p>Parametric model</p></li>
+<li><p>Do not use observed event times to censor simulated times</p>
+<ul>
+<li>Mixture of event and censoring distributions</li>
+</ul></li>
+</ul>
+</div>
+<div id="time-to-censoring-of-os" class="slide section level1">
+<h1>Time to censoring of OS</h1>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsurvplot</span>(<span class="fu">survfit</span>(<span class="fu">Surv</span>(TIME, <span class="dv">1</span><span class="sc">-</span>DV) <span class="sc">~</span> ECOG, <span class="at">data=</span>dos84), </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">fun=</span><span class="st">&#39;event&#39;</span>, </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>           <span class="at">ylab=</span><span class="st">&#39;Proportion censored&#39;</span>)</span></code></pre></div>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-12-1.png" width="864" height="67%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="fit-log-normal-model-for-censoring-distribution"
+class="slide section level1">
+<h1>Fit log-normal model for censoring distribution</h1>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_censoring <span class="ot">&lt;-</span> <span class="fu">brm</span>(TIME <span class="sc">|</span> <span class="fu">cens</span>(<span class="dv">1</span><span class="sc">-</span>DV) <span class="sc">~</span> ECOG, <span class="at">data=</span>dos84, <span class="at">family=</span><span class="fu">lognormal</span>())</span></code></pre></div>
+<pre><code>.  Family: lognormal 
+.   Links: mu = identity; sigma = identity 
+. Formula: TIME | cens(1 - DV) ~ ECOG 
+.    Data: dos84 (Number of observations: 336) 
+.   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+.          total post-warmup draws = 4000
+. 
+. Population-Level Effects: 
+.           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+. Intercept     6.41      0.06     6.29     6.54 1.00     3297     2635
+. ECOG         -0.41      0.08    -0.57    -0.24 1.00     3314     3040
+. 
+. Family Specific Parameters: 
+.       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+. sigma     0.70      0.04     0.63     0.78 1.00     2864     2837
+. 
+. Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+. and Tail_ESS are effective sample size measures, and Rhat is the potential
+. scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+</div>
+<div id="simulate-censoring-times-and-derive-the-event-time"
+class="slide section level1">
+<h1>Simulate censoring times and derive the event time</h1>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>censoring_sims <span class="ot">&lt;-</span> <span class="fu">add_predicted_draws</span>(<span class="at">newdata =</span> dos84 <span class="sc">%&gt;%</span> <span class="fu">select</span>(ID, rts84, rts84_f, ECOG),</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>                                      fit_censoring, </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>                                      <span class="at">prediction =</span> <span class="st">&#39;censoring_time&#39;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>event_sims <span class="ot">&lt;-</span> weibull_sims <span class="sc">%&gt;%</span> <span class="fu">left_join</span>(censoring_sims) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">event_time =</span> <span class="fu">pmin</span>(survival_time, censoring_time),</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">delta =</span> survival_time <span class="sc">&lt;</span> censoring_time)</span></code></pre></div>
+<div class="kable-table">
+<table>
+<colgroup>
+<col width="3%" />
+<col width="12%" />
+<col width="9%" />
+<col width="6%" />
+<col width="6%" />
+<col width="7%" />
+<col width="16%" />
+<col width="18%" />
+<col width="13%" />
+<col width="7%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">ID</th>
+<th align="right">rts84</th>
+<th align="left">rts84_f</th>
+<th align="right">ECOG</th>
+<th align="right">.row</th>
+<th align="right">.draw</th>
+<th align="right">survival_time</th>
+<th align="right">censoring_time</th>
+<th align="right">event_time</th>
+<th align="left">delta</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">657.3854</td>
+<td align="right">248.8542</td>
+<td align="right">248.8542</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">391.6466</td>
+<td align="right">443.9571</td>
+<td align="right">391.6466</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">588.8692</td>
+<td align="right">871.1007</td>
+<td align="right">588.8692</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">631.8280</td>
+<td align="right">186.2051</td>
+<td align="right">186.2051</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="right">392.1557</td>
+<td align="right">1297.7667</td>
+<td align="right">392.1557</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.6293569</td>
+<td align="left">Q2</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">1223.0761</td>
+<td align="right">464.5650</td>
+<td align="right">464.5650</td>
+<td align="left">FALSE</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div
+id="summary-statistic-kaplan-meier-estimate-of-st-stratified-by-rts-quartile"
+class="slide section level1">
+<h1>Summary statistic: Kaplan-Meier estimate of S(t) stratified by RTS
+quartile</h1>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>vpc_stat_km <span class="ot">&lt;-</span> <span class="cf">function</span>(.data, <span class="at">pred_times=</span><span class="cn">NULL</span>) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(time,event)<span class="sc">~</span>rts84_f, <span class="at">data=</span>.data)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(pred_times)) {</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    pred_times <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="fu">sort</span>(<span class="fu">unique</span>(fit<span class="sc">$</span>time)))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  preds <span class="ot">=</span> <span class="fu">summary</span>(fit, <span class="at">times=</span>pred_times)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">pred_times=</span>preds<span class="sc">$</span>time, <span class="at">preds =</span> preds<span class="sc">$</span>surv, <span class="at">group=</span>preds<span class="sc">$</span>strata)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="calculate-k-m-estimator-for-observed-and-simulated-data"
+class="slide section level1">
+<h1>Calculate K-M estimator for observed and simulated data</h1>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>obs_surv <span class="ot">=</span> <span class="fu">vpc_stat_km</span>(dos84 <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">time=</span>TIME, <span class="at">event=</span>DV))</span></code></pre></div>
+<p>Apply the summary statistic to each simulated dataset</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sim_surv <span class="ot">=</span> event_sims <span class="sc">%&gt;%</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time=</span>event_time, <span class="at">event=</span><span class="fu">as.numeric</span>(delta)) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nest</span>(<span class="at">data =</span> <span class="sc">-</span>.draw) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">km_est =</span> <span class="fu">map</span>(data, <span class="sc">~</span><span class="fu">vpc_stat_km</span>(., <span class="at">pred_times=</span><span class="fu">sort</span>(<span class="fu">unique</span>(obs_surv<span class="sc">$</span>pred_times))))) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>data) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="at">cols=</span>km_est)</span></code></pre></div>
+</div>
+<div id="plot-survival-function-vpc" class="slide section level1">
+<h1>Plot survival function VPC</h1>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sim_surv <span class="sc">%&gt;%</span> <span class="fu">group_by</span>(pred_times, group) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">med=</span><span class="fu">mean</span>(preds), </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">lcl =</span> <span class="fu">quantile</span>(preds,<span class="at">probs =</span> <span class="fl">0.05</span>),</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">ucl =</span> <span class="fu">quantile</span>(preds, <span class="at">probs=</span><span class="fl">0.95</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x=</span>pred_times)) <span class="sc">+</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_step</span>(<span class="fu">aes</span>(<span class="at">y=</span>med), <span class="at">color=</span><span class="st">&#39;red&#39;</span>) <span class="sc">+</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">ymin=</span>lcl, <span class="at">ymax=</span>ucl), <span class="at">fill=</span><span class="st">&#39;red&#39;</span>, <span class="at">alpha=</span><span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_step</span>(<span class="at">data=</span>obs_surv,<span class="fu">aes</span>(<span class="at">y=</span>preds)) <span class="sc">+</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>group) <span class="sc">+</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x=</span><span class="st">&#39;Time (days)&#39;</span>, <span class="at">y=</span><span class="st">&#39;Surviving fraction&#39;</span>)</span></code></pre></div>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-20-1.png" width="864" height="50%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="summary-statistic-hazard-function"
+class="slide section level1">
+<h1>Summary statistic: hazard function</h1>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>vpc_stat_hazard <span class="ot">&lt;-</span> <span class="cf">function</span>(.data, <span class="at">.maxtime=</span><span class="cn">NULL</span>) {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  grid <span class="ot">=</span> <span class="fu">seq</span>(<span class="dv">0</span>,.maxtime, <span class="at">length=</span><span class="dv">101</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(.maxtime)) {</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    fit <span class="ot">&lt;-</span> <span class="fu">with</span>(.data, <span class="fu">muhaz</span>(time,event, <span class="at">min.time =</span> <span class="dv">0</span>, <span class="at">max.time =</span> .maxtime))</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    fit <span class="ot">&lt;-</span> <span class="fu">with</span>(.data, <span class="fu">muhaz</span>(time,event, <span class="at">min.time =</span> <span class="dv">0</span>))</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Impute at grid times in case muhaz uses different estimation points</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># -- Impute NA if .maxtime is beyond last event time</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  haz <span class="ot">=</span> <span class="fu">approx</span>(<span class="at">x=</span>fit<span class="sc">$</span>est.grid, <span class="at">y=</span>fit<span class="sc">$</span>haz.est, <span class="at">xout=</span>grid, <span class="at">rule=</span><span class="dv">1</span>)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">pred_times=</span>grid, <span class="at">preds =</span> haz<span class="sc">$</span>y)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="apply-to-observed-and-simulated-data"
+class="slide section level1">
+<h1>Apply to observed and simulated data</h1>
+<p>We will estimate the hazard until only 5% of subjects remain at
+risk.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>endtime <span class="ot">=</span> dos84 <span class="sc">%&gt;%</span> <span class="fu">arrange</span>(TIME) <span class="sc">%&gt;%</span> <span class="fu">slice</span>(<span class="fu">floor</span>(.<span class="dv">95</span><span class="sc">*</span><span class="fu">n</span>())) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(TIME)</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>obs_hazard <span class="ot">=</span> dos84 <span class="sc">%&gt;%</span> </span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">time=</span>TIME, <span class="at">event=</span>DV) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nest</span>(<span class="at">data=</span> <span class="sc">-</span>rts84_f) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">hazard =</span> <span class="fu">map</span>(data, <span class="sc">~</span><span class="fu">vpc_stat_hazard</span>(<span class="at">.data=</span>., <span class="at">.maxtime =</span> endtime))) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>data) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(hazard)</span></code></pre></div>
+<p>Apply the summary statistic to each simulated dataset</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>sim_hazard <span class="ot">=</span> event_sims <span class="sc">%&gt;%</span> </span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time=</span>event_time, <span class="at">event=</span><span class="fu">as.numeric</span>(delta)) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(.draw <span class="sc">&lt;=</span> <span class="dv">500</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(.draw, rts84_f) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nest</span>(<span class="at">data =</span> <span class="sc">-</span><span class="fu">c</span>(.draw, rts84_f)) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">hazard =</span> <span class="fu">map</span>(data, <span class="sc">~</span><span class="fu">vpc_stat_hazard</span>(., <span class="at">.maxtime =</span> endtime))) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>data) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="at">cols=</span>hazard)</span></code></pre></div>
+</div>
+<div id="plot-hazard-function-vpc" class="slide section level1">
+<h1>Plot hazard function VPC</h1>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>sim_hazard <span class="sc">%&gt;%</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(pred_times, rts84_f) <span class="sc">%&gt;%</span> </span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">med=</span><span class="fu">mean</span>(preds, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">lcl =</span> <span class="fu">quantile</span>(preds,<span class="at">probs =</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">ucl =</span> <span class="fu">quantile</span>(preds, <span class="at">probs=</span><span class="fl">0.95</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x=</span>pred_times)) <span class="sc">+</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_step</span>(<span class="fu">aes</span>(<span class="at">y=</span>med), <span class="at">color=</span><span class="st">&#39;red&#39;</span>) <span class="sc">+</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">ymin=</span>lcl, <span class="at">ymax=</span>ucl), <span class="at">fill=</span><span class="st">&#39;red&#39;</span>, <span class="at">alpha=</span><span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data=</span>obs_hazard,<span class="fu">aes</span>(<span class="at">y=</span>preds)) <span class="sc">+</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>rts84_f) <span class="sc">+</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x=</span><span class="st">&#39;Time (days)&#39;</span>, <span class="at">y=</span><span class="st">&#39;Hazard&#39;</span>)</span></code></pre></div>
+<p><img src="BayesianTTE_brms_files/figure-slidy/unnamed-chunk-25-1.png" width="864" height="50%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="workbook-01" class="slide section level1">
+<h1>Workbook 01</h1>
+<p>Using brms to fit and compare survival models.</p>
+</div>
+<div id="references" class="slide section level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body">
+<div id="ref-Zecchin2016-rw" class="csl-entry">
+<div class="csl-left-margin">[1] </div><div
+class="csl-right-inline"><span class="smallcaps">Zecchin</span>, C.,
+<span class="smallcaps">Gueorguieva</span>, I., <span
+class="smallcaps">Enas</span>, N. H. and <span
+class="smallcaps">Friberg</span>, L. E. (2016). Models for change in
+tumour size, appearance of new lesions and survival probability in
+patients with advanced epithelial ovarian cancer. <em>Br. J. Clin.
+Pharmacol.</em> <strong>82</strong> 717–27.</div>
+</div>
+</div>
+</div>
+
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "BayesianTTE_brms_files/mathjax-local/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+</body>
+</html>
