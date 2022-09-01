@@ -7,6 +7,8 @@ output:
     toc: true
 params:
   include: TRUE
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -127,7 +129,7 @@ fit_weibull_pmx <- stan(file = '../model/stan/weibull_example_v2.stan',
                         data = tte_data, 
                         init = weibull_inits,
                         chains = 4,
-                        cores = 2,
+                        cores = 4,
                         seed = 76341
                         )
 ```

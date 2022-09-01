@@ -14,7 +14,8 @@ output:
     df_print: tibble
 #bibliography: alpha.bib
 #nocite: | 
-#    @2795, @2192, @3684
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -145,7 +146,7 @@ source('preprocess_data.R')
 ```{r, eval=FALSE}
 mod01_glm <- glm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
                   data = aedat, 
-                  family = bernoulli(link = "logit")
+                  family = binomial(link = "logit")
                  )
 ```
 
@@ -158,8 +159,8 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                   warmup = 500, 
                   iter = 2000, 
                   chains = 4, 
-                  inits = "random", 
-                  cores = 4, 
+                  init = "random", 
+                  cores = 2, 
                   seed = 123)
 ```
 
@@ -178,8 +179,8 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                   warmup = 500, 
                   iter = 2000, 
                   chains = 4, 
-                  inits = "random", 
-                  cores = 4,
+                  init = "random", 
+                  cores = 2,
                   seed = 123,
                   file = 'mod01_stan_output')
 ```
@@ -323,7 +324,7 @@ aedat %>% ungroup() %>%
 
 
 ```{r}
-aedat_pp = add_predicted_draws(model=mod01_stan, newdata = aedat)
+aedat_pp = add_predicted_draws(newdata = aedat, mod01_stan)
 
 aedat_pp %>% ungroup() %>% 
   select(USUBJID, PTTYPE, AE01, Quartile:.prediction) %>% 

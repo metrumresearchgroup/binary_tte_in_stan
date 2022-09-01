@@ -1,0 +1,484 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="copyright" content="Metrum Research Group &copy 2021"/>
+  <meta name="font-size-adjustment" content="3"/>
+  <title>Repeated time-to-event and integrated hazard models</title>
+  <style type="text/css">
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+              </style>
+  <script src="Day4_slides_files/header-attrs-2.14/header-attrs.js"></script>
+  <link href="Day4_slides_files/slidy-2/styles/slidy.css" rel="stylesheet" />
+  <script src="Day4_slides_files/slidy-2/scripts/slidy.js"></script>
+  <script src="Day4_slides_files/slidy_shiny-1/slidy_shiny.js"></script>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+   href="slidystyles.css" />
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Repeated time-to-event and integrated hazard
+models</h1>
+  <p class="author">
+
+  </p>
+</div>
+<div id="key-learning-objectives-for-today"
+class="slide section level1">
+<h1>Key learning objectives for today</h1>
+<ul>
+<li><p>Review questions from previous weeks</p></li>
+<li><p>Coding models which require integration</p>
+<ul>
+<li>Hazards without closed-form integrals</li>
+<li>Variables which vary continuously with time</li>
+</ul></li>
+<li><p>Repeated time-to-event models</p></li>
+</ul>
+</div>
+<div id="why-do-we-need-to-integrate-when-fitting-tte-models"
+class="slide section level1">
+<h1>Why do we need to integrate when fitting TTE models?</h1>
+<ul>
+<li><p>The likelihood in a TTE model depends on</p>
+<ul>
+<li>Hazard at the time of an event: <span
+class="math inline">\(h(t)\)</span></li>
+<li>Cumulative hazard up to the event/censoring time: <span
+class="math inline">\(H(t) = \int_0^t h(s)~ds\)</span></li>
+</ul></li>
+<li><p>Thus, we need to be able to integrate the hazard
+function</p></li>
+<li><p>For ‘simple’ TTE models, the hazard in integreble</p></li>
+<li><p>As we move away from simple TTE models, we may be working with
+hazard functions that don’t have closed-form integrals</p></li>
+</ul>
+</div>
+<div id="examples" class="slide section level1">
+<h1>Examples</h1>
+<ul>
+<li>Continuously time-varying predictors
+<ul>
+<li>PK-driven TTE model</li>
+<li>PD-driven TTE model</li>
+</ul></li>
+<li>Non-standard hazard models
+<ul>
+<li>The hazard function can take any form as long as <span
+class="math inline">\(h(t) \geq 0\)</span></li>
+</ul></li>
+<li>Cure-rate models
+<ul>
+<li>Will return to these later</li>
+</ul></li>
+</ul>
+</div>
+<div id="specifying-the-models-in-stan" class="slide section level1">
+<h1>Specifying the models in Stan</h1>
+<ul>
+<li>We will focus on one-dimensional integrals here
+<ul>
+<li>Integrate hazard only</li>
+<li>Assuming the continuous-time covariate is available as a closed-form
+function of time</li>
+</ul></li>
+<li>More complex (joint) models are feasible in Stan using ODE solver
+<ul>
+<li>Could cover as a follow-up class</li>
+</ul></li>
+</ul>
+</div>
+<div id="one-dimensional-integrals-in-stan"
+class="slide section level1">
+<h1>One-dimensional integrals in Stan</h1>
+<ul>
+<li><p>We will use the <code>integrate_1d</code> function in
+Stan</p></li>
+<li><p>Suppose we want to calculate <span class="math inline">\(H(t) =
+\int_a^b h(y | \theta, x_r, x_i) ~ dy\)</span></p></li>
+<li><p>Inputs to <code>integrate_1d</code></p>
+<ul>
+<li>function to integrate (must have a strict signature): <span
+class="math inline">\(h(y~|~\theta, x_r, x_i)\)</span></li>
+<li>left limit: <span class="math inline">\(a\)</span></li>
+<li>right limit: <span class="math inline">\(b\)</span></li>
+<li>parameters: <span class="math inline">\(\theta\)</span></li>
+<li>real-valued covariates: <span
+class="math inline">\(x_r\)</span></li>
+<li>integer valued covariates: <span
+class="math inline">\(x_i\)</span></li>
+</ul></li>
+</ul>
+</div>
+<div id="integrating-a-weibull-hazard" class="slide section level1">
+<h1>Integrating a Weibull hazard</h1>
+<p>For example,</p>
+<pre><code>real cum_hazard[Nsubj];
+
+for (i in 1:Nsubj) {
+    cum_haz[i] = integrate_1d(weibull_hazard,   // function to integrate
+                             0.0,               // integrate from 0
+                             event_time[i],    // integrate to the event time
+                             { alpha, gamma, beta1, beta2 }, // parameter array
+                             {AGE[i]},  // array of real-valued data
+                             {ECOG[i]}  // array of integer-valued data
+                             );
+}</code></pre>
+</div>
+<div id="the-weibull_hazard-function" class="slide section level1">
+<h1>The <code>weibull_hazard</code> function</h1>
+<p>Must follow a strict function signature and be defined in the
+function block in a Stan program.</p>
+<pre><code>real weibull_hazard(real x,          // Function argument
+                    real xc,         // Complement of function argument on the domain (not used in this class)
+                    real[] theta,    // parameters
+                    real[] x_r,      // data (real)
+                    int[] x_i) {     // data (integer)
+
+    real alpha = theta[1];
+    real gamma = theta[2];
+    real beta1 = theta[3];
+    real beta2 = theta[4];
+    
+    real hazard = (alpha/gamma) * pow(x/gamma, alpha-1) * exp(beta1*x_r[1] + beta2*x_i[1]);
+
+    return hazard;
+}</code></pre>
+</div>
+<div id="example" class="slide section level1">
+<h1>Example</h1>
+<ul>
+<li><p>We’ll work through an analysis using the simulated survival data
+from the last class.</p></li>
+<li><p><strong>Models for change in tumor size, appearance of new
+lesions and survival probability in patients with advanced epithelial
+ovarian cancer</strong> <span class="citation">[1]</span></p>
+<ul>
+<li>DDMORE repository submission IDs: DDMODEL00000217,
+DDMODEL00000218</li>
+<li>Data simulated from these models</li>
+</ul></li>
+<li><p>Original study</p>
+<ul>
+<li>Patients with platinum-sensitive recurrent ovarian cancer</li>
+<li>Randomly assigned to receive gemcitabine plus carboplatin (Cb+G) or
+carboplatin alone (Cb), every 21 days</li>
+<li>Primary objective was to compare progression-free survival
+(PFS)</li>
+</ul></li>
+<li><p>We will analyze OS and the relationship between tumor changes and
+OS, using simulated data</p></li>
+</ul>
+</div>
+<div id="os-by-treatment-group" class="slide section level1">
+<h1>OS by treatment group</h1>
+<p><img src="Day4_slides_files/figure-slidy/unnamed-chunk-3-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="tumor-growth-by-treatment-group" class="slide section level1">
+<h1>Tumor growth by treatment group</h1>
+<p><img src="Day4_slides_files/figure-slidy/unnamed-chunk-4-1.png" width="90%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="modeling-approach" class="slide section level1">
+<h1>Modeling approach</h1>
+<ul>
+<li>To keep the example manageable, we assume that the following tumor
+dynamic model has been fitted</li>
+</ul>
+<p><span class="math display">\[
+\frac{d}{dt} TS(t) = \left(KG_i - (KD0_{i} \cdot \overline{AUC0}_i +
+KD1_{i} \cdot \overline{AUC1}_i \right) TS(t)
+\]</span></p>
+<p>where <span class="math inline">\(AUC0_i\)</span> and <span
+class="math inline">\(AUC1_i\)</span> are model-predicted time-averaged
+AUC values for carboplatin and gemcitabine, respectively</p>
+<ul>
+<li>We use the post-hoc estimated parameters for <span
+class="math inline">\(KG_i\)</span>, <span
+class="math inline">\(KD0_i\)</span>, <span
+class="math inline">\(KD1_i\)</span> and <span
+class="math inline">\(IBASE_i\)</span>.</li>
+</ul>
+</div>
+<div id="modeling-approach-1" class="slide section level1">
+<h1>Modeling approach</h1>
+<p>We’ll include effects for the model-predicted baseline tumor size and
+the tumor size relative to baseline (RTS).</p>
+<p><span class="math display">\[
+h_i(t) = \alpha / \lambda_0  \times (t / \lambda_0)^{\alpha-1}
+\exp(\beta_1 \times RTS(t) + \beta_2 BTS_i)
+\]</span></p>
+<p>where <span class="math inline">\(TS_i(t)\)</span> comes from the
+tumor model predictions and</p>
+<p><span class="math display">\[
+RTS_i(t) = \frac{TS_i(t)}{BTS_i}
+\]</span></p>
+</div>
+<div id="workbook" class="slide section level1">
+<h1>Workbook</h1>
+<p>We’ll try a few models in Workbook_time_varying.Rmd</p>
+</div>
+<div id="models-for-repeated-times-to-event-rtte"
+class="slide section level1">
+<h1>Models for repeated times to event (RTTE)</h1>
+<ul>
+<li><p>Also known as recurrent event data</p></li>
+<li><p>Examples</p>
+<ul>
+<li>Time to sleep onset in a sleep study</li>
+<li>Time to falls in elderly subjects</li>
+<li>Time to ear infection in children</li>
+<li>Time to asthma exacerbation</li>
+<li>Time to hospital admission in schizophrenia patients</li>
+</ul></li>
+</ul>
+</div>
+<div id="time-to-bleeding-event-in-patients-with-hemophilia-a"
+class="slide section level1">
+<h1>Time to bleeding event in patients with hemophilia A</h1>
+<p>Data were simulated from a PK-RTTE model by Abrantes et. al <span
+class="citation">[2]</span></p>
+<ul>
+<li>PK model for a full-length recombinant human FVIII product
+<ul>
+<li>Dosed at levels of 20 - 50 IU/kg</li>
+</ul></li>
+<li>Repeated time to bleeding event model
+<ul>
+<li>Gompertz TTE model with an inhibitory Emax effect of FVIII(t)</li>
+<li>Follow-up for one year</li>
+</ul></li>
+</ul>
+<p>Simulated data:</p>
+<ul>
+<li>Hypothetical trial in 100 patients</li>
+<li>Randomly allocated 1:1 to doses of 20 and 50 IU/kg</li>
+<li>Follow-up for 90 days</li>
+</ul>
+</div>
+<div id="number-of-bleeding-events" class="slide section level1">
+<h1>Number of bleeding events</h1>
+<p>Number of events stratified by dose.</p>
+<p><img src="Day4_slides_files/figure-slidy/unnamed-chunk-6-1.png" width="80%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="time-to-bleeding" class="slide section level1">
+<h1>Time to bleeding</h1>
+<p>Time to first, second, and third bleeding events.</p>
+<p><img src="Day4_slides_files/figure-slidy/unnamed-chunk-7-1.png" width="80%" style="display: block; margin: auto auto auto 0;" /></p>
+</div>
+<div id="key-feature-of-rtte-data-correlation-within-subjects"
+class="slide section level1">
+<h1>Key feature of RTTE data: correlation within subjects</h1>
+<ul>
+<li>To model this correlation, we typically include a random subject
+effect. For example,</li>
+</ul>
+<p><span class="math display">\[
+h_i(t) = h_0(t) \exp(x_i \beta) \times Z_i
+\]</span> where <span class="math display">\[
+Z_i \in (0,+\infty) \sim G(z ~ | ~ \omega)
+\]</span></p>
+<ul>
+<li>Common distributions
+<ul>
+<li><span class="math inline">\(Z_i \sim
+\text{log-normal}(0,\omega)\)</span> (common in pharmacometrics)
+<ul>
+<li>Median = 1, mean = <span
+class="math inline">\(\exp(\omega^2/2)\)</span></li>
+</ul></li>
+<li><span class="math inline">\(Z_i \sim
+\text{Gamma}(\omega,\omega)\)</span> (common in statistics)
+<ul>
+<li>Mean = 1</li>
+</ul></li>
+<li>In practice, difficult to differentiate frailty distributions <span
+class="citation">[3]</span></li>
+</ul></li>
+</ul>
+</div>
+<div id="other-uses-for-frailties" class="slide section level1">
+<h1>Other uses for frailties</h1>
+<p>Frailties are also used for modeling other
+correlations/clustering</p>
+<ul>
+<li>Within centers in a multi-center trial</li>
+<li>Shared random effects models for joint longitudinal-TTE models</li>
+</ul>
+</div>
+<div id="model-fitting" class="slide section level1">
+<h1>Model fitting</h1>
+<ul>
+<li>Need to carefully consider if and how the hazard changes fare an
+event
+<ul>
+<li>Does the hazard completely reset after an event?</li>
+<li>Does the hazard depend on the number of events preceding <span
+class="math inline">\(t\)</span>?</li>
+</ul></li>
+<li>Is the subject at-risk for another event immediately after
+experiencing an event?
+<ul>
+<li>Subjects may be out of risk set if ‘event’ has a period of time
+<ul>
+<li>time to sleep onset (not at ‘risk’ again until awake)</li>
+<li>time to hospitalization (not at risk while in the hospital)</li>
+</ul></li>
+<li>If event is instantaneous, then not out of risk set</li>
+<li>Use multi-state models, if interest is in time in each state</li>
+</ul></li>
+</ul>
+</div>
+<div id="likelihood-function" class="slide section level1">
+<h1>Likelihood function</h1>
+<ul>
+<li>The likelihood depends on
+<ul>
+<li>Hazard at the time of an event</li>
+<li>Accumulated hazard between events</li>
+</ul></li>
+<li>Conditional on the random effect, events are assumed to be
+independent</li>
+</ul>
+</div>
+<div id="likelihood-function-example" class="slide section level1">
+<h1>Likelihood function example</h1>
+<ul>
+<li><p>Suppose a subject experienced events at times <span
+class="math inline">\(t_1\)</span> and <span
+class="math inline">\(t_2\)</span> and is event-free until <span
+class="math inline">\(t_3\)</span> when she is out of the risk
+set</p></li>
+<li><p>The likelihood contribution is</p></li>
+</ul>
+<p><span class="math display">\[
+\begin{align*}
+L_i(\theta) &amp;= \int_0^\infty \left( h_i(t_1~|~Z) ~S_i(t_1~|~Z)
+\right) \times \left( h_i(t_2~|~Z) \frac{S_i(t_2~|~Z)}{S_i(t_1~|~Z)}
+\right) \times \frac{S_i(t_3~|~Z)}{S_i(t_2~|~Z)} f(Z) dZ \\
+  &amp;= \int_0^\infty h_i(t_1~|~Z) \times h_i(t_2~|~Z) \times
+S_i(t_3~|~Z) ~ f(Z) ~ dZ
+\end{align*}
+\]</span> Conditional on <span class="math inline">\(Z\)</span>, the
+log-likelihood contribution would be</p>
+<p><span class="math display">\[
+\begin{align*}
+\ell_i(\theta) &amp;= \log h_i(t_1~|~Z) - H_i(t_1~|~Z) + \log
+h_i(t_2~|~Z) - \left(H_i(t_2~|~Z) - H_i(t_1~|~Z) \right) - \left(
+H_i(t_3~|~Z) - H_i(t_2~|~Z) \right) \\
+  &amp;= \log h_i(t_1~|~Z) + \log h_i(t_2~|~Z) - H_i(t_3~|~Z)
+\end{align*}
+\]</span></p>
+</div>
+<div id="bayesian-analysis-of-rtte-models" class="slide section level1">
+<h1>Bayesian analysis of RTTE models</h1>
+<ul>
+<li><p>Similar to previous modeling, but with the added random effect
+distribution</p></li>
+<li><p>Prior distribution on <span
+class="math inline">\(\omega\)</span></p></li>
+<li><p>We’ll model using log-normal distributions for <span
+class="math inline">\(Z\)</span>, but try using a Gamma model for
+homework</p></li>
+</ul>
+</div>
+<div id="simulating-from-an-rtte-model" class="slide section level1">
+<h1>Simulating from an RTTE model</h1>
+<ul>
+<li>Much more complicated than single TTE simulation
+<ul>
+<li>Simulate <span class="math inline">\(T1\)</span> - time to first
+event</li>
+<li>Simulate <span class="math inline">\(T2\)</span> - time to second
+event, given first event</li>
+<li>Etc.</li>
+</ul></li>
+<li>Inter-event intervals depend on accumulated hazard following
+previous event
+<ul>
+<li>Easiest with closed-form cumulative hazard functions</li>
+</ul></li>
+<li>Use inverse CDF method for simulating TTE
+<ul>
+<li><span class="math inline">\(T_1 = S^{-1}(u_1)\)</span> where <span
+class="math inline">\(u_1 \sim U(0,1)\)</span></li>
+<li><span class="math inline">\(T_2 = T_1 + \bar{S}^{-1}(u_2)\)</span>
+where <span class="math inline">\(\bar{S}(u) =
+\frac{S(u)}{S(T1)}\)</span> and <span class="math inline">\(u_2 \sim
+U(0,1)\)</span></li>
+<li>Etc.</li>
+<li>Simulate until <span class="math inline">\(T_k &gt; \text{follow-up
+time}\)</span></li>
+</ul></li>
+<li>For more details see <span class="citation">[4]</span></li>
+</ul>
+</div>
+<div id="workbook_rtte" class="slide section level1">
+<h1>Workbook_rtte</h1>
+<p>We’ll work through these using a workbook.</p>
+</div>
+<div id="references" class="slide section level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body">
+<div id="ref-Zecchin2016-rw" class="csl-entry">
+<div class="csl-left-margin">[1] </div><div
+class="csl-right-inline"><span class="smallcaps">Zecchin</span>, C.,
+<span class="smallcaps">Gueorguieva</span>, I., <span
+class="smallcaps">Enas</span>, N. H. and <span
+class="smallcaps">Friberg</span>, L. E. (2016). Models for change in
+tumour size, appearance of new lesions and survival probability in
+patients with advanced epithelial ovarian cancer. <em>Br. J. Clin.
+Pharmacol.</em> <strong>82</strong> 717–27.</div>
+</div>
+<div id="ref-Abrantes2020-yd" class="csl-entry">
+<div class="csl-left-margin">[2] </div><div
+class="csl-right-inline"><span class="smallcaps">Abrantes</span>, J. A.,
+<span class="smallcaps">Solms</span>, A., <span
+class="smallcaps">Garmann</span>, D., <span
+class="smallcaps">Nielsen</span>, E. I., <span
+class="smallcaps">Jönsson</span>, S. and <span
+class="smallcaps">Karlsson</span>, M. O. (2020). Relationship between
+factor <span>VIII</span> activity, bleeds and individual characteristics
+in severe hemophilia a patients. <em>Haematologica</em>
+<strong>105</strong> 1443–53.</div>
+</div>
+<div id="ref-Balan2020-wv" class="csl-entry">
+<div class="csl-left-margin">[3] </div><div
+class="csl-right-inline"><span class="smallcaps">Balan</span>, T. A. and
+<span class="smallcaps">Putter</span>, H. (2020). A tutorial on frailty
+models. <em>Stat. Methods Med. Res.</em> <strong>29</strong>
+3424–54.</div>
+</div>
+<div id="ref-Jahn-Eimermacher2015-rz" class="csl-entry">
+<div class="csl-left-margin">[4] </div><div
+class="csl-right-inline"><span
+class="smallcaps">Jahn-Eimermacher</span>, A., <span
+class="smallcaps">Ingel</span>, K., <span class="smallcaps">Ozga</span>,
+A.-K., <span class="smallcaps">Preussler</span>, S. and <span
+class="smallcaps">Binder</span>, H. (2015). Simulating recurrent event
+data with hazard functions defined on a total time scale. <em>BMC Med.
+Res. Methodol.</em> <strong>15</strong> 16.</div>
+</div>
+</div>
+</div>
+
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "Day4_slides_files/mathjax-local/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+</body>
+</html>

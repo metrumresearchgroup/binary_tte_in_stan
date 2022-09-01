@@ -27,7 +27,7 @@ Packages:
 
 Repos:
   - templ: https://s3.amazonaws.com/mpn.metworx.dev/releases/templ/0.1.0
-  - MPN: https://mpn.metworx.com/snapshots/stable/2021-02-01
+  - MPN: https://mpn.metworx.com/snapshots/stable/2022-06-15
 
 Customizations:
   Packages:

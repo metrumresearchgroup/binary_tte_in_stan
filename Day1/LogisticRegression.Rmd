@@ -14,7 +14,8 @@ output:
     df_print: tibble
 #bibliography: alpha.bib
 #nocite: | 
-#    @2795, @2192, @3684
+editor_options: 
+  chunk_output_type: console
 ---
 
 

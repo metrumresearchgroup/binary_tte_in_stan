@@ -16,6 +16,19 @@
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
               </style>
+  <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
   <style type="text/css">
 body
 {
@@ -378,11 +391,12 @@ list-style-type: none;
   });
 })()
 </script>
-  <link href="data:text/css;charset=utf-8,body%7B%0Afont%2Dfamily%3A%20Geneva%3B%0Aline%2Dheight%3A%201%2E25%3B%0A%7D%0A%2EsourceCode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2095%25%3B%0Abackground%2Dcolor%3A%20%23f6f8fa%3B%0A%7D%0A%2EsourceCode%2Er%2Esmall%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2055%25%3B%0Abackground%2Dcolor%3A%20%23f6f8fa%3B%0A%7D%0A%2EsourceCode%2Ec%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2095%25%3B%0Abackground%2Dcolor%3A%20%23f6f8fa%3B%0A%7D%0Ared%20%7B%0Acolor%3A%20firebrick%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Agrn%20%7B%0Acolor%3A%20darkgreen%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0A%2Enotebox%20%7B%0Apadding%3A%201em%3B%0Abackground%3A%20LightGray%3B%0Acolor%3A%20black%3B%0Aborder%3A%202px%20black%3B%0Aborder%2Dradius%3A%2010px%3B%0A%7D%0A%2Ecenter%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Acode%20%7B%0Afont%2Dsize%3A%2080%25%3B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0Aoverflow%3A%20auto%3B%0Afont%2Dsize%3A%2080%25%3B%0Aline%2Dheight%3A%201%2E45%3B%0Aborder%2Dradius%3A%205px%3B%0A%7D%0Apre%20%7B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0Aoverflow%3A%20auto%3B%0Afont%2Dsize%3A%2080%25%3B%0Aline%2Dheight%3A%201%2E45%3B%0Aborder%3A%200%3B%0Apadding%3A%2016px%3B%0Aborder%2Dradius%3A%205px%3B%0Amargin%2Dtop%3A%2016px%3B%0Amargin%2Dbottom%3A%2018px%3B%0Apadding%2Dtop%3A%2012px%3B%0Apadding%2Dbottom%3A%2012px%3B%20%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Aborder%3A%201%3B%0Acolor%3A%20black%3B%0Abackground%2Dcolor%3A%20Azure%3B%0A%7D%0Acode%3Anot%28%5Bclass%5D%29%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dweight%3A%20bold%3B%0Acolor%3A%20green%3B%0A%7D%0A%2EsourceCode%2Er%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2090%25%3B%0Abackground%2Dcolor%3A%20WhiteSmoke%3B%0A%7D%0A" rel="stylesheet" type="text/css" media="screen, projection, print" />
+  <link href="data:text/css,body%7B%0Afont%2Dfamily%3A%20Geneva%3B%0Aline%2Dheight%3A%201%2E25%3B%0A%7D%0A%2EsourceCode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2095%25%3B%0Abackground%2Dcolor%3A%20%23f6f8fa%3B%0A%7D%0A%2EsourceCode%2Er%2Esmall%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2055%25%3B%0Abackground%2Dcolor%3A%20%23f6f8fa%3B%0A%7D%0A%2EsourceCode%2Ec%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2095%25%3B%0Abackground%2Dcolor%3A%20%23f6f8fa%3B%0A%7D%0Ared%20%7B%0Acolor%3A%20firebrick%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Agrn%20%7B%0Acolor%3A%20darkgreen%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0A%2Enotebox%20%7B%0Apadding%3A%201em%3B%0Abackground%3A%20LightGray%3B%0Acolor%3A%20black%3B%0Aborder%3A%202px%20black%3B%0Aborder%2Dradius%3A%2010px%3B%0A%7D%0A%2Ecenter%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Acode%20%7B%0Afont%2Dsize%3A%2080%25%3B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0Aoverflow%3A%20auto%3B%0Afont%2Dsize%3A%2080%25%3B%0Aline%2Dheight%3A%201%2E45%3B%0Aborder%2Dradius%3A%205px%3B%0A%7D%0Apre%20%7B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0Aoverflow%3A%20auto%3B%0Afont%2Dsize%3A%2080%25%3B%0Aline%2Dheight%3A%201%2E45%3B%0Aborder%3A%200%3B%0Apadding%3A%2016px%3B%0Aborder%2Dradius%3A%205px%3B%0Amargin%2Dtop%3A%2016px%3B%0Amargin%2Dbottom%3A%2018px%3B%0Apadding%2Dtop%3A%2012px%3B%0Apadding%2Dbottom%3A%2012px%3B%20%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Aborder%3A%201%3B%0Acolor%3A%20black%3B%0Abackground%2Dcolor%3A%20Azure%3B%0A%7D%0Acode%3Anot%28%5Bclass%5D%29%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dweight%3A%20bold%3B%0Acolor%3A%20green%3B%0A%7D%0A%2EsourceCode%2Er%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2090%25%3B%0Abackground%2Dcolor%3A%20WhiteSmoke%3B%0A%7D%0A" rel="stylesheet" type="text/css" media="screen, projection, print" />
 </head>
 <body>
 <div class="slide titlepage">
-  <h1 class="title">Introduction to the Analysis of Binary and Time-to-Event Data</h1>
+  <h1 class="title">Introduction to the Analysis of Binary and
+Time-to-Event Data</h1>
   <p class="author">
 
   </p>
@@ -399,8 +413,10 @@ list-style-type: none;
 <h1>Course objectives</h1>
 <p>We want you to finish this course with:</p>
 <ul>
-<li>Conceptual understanding, basic intuitions, and hand-on experience for the analysis of binary outcomes and time-to-event data</li>
-<li>Specific tips, tricks, and recipes for getting the job done “soup to nuts” in R and Stan</li>
+<li>Conceptual understanding, basic intuitions, and hand-on experience
+for the analysis of binary outcomes and time-to-event data</li>
+<li>Specific tips, tricks, and recipes for getting the job done “soup to
+nuts” in R and Stan</li>
 </ul>
 </div>
 <div id="what-this-course-isnt" class="slide section level1">
@@ -409,13 +425,18 @@ list-style-type: none;
 <li><strong>Not</strong> primarily a course on R programming.
 <ul>
 <li>We expect a full range of experience levels.</li>
-<li>R techniques <strong>not</strong> taught systematically “from the ground up”</li>
-<li>Instead: <strong>“copy and modify” / “learn by playing”</strong></li>
+<li>R techniques <strong>not</strong> taught systematically “from the
+ground up”</li>
+<li>Instead: <strong>“copy and modify” / “learn by
+playing”</strong></li>
 </ul></li>
-<li><strong>Not</strong> a comprehensive course on the analysis of odd-type data
+<li><strong>Not</strong> a comprehensive course on the analysis of
+odd-type data
 <ul>
-<li>But, we will touch on most of the key concepts for analyzing binary and TTE data</li>
-<li>Will get into more complex examples during the technical sessions</li>
+<li>But, we will touch on most of the key concepts for analyzing binary
+and TTE data</li>
+<li>Will get into more complex examples during the technical
+sessions</li>
 </ul></li>
 </ul>
 </div>
@@ -442,11 +463,13 @@ list-style-type: none;
 <ul>
 <li><code>Basic concepts for binary data</code> :
 <ul>
-<li>Notational conventions, Bernoulli distribution, Maximum likelihood</li>
+<li>Notational conventions, Bernoulli distribution, Maximum
+likelihood</li>
 <li>Visualizing relationships</li>
 <li>Models, model checking, and measures of effect</li>
 </ul></li>
-<li><code>Bayesian models for binary data</code> (Technical session)</li>
+<li><code>Bayesian models for binary data</code> (Technical
+session)</li>
 </ul>
 </div>
 <div id="session-2" class="slide section level1">
@@ -481,7 +504,8 @@ list-style-type: none;
 <ul>
 <li><code>Even more advanced concepts for time-to-event data</code> :
 <ul>
-<li>Joint modeling of continuous and time-to-event data (TD and TTE)</li>
+<li>Joint modeling of continuous and time-to-event data (TD and
+TTE)</li>
 <li>Modeling of treatment related AEs (neutropenia, diarrhea, etc)</li>
 </ul></li>
 </ul>

@@ -16,7 +16,8 @@ output:
 bibliography: Day3-references.bib
 csl: statistical-science.csl
 #nocite: | 
-#    @2795, @2192, @3684
+editor_options: 
+  chunk_output_type: console
 ---
 
 
@@ -212,8 +213,8 @@ Remeber our recipe
 # Simulate survival times from model
 
 ```{r, echo=TRUE}
-weibull_sims <- add_predicted_draws(model=fit_weibull, 
-                                    newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+weibull_sims <- add_predicted_draws(newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+                                    fit_weibull, 
                                     prediction = 'survival_time')
 ```
 
@@ -256,8 +257,8 @@ fit_censoring
 # Simulate censoring times and derive the event time
 
 ```{r, echo=TRUE, results='hide'}
-censoring_sims <- add_predicted_draws(model=fit_censoring, 
-                                      newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+censoring_sims <- add_predicted_draws(newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
+                                      fit_censoring, 
                                       prediction = 'censoring_time')
 
 event_sims <- weibull_sims %>% left_join(censoring_sims) %>% 
