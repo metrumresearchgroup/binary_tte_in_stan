@@ -33,7 +33,6 @@ Customizations:
   Packages:
   - bbr: {Suggests: true}
   - templ: {Type: source}
-      
-Lockfile:
-    Type: renv
+
+Library: rlibs
 
