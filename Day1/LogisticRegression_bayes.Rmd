@@ -60,7 +60,7 @@ expit <- function(x) 1 / (1+exp(-x))
     * brms is a package that enables simple fitting of many types models that you can fit using `glm`, `survreg`, `lme`, `nlme`, etc.
     * Allows quick access to Bayesian inference
 
-* Later we will program our own Stan models and run them with `cmdstanr`
+* Later we will program our own Stan models and run them with `rstan`
     * Learn more about the Stan language
     * Fit models that are not supported in `brms`
 
@@ -119,7 +119,7 @@ p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\rig
 * Data
 * Model for the outcome(s) -- the likelihood
 * Models for the parameters -- the prior distribution
-* MCMC tool -- Stan (via `brms` or `cmdstanr`)
+* MCMC tool -- Stan (via `brms` or `rstan``)
 
 # Ingredients for HMC/NUTS
 

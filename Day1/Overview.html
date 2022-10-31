@@ -413,8 +413,13 @@ Time-to-Event Data</h1>
 <h1>Course objectives</h1>
 <p>We want you to finish this course with:</p>
 <ul>
-<li>Conceptual understanding, basic intuitions, and hand-on experience
-for the analysis of binary outcomes and time-to-event data</li>
+<li>Conceptual understanding &amp; basic intuitions for the analysis of
+exposure-response with binary and time-to-event (TTE) endpoints.</li>
+<li>Enough hand-on experience to enable further self-exploration.</li>
+</ul>
+<p><em>After</em> the course self-exploration of those materials will
+also give you:</p>
+<ul>
 <li>Specific tips, tricks, and recipes for getting the job done “soup to
 nuts” in R and Stan</li>
 </ul>
@@ -433,93 +438,100 @@ playing”</strong></li>
 <li><strong>Not</strong> a comprehensive course on the analysis of
 odd-type data
 <ul>
-<li>But, we will touch on most of the key concepts for analyzing binary
-and TTE data</li>
-<li>Will get into more complex examples during the technical
-sessions</li>
+<li>We emphasize the aspects that we have found most essential in
+pharmacometric research, specifically in exposure-response.</li>
 </ul></li>
 </ul>
 </div>
 <div id="course-organization" class="slide section level1">
 <h1>Course organization</h1>
 <ul>
-<li>Four 3-4 hour sessions
+<li>3 4 hour sessions
 <ul>
-<li>June 4, 11, 25</li>
-<li>July 9</li>
+<li>Thursday Nov 3 PM 1:00-5:00</li>
+<li>Friday Nov 4 AM 8:00-12:00</li>
+<li>Friday Nov 4 PM 1:00-5:00</li>
 </ul></li>
-<li>Each session is a mix of didactic + hands-on learning</li>
-<li>Sessions will be recorded</li>
-<li>We will pause periodically for questions
+<li>Each session is a mix of
 <ul>
-<li>Post questions in the chat box, or</li>
-<li>Ask when we pause <br></li>
+<li>Didactic (html slides that you can compile from Rmd if you
+want)</li>
+<li>Hands-on learning (Rmd workbooks that probably won’t compile until
+you edit them)</li>
+<li>Solutions not included, but we will send by email approximately 1
+week from now</li>
 </ul></li>
-<li>Board for ansynchonous questions and discussion?</li>
+<li>Course materials are organized according to a 4 1/2 day format;
+given time constraints we will mix and match a bit.</li>
 </ul>
 </div>
 <div id="session-1" class="slide section level1">
 <h1>Session 1</h1>
+<p>Only material in <strong>bold</strong> will be covered. Material in
+<em>italics</em> is yours to keep for self-exploration</p>
+<p>Slides:</p>
 <ul>
-<li><code>Basic concepts for binary data</code> :
+<li><strong>Day1/Overview.html</strong></li>
+<li><em>Day1/Confounded-Exposure-Response.html</em></li>
+<li><strong>Day1/LogisticRegression.html (partial)</strong></li>
+<li><strong>Day1/LogisticRegression_bayes.html</strong></li>
+</ul>
+<p>Workbooks:</p>
 <ul>
-<li>Notational conventions, Bernoulli distribution, Maximum
-likelihood</li>
-<li>Visualizing relationships</li>
-<li>Models, model checking, and measures of effect</li>
-</ul></li>
-<li><code>Bayesian models for binary data</code> (Technical
-session)</li>
+<li><strong>Day1/Workbook01.Rmd</strong> ; binomial basics in R</li>
+<li><em>Day1/Workbook02.Rmd</em> (partial) ; EDA prior to modeling</li>
+<li><em>Day1/Workbook3.Rmd</em> ; measures of effect for binomial
+outcomes</li>
+<li><strong>Day1/Workbook04.Rmd</strong> ; glm syntax in R</li>
+<li><em>Day1/Workbook05.html</em> ; residuals and VPCs</li>
+<li><strong>Day1/Workbook_Bayes01.Rmd</strong> ; logistic regression
+with brms</li>
 </ul>
 </div>
 <div id="session-2" class="slide section level1">
 <h1>Session 2</h1>
+<p>Slides</p>
 <ul>
-<li><code>Study designs and confounded exposure-response</code><br />
-</li>
-<li><code>Basic concepts for time-to-event data</code> :
+<li><strong>TTE_Introduction.html</strong> (partial; we will skip slides
+29-53 on Cox PH)</li>
+<li><strong>Day3/BayesianTTE_brms.html</strong></li>
+</ul>
+<p>Workbooks</p>
 <ul>
-<li>Time-to-event (TTE) data:: what makes it different?</li>
-<li>Visualizing TTE data - the Kaplan-Meier estimator</li>
-<li>Cox proportional hazards model</li>
-<li>Introduction to parametric regression models</li>
-</ul></li>
+<li><strong>Day2/Workbook01.Rmd</strong>; relationships between hazard,
+survival, etc.</li>
+<li><strong>Day2/Workbook02.Rmd</strong>; Kaplan Meier estimates</li>
+<li><em>Day2/Workbook03.Rmd</em>; summary measures of surv curves</li>
+<li><em>Day2/Workbook04.Rmd</em>; Cox PH</li>
+<li><strong>Day2/Workbook05.Rmd</strong>; flexsurvreg, VPCs</li>
+<li><strong>Day3/Workbook01.Rmd</strong>; TTE with brms</li>
 </ul>
 </div>
 <div id="session-3" class="slide section level1">
 <h1>Session 3</h1>
+<p>Slides</p>
 <ul>
-<li><code>Advanced concepts for time-to-event data</code> :
+<li><strong>Day3/Stan_Intro.html</strong> (partial, up to slide 23)</li>
+<li><strong>Day4/Time_varying_hazard.html</strong> (as time allows)</li>
+</ul>
+<p>Workbooks</p>
 <ul>
-<li>Bayesian TTE parametric modeling</li>
-<li>Additional topics in TTE modeling</li>
-<li>TTE models with a continuously time-varying hazard</li>
-<li>Repeated time-to-event data</li>
-<li>Markov models for analysis of longitudinal discrete state data</li>
-</ul></li>
+<li><strong>Day3/Workbook_Stan01.Rmd</strong> ; logistic regression w /
+rstan</li>
+<li><strong>Day3/weibull_example.Rmd</strong> ; Weibull TTE w/
+rstan</li>
+<li><strong>Day4/Workbook_time_varying.Rmd</strong> ; Time-varying
+hazards w/ rstan</li>
 </ul>
 </div>
-<div id="session-4" class="slide section level1">
-<h1>Session 4</h1>
+<div id="notes-on-breakout-sessions" class="slide section level1">
+<h1>Notes on breakout sessions</h1>
 <ul>
-<li><code>Even more advanced concepts for time-to-event data</code> :
-<ul>
-<li>Joint modeling of continuous and time-to-event data (TD and
-TTE)</li>
-<li>Modeling of treatment related AEs (neutropenia, diarrhea, etc)</li>
-</ul></li>
-</ul>
-</div>
-<div id="course-materials" class="slide section level1">
-<h1>Course materials</h1>
-<ul>
-<li>Each session has slide sets and workbooks</li>
-<li>Navigate slides by first typing “t”.</li>
-<li>Workbooks are “Rmarkdown” documents.
-<ul>
-<li>GUI button to execute a code chunk.</li>
-<li>GUI button to execute all prior code.</li>
-</ul></li>
+<li>Please hail a teaching assistant at any time if you are stuck.</li>
+<li>We will usually take 15-20 minutes for each breakout; use this for
+bio breaks as well.</li>
+<li>No need to complete everything here. Get hands dirty. Try to get to
+a point that will enable further self-exploration.</li>
 </ul>
 <!-- ---- -->
 <!-- # Why start with GLMs?  -->
