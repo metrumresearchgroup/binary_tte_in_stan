@@ -160,31 +160,6 @@ data</h1>
 
   </p>
 </div>
-<div id="key-learning-objectives-for-today"
-class="slide section level1">
-<h1>Key learning objectives for today</h1>
-<ul>
-<li>Conceptual understanding of TTE data and the impact of
-censoring</li>
-<li>Visualizing relationships between TTE distribution and
-covariates</li>
-<li>Key concepts of the Cox regression model, how to fit and interpret
-parameters</li>
-<li>Fitting models to TTE data using parametric distributions</li>
-</ul>
-</div>
-<div id="not-covered-today-but-coming-soon"
-class="slide section level1">
-<h1>Not covered today, but coming soon</h1>
-<ul>
-<li>Bayesian analysis of TTE models
-<ul>
-<li>Parametric non-linear effects</li>
-</ul></li>
-<li>Effects for covariates that vary continuously with time</li>
-<li>Repeated time to event</li>
-</ul>
-</div>
 <div id="what-is-time-to-event-data" class="slide section level1">
 <h1>What is time-to-event data?</h1>
 <ul>
@@ -310,8 +285,8 @@ the problems</p></li>
 <li><p>Hazard function = instantaneous event rate, conditional on event
 happening on or after time <span class="math inline">\(t\)</span></p>
 <ul>
-<li><span class="math inline">\(h(t) = \lim_{\Delta t \rightarrow 0} P(t
-&lt; T \leq t+\Delta t ~|~ T \geq t )\)</span></li>
+<li><span class="math inline">\(h(t) = \lim_{\Delta t \rightarrow 0}
+\frac{P(t &lt; T \leq t+\Delta t ~|~ T \geq t )}{\Delta t}\)</span></li>
 <li>“conditional on event happening on or after time <span
 class="math inline">\(t\)</span>” is what helps</li>
 </ul></li>
@@ -331,8 +306,7 @@ class="math inline">\(t\)</span> <span class="citation">[1]</span>
 <li>Probability density function = instantaneous event risk (aka
 <em>density</em>)
 <ul>
-<li><span class="math inline">\(f(t) = \lim_{\Delta t \rightarrow 0} P(t
-&lt; T \leq t+\Delta t)\)</span> <br></li>
+<li>$f(t) = _{t } $ <br></li>
 </ul></li>
 <li>Survival function = probability of an event happening after time
 <span class="math inline">\(t\)</span>

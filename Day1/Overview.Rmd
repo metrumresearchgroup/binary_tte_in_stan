@@ -23,7 +23,11 @@ output:
 
 We want you to finish this course with: 
 
-* Conceptual understanding, basic intuitions, and hand-on experience for the analysis of binary outcomes and time-to-event data
+* Conceptual understanding & basic intuitions for the analysis of exposure-response with binary and time-to-event (TTE) endpoints.
+* Enough hand-on experience to enable further self-exploration.
+
+_After_ the course self-exploration of those materials will also give you: 
+
 * Specific tips, tricks, and recipes for getting the job done "soup to nuts" in R and Stan
 
 
@@ -37,26 +41,23 @@ We want you to finish this course with:
     * Instead: __"copy and modify" / "learn by playing"__
 
 * __Not__ a comprehensive course on the analysis of odd-type data
-    * But, we will touch on most of the key concepts for analyzing binary and TTE data
-    * Will get into more complex examples during the technical sessions
+    * We emphasize the aspects that we have found most essential in pharmacometric research, specifically in exposure-response.
+    
 
 
 ----
 
 # Course organization
 
-* Four 3-4 hour sessions
-    * June 4, 11, 25
-    * July 9
-* Each session is a mix of didactic + hands-on learning
-* Sessions will be recorded
-* We will pause periodically for questions
-    * Post questions in the chat box, or 
-    * Ask when we pause
-<br>
-* Board for ansynchonous questions and discussion?
-
-
+* 3 4 hour sessions
+    * Thursday Nov 3 PM 1:00-5:00
+    * Friday Nov 4 AM 8:00-12:00
+    * Friday Nov 4 PM 1:00-5:00
+* Each session is a mix of 
+    * Didactic (html slides that you can compile from Rmd if you want) 
+    * Hands-on learning (Rmd workbooks that probably won't compile until you edit them)
+    * Solutions not included, but we will send by email approximately 1 week from now
+* Course materials are organized according to a 4 1/2 day format; given time constraints we will mix and match a bit.     
 
 
 
@@ -64,51 +65,65 @@ We want you to finish this course with:
 
 # Session 1
 
-* `Basic concepts for binary data` : 
-    * Notational conventions, Bernoulli distribution, Maximum likelihood
-    * Visualizing relationships
-    * Models, model checking, and measures of effect
-* `Bayesian models for binary data` (Technical session)
+Only material in **bold** will be covered. Material in _italics_ is yours to keep for self-exploration
+
+Slides: 
+
+* **Day1/Overview.html** 
+* _Day1/Confounded-Exposure-Response.html_
+* **Day1/LogisticRegression.html (partial)**
+* **Day1/LogisticRegression_bayes.html**
+
+Workbooks: 
+
+* **Day1/Workbook01.Rmd** ; binomial basics in R
+* _Day1/Workbook02.Rmd_ (partial) ; EDA prior to modeling 
+* _Day1/Workbook3.Rmd_ ; measures of effect for binomial outcomes
+* **Day1/Workbook04.Rmd** ; glm syntax in R
+* _Day1/Workbook05.html_ ; residuals and VPCs
+* **Day1/Workbook_Bayes01.Rmd** ; logistic regression with brms
     
 ----
 
 # Session 2
 
-* `Study designs and confounded exposure-response`  
-* `Basic concepts for time-to-event data` : 
-    * Time-to-event (TTE) data:: what makes it different?
-    * Visualizing TTE data - the Kaplan-Meier estimator
-    * Cox proportional hazards model
-    * Introduction to parametric regression models
+Slides
+
+* **TTE_Introduction.html** (partial; we will skip slides 29-53 on Cox PH) 
+* **Day3/BayesianTTE_brms.html** 
+ 
+Workbooks
+
+* **Day2/Workbook01.Rmd**; relationships between hazard, survival, etc. 
+* **Day2/Workbook02.Rmd**; Kaplan Meier estimates
+* _Day2/Workbook03.Rmd_; summary measures of surv curves
+* _Day2/Workbook04.Rmd_; Cox PH
+* **Day2/Workbook05.Rmd**; flexsurvreg, VPCs
+* **Day3/Workbook01.Rmd**; TTE with brms
 
 ----
 
 # Session 3
-* `Advanced concepts for time-to-event data` : 
-    * Bayesian TTE parametric modeling
-    * Additional topics in TTE modeling
-    * TTE models with a continuously time-varying hazard
-    * Repeated time-to-event data
-    * Markov models for analysis of longitudinal discrete state data
 
-----
+Slides 
 
-# Session 4
-* `Even more advanced concepts for time-to-event data` : 
-    * Joint modeling of continuous and time-to-event data (TD and TTE)
-    * Modeling of treatment related AEs (neutropenia, diarrhea, etc)
+* **Day3/Stan_Intro.html** (partial, up to slide 23)
+* **Day4/Time_varying_hazard.html** (as time allows)
+ 
+Workbooks
+
+* **Day3/Workbook_Stan01.Rmd** ; logistic regression w / rstan
+* **Day3/weibull_example.Rmd** ; Weibull TTE w/ rstan
+* **Day4/Workbook_time_varying.Rmd** ; Time-varying hazards w/ rstan
 
 
-----
 
+# Notes on breakout sessions
 
-# Course materials
+* Please hail a teaching assistant at any time if you are stuck. 
+* We will usually take 15-20 minutes for each breakout; use this for bio breaks as well.
+* No need to complete everything here. Get hands dirty. Try to get to a point that will enable further self-exploration. 
 
-* Each session has slide sets and workbooks
-* Navigate slides by first typing "t". 
-* Workbooks are "Rmarkdown" documents. 
-    * GUI button to execute a code chunk. 
-    * GUI button to execute all prior code. 
 
 <!-- ---- -->
 

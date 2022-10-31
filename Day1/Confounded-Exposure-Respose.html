@@ -16,89 +16,93 @@
     div.column{display: inline-block; vertical-align: top; width: 50%;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
-            a.sourceLine { display: inline-block; line-height: 1.25; }
-    a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-    a.sourceLine:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode { white-space: pre; position: relative; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    code.sourceCode { white-space: pre-wrap; }
-    a.sourceLine { text-indent: -1em; padding-left: 1em; }
-    }
-    pre.numberSource a.sourceLine
-      { position: relative; left: -4em; }
-    pre.numberSource a.sourceLine::before
-      { content: attr(data-line-number);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; pointer-events: all; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {  }
-    @media screen {
-    a.sourceLine::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+            pre > code.sourceCode { white-space: pre; position: relative; }
+            pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+            pre > code.sourceCode > span:empty { height: 1.2em; }
+            .sourceCode { overflow: visible; }
+            code.sourceCode > span { color: inherit; text-decoration: inherit; }
+            div.sourceCode { margin: 1em 0; }
+            pre.sourceCode { margin: 0; }
+            @media screen {
+            div.sourceCode { overflow: auto; }
+            }
+            @media print {
+            pre > code.sourceCode { white-space: pre-wrap; }
+            pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+            }
+            pre.numberSource code
+              { counter-reset: source-line 0; }
+            pre.numberSource code > span
+              { position: relative; left: -4em; counter-increment: source-line; }
+            pre.numberSource code > span > a:first-child::before
+              { content: counter(source-line);
+                position: relative; left: -1em; text-align: right; vertical-align: baseline;
+                border: none; display: inline-block;
+                -webkit-touch-callout: none; -webkit-user-select: none;
+                -khtml-user-select: none; -moz-user-select: none;
+                -ms-user-select: none; user-select: none;
+                padding: 0 4px; width: 4em;
+                color: #aaaaaa;
+              }
+            pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+            div.sourceCode
+              {   }
+            @media screen {
+            pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+            }
+            code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+            code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+            code span.at { color: #7d9029; } /* Attribute */
+            code span.bn { color: #40a070; } /* BaseN */
+            code span.bu { } /* BuiltIn */
+            code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+            code span.ch { color: #4070a0; } /* Char */
+            code span.cn { color: #880000; } /* Constant */
+            code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+            code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+            code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+            code span.dt { color: #902000; } /* DataType */
+            code span.dv { color: #40a070; } /* DecVal */
+            code span.er { color: #ff0000; font-weight: bold; } /* Error */
+            code span.ex { } /* Extension */
+            code span.fl { color: #40a070; } /* Float */
+            code span.fu { color: #06287e; } /* Function */
+            code span.im { } /* Import */
+            code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+            code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+            code span.op { color: #666666; } /* Operator */
+            code span.ot { color: #007020; } /* Other */
+            code span.pp { color: #bc7a00; } /* Preprocessor */
+            code span.sc { color: #4070a0; } /* SpecialChar */
+            code span.ss { color: #bb6688; } /* SpecialString */
+            code span.st { color: #4070a0; } /* String */
+            code span.va { color: #19177c; } /* Variable */
+            code span.vs { color: #4070a0; } /* VerbatimString */
+            code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
           </style>
   <style type="text/css">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(data-line-number);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -107,9 +111,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -141,6 +145,7 @@ code span.va { color: #19177c; } /* Variable */
 code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
   </style>
+  <script src="Confounded-Exposure-Respose_files/header-attrs-2.14/header-attrs.js"></script>
   <link href="Confounded-Exposure-Respose_files/slidy-2/styles/slidy.css" rel="stylesheet" />
   <script src="Confounded-Exposure-Respose_files/slidy-2/scripts/slidy.js"></script>
   <script src="Confounded-Exposure-Respose_files/slidy_shiny-1/slidy_shiny.js"></script>
@@ -164,8 +169,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>What are some solutions?</li>
 </ul>
 </div>
-<div id="understanding-exposure-response-relationships-is-a-key-component-of-decision-making" class="slide section level1">
-<h1>Understanding exposure-response relationships is a key component of decision-making</h1>
+<div
+id="understanding-exposure-response-relationships-is-a-key-component-of-decision-making"
+class="slide section level1">
+<h1>Understanding exposure-response relationships is a key component of
+decision-making</h1>
 <p>For example,</p>
 <ul>
 <li>Sponsors: Dose-selection for future trials or registration</li>
@@ -173,8 +181,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Physicians: “Optimizing” benefit-risk for a patient</li>
 </ul>
 </div>
-<div id="in-some-development-programs-only-one-dose-is-studied-extensively" class="slide section level1">
-<h1>In some development programs, only one dose is studied extensively</h1>
+<div
+id="in-some-development-programs-only-one-dose-is-studied-extensively"
+class="slide section level1">
+<h1>In some development programs, only one dose is studied
+extensively</h1>
 <ul>
 <li>Common practice in oncology
 <ul>
@@ -188,7 +199,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul></li>
 </ul>
 </div>
-<div id="with-biologics-this-can-cause-a-problem" class="slide section level1">
+<div id="with-biologics-this-can-cause-a-problem"
+class="slide section level1">
 <h1>With biologics this can cause a problem</h1>
 <ul>
 <li>Observe an apparent exposure-response
@@ -221,21 +233,27 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 </div>
 </div>
-<div id="toga-trastuzumab-in-metastatic-gastric-cancer" class="slide section level1">
+<div id="toga-trastuzumab-in-metastatic-gastric-cancer"
+class="slide section level1">
 <h1>ToGA: Trastuzumab in metastatic gastric cancer</h1>
-<div style="display: grid; grid-template-columns: 50% 50%; grid-column-gap: 10px;">
+<div
+style="display: grid; grid-template-columns: 50% 50%; grid-column-gap: 10px;">
 <div>
-<p>ToGA trial demonstrated benefit of trastuzumab in mGC, but possibly less effective in patients with low exposure</p>
+<p>ToGA trial demonstrated benefit of trastuzumab in mGC, but possibly
+less effective in patients with low exposure</p>
 <ul>
 <li>Phase 3, randomized, OL study
 <ul>
 <li>Fluoropyrimidine and cisplatin (FC) vs. trastuzumab + FC (T+FC)</li>
 <li>Trastuzumab dosed with ‘standard’ regimen</li>
-<li>Overall effect (top panel <span class="citation">@Bang2010-lp</span>)</li>
-<li>By <span class="math inline">\(C_{\text{min},1}\)</span> quartile (bottom panel <span class="citation">@Yang2013-tr</span>)</li>
+<li>Overall effect (top panel <span
+class="citation">@Bang2010-lp</span>)</li>
+<li>By <span class="math inline">\(C_{\text{min},1}\)</span> quartile
+(bottom panel <span class="citation">@Yang2013-tr</span>)</li>
 </ul></li>
 </ul>
-<p>Led to a trial designed to compare a standard and high-dose trastuzumab regimens.</p>
+<p>Led to a trial designed to compare a standard and high-dose
+trastuzumab regimens.</p>
 </div>
 <div>
 <p><img src="graphics/ToGA-overall.png" width="60%" style="display: block; margin: auto auto auto 0;" /></p>
@@ -243,19 +261,25 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 </div>
 </div>
-<div id="the-analysis-of-toga-led-to-the-heloise-trial" class="slide section level1">
+<div id="the-analysis-of-toga-led-to-the-heloise-trial"
+class="slide section level1">
 <h1>The analysis of ToGA led to the HELOISE trial</h1>
-<div style="display: grid; grid-template-columns: 50% 50%; grid-column-gap: 10px;">
+<div
+style="display: grid; grid-template-columns: 50% 50%; grid-column-gap: 10px;">
 <div>
-<p>HELOISE trial demonstrated no additional benefit of high dose trastuzumab in mGC</p>
+<p>HELOISE trial demonstrated no additional benefit of high dose
+trastuzumab in mGC</p>
 <ul>
 <li>Phase 3b, randomized, OL study in 1L mGC
 <ul>
 <li>Trastuzumab standard regimen vs high-dose regimen</li>
 <li>Both regimens included cisplatin + capecitabine</li>
 </ul></li>
-<li>Top panel: overall effect (<span class="citation">@Shah2017-yo</span>)</li>
-<li>Bottom panel: Effect in low <span class="math inline">\(C_{\text{min},1}\)</span> group (<span class="citation">@Shah2017-yo</span>)</li>
+<li>Top panel: overall effect (<span
+class="citation">@Shah2017-yo</span>)</li>
+<li>Bottom panel: Effect in low <span
+class="math inline">\(C_{\text{min},1}\)</span> group (<span
+class="citation">@Shah2017-yo</span>)</li>
 </ul>
 </div>
 <div>
@@ -267,8 +291,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="what-happened" class="slide section level1">
 <h1>What happened?</h1>
 <ul>
-<li><p>The apparent exposure-response in the ToGA trial was an artifact of <red>confounding</red></p></li>
-<li><p>Subsequent analyses (<span class="citation">@Yang2013-tr</span>) confirmed the lack of an exposure-response relationship in the ToGA study.</p></li>
+<li><p>The apparent exposure-response in the ToGA trial was an artifact
+of <red>confounding</red></p></li>
+<li><p>Subsequent analyses (<span class="citation">@Yang2013-tr</span>)
+confirmed the lack of an exposure-response relationship in the ToGA
+study.</p></li>
 </ul>
 <!-- # This observation is common with large molecules which are studied at one dose -->
 <!-- << give other examples: T-DM1, tremi, vedo >> -->
@@ -278,44 +305,55 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="what-is-confounding" class="slide section level1">
 <h1>What is confounding?</h1>
 <ul>
-<li>Our primary interest is in the <red>causal</red> effect of exposure on an outcome.
+<li>Our primary interest is in the <red>causal</red> effect of exposure
+on an outcome.
 <ul>
 <li><em>If we change exposure, how does the response change?</em></li>
 </ul></li>
-<li><red>Confounding</red> is a bias in the estimate of the causal effect.</li>
-<li>Occurs when there is a <red>common cause</red> of exposure and the outcome.</li>
+<li><red>Confounding</red> is a bias in the estimate of the causal
+effect.</li>
+<li>Occurs when there is a <red>common cause</red> of exposure and the
+outcome.</li>
 </ul>
 <div class="notebox">
-<p>Exposure-response confounding occurs when there is a common cause of exposure and the outcome of interest.</p>
+<p>Exposure-response confounding occurs when there is a common cause of
+exposure and the outcome of interest.</p>
 </div>
 </div>
-<div id="how-does-a-common-cause-introduce-bias" class="slide section level1">
+<div id="how-does-a-common-cause-introduce-bias"
+class="slide section level1">
 <h1>How does a common cause introduce bias?</h1>
 <ul>
-<li>Suppose there is no relationship between exposure (E) and the outcome (O)</li>
+<li>Suppose there is no relationship between exposure (E) and the
+outcome (O)</li>
 <li>There is one common cause (A) of both</li>
-<li>We can represent this in a <em>directed acyclic graph</em> (DAG)</li>
+<li>We can represent this in a <em>directed acyclic graph</em>
+(DAG)</li>
 </ul>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-6-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 <ul>
 <li>This induces a relationship between exposure and outcome
 <ul>
-<li>Even though there is no causal effect of exposure on the outcome</li>
+<li>Even though there is no causal effect of exposure on the
+outcome</li>
 <li><em>Association is not causation</em></li>
 </ul></li>
 </ul>
 </div>
 <div id="simulated-data" class="slide section level1">
 <h1>Simulated data</h1>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">simulated_data &lt;-<span class="st"> </span><span class="kw">tibble</span>(</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2">  <span class="dt">A =</span> <span class="kw">rnorm</span>(<span class="dv">100</span>),</a>
-<a class="sourceLine" id="cb1-3" data-line-number="3">  <span class="dt">E =</span> <span class="kw">exp</span>(<span class="op">-</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span>A <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">100</span>,<span class="dt">sd=</span><span class="fl">0.2</span>)),</a>
-<a class="sourceLine" id="cb1-4" data-line-number="4">  <span class="dt">O =</span> <span class="dv">10</span> <span class="op">+</span><span class="st"> </span>A <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">100</span>)  <span class="co"># No direct link between E and O</span></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5">)</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>simulated_data <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>),</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">E =</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">2</span> <span class="sc">+</span> A <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">100</span>,<span class="at">sd=</span><span class="fl">0.2</span>)),</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">O =</span> <span class="dv">10</span> <span class="sc">+</span> A <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">100</span>)  <span class="co"># No direct link between E and O</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-8-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
-<div id="the-same-type-of-problem-can-occur-when-there-is-an-e-r-relationship" class="slide section level1">
-<h1>The same type of problem can occur when there is an E-R relationship</h1>
+<div
+id="the-same-type-of-problem-can-occur-when-there-is-an-e-r-relationship"
+class="slide section level1">
+<h1>The same type of problem can occur when there is an E-R
+relationship</h1>
 <div class="columns">
 <div class="column">
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-9-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
@@ -323,82 +361,104 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>The apparent relationship will differ from the causal one</li>
 </ul>
 </div><div class="column">
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">simulated_data &lt;-<span class="st"> </span><span class="kw">tibble</span>(</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2">  <span class="dt">A =</span> <span class="kw">rnorm</span>(<span class="dv">100</span>),</a>
-<a class="sourceLine" id="cb2-3" data-line-number="3">  <span class="dt">E =</span> <span class="kw">exp</span>(<span class="op">-</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span>A <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">100</span>,<span class="dt">sd=</span><span class="fl">0.2</span>)),</a>
-<a class="sourceLine" id="cb2-4" data-line-number="4">  <span class="dt">O =</span> <span class="dv">10</span> <span class="op">+</span><span class="st"> </span>A <span class="op">+</span><span class="st"> </span><span class="dv">-4</span><span class="op">*</span>E <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">100</span>)  <span class="co"># E reduces O</span></a>
-<a class="sourceLine" id="cb2-5" data-line-number="5">)</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>simulated_data <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>),</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">E =</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">2</span> <span class="sc">+</span> A <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">100</span>,<span class="at">sd=</span><span class="fl">0.2</span>)),</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">O =</span> <span class="dv">10</span> <span class="sc">+</span> A <span class="sc">+</span> <span class="sc">-</span><span class="dv">4</span><span class="sc">*</span>E <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">100</span>)  <span class="co"># E reduces O</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-11-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
 </div>
 </div>
-<div id="simple-dag-for-the-trastuzumab-example" class="slide section level1">
+<div id="simple-dag-for-the-trastuzumab-example"
+class="slide section level1">
 <h1>Simple DAG for the trastuzumab example</h1>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-12-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
-<p><strong>Weight:</strong> <em>baseline</em> factor indirectly affecting exposure (through CL)</p>
-<p><strong>Disease severity:</strong> <em>baseline</em> factor directly affecting outcome and indirectly affecting exposure through an effect on CL</p>
+<p><strong>Weight:</strong> <em>baseline</em> factor indirectly
+affecting exposure (through CL)</p>
+<p><strong>Disease severity:</strong> <em>baseline</em> factor directly
+affecting outcome and indirectly affecting exposure through an effect on
+CL</p>
 <ul>
-<li><p>Effect on CL through, e.g., cachexia -&gt; inflammation and proteolytic activity -&gt; high CL</p></li>
-<li><p>If we’re not careful, baseline disease severity can confound the causal relationship between exposure and survival</p></li>
+<li><p>Effect on CL through, e.g., cachexia -&gt; inflammation and
+proteolytic activity -&gt; high CL</p></li>
+<li><p>If we’re not careful, baseline disease severity can confound the
+causal relationship between exposure and survival</p></li>
 </ul>
 </div>
 <div id="why-is-this-a-problem" class="slide section level1">
 <h1>Why is this a problem?</h1>
 <ul>
-<li>We want to know the <strong>causal</strong> effect of exposure on the outcome.
+<li><p>We want to know the <strong>causal</strong> effect of exposure on
+the outcome.</p>
 <ul>
 <li>That is, if we change exposure how does the response change?</li>
 </ul></li>
-<li><p>The data going into these analyses are essentially observational.</p></li>
-<li><p>The common cause of exposure and outcome provides a <red>backdoor path</red> for information to flow.</p></li>
+<li><p>The data going into these analyses are essentially
+observational.</p></li>
+<li><p>The common cause of exposure and outcome provides a <red>backdoor
+path</red> for information to flow.</p></li>
 </ul>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-13-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 </div>
-<div id="why-is-this-a-large-molecule-issue" class="slide section level1">
+<div id="why-is-this-a-large-molecule-issue"
+class="slide section level1">
 <h1>Why is this a large molecule issue?</h1>
 <ul>
-<li>For small molecules, baseline disease severity has much less of an impact on exposure</li>
+<li>For small molecules, baseline disease severity has much less of an
+impact on exposure</li>
 </ul>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-14-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
-<p><strong>Weight:</strong> <em>baseline</em> factor indirectly affecting exposure (through CL)</p>
-<p><strong>Disease severity:</strong> <em>baseline</em> factor directly affecting outcome</p>
+<p><strong>Weight:</strong> <em>baseline</em> factor indirectly
+affecting exposure (through CL)</p>
+<p><strong>Disease severity:</strong> <em>baseline</em> factor directly
+affecting outcome</p>
 </div>
 <div id="why-is-this-a-one-regimen-issue" class="slide section level1">
 <h1>Why is this a ‘one regimen’ issue?</h1>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-15-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
-<p>Weight: baseline factor indirectly affecting exposure (through CL)<br />
-Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure</p>
+<p>Weight: baseline factor indirectly affecting exposure (through
+CL)<br />
+Disease severity: baseline factor directly affecting outcome and
+indirectly affecting exposure</p>
 <ul>
 <li>All of the variability in exposure is due to variability in CL
 <ul>
-<li>As a result, we can’t block the backdoor path by controlling for CL</li>
+<li>As a result, we can’t block the backdoor path by controlling for
+CL</li>
 </ul></li>
 <li>Adding additional dose levels to the design is one solution</li>
 </ul>
 </div>
-<div id="solutions-when-confounding-is-due-to-baseline-factors" class="slide section level1">
+<div id="solutions-when-confounding-is-due-to-baseline-factors"
+class="slide section level1">
 <h1>Solutions when confounding is due to baseline factors</h1>
 <ul>
 <li>Thinking about your estimand and potential confounding ahead of time
 <ul>
-<li>Use DAGs to identify back door paths and how to block them without introducing other sources of bias</li>
+<li>Use DAGs to identify back door paths and how to block them without
+introducing other sources of bias</li>
 </ul></li>
 <li>Study design
 <ul>
-<li>Include multiple dose levels / regimens to de-couple CL and dose</li>
+<li>Include multiple dose levels / regimens to de-couple CL and
+dose</li>
 <li>Depending on the context, this may not be practical</li>
 </ul></li>
 <li>Adjusted analysis
 <ul>
 <li>Regression models
 <ul>
-<li>Include effects of common causes in the model (even if they are not statistically significant!)</li>
+<li>Include effects of common causes in the model (even if they are not
+statistically significant!)</li>
 <li>Be careful not to include common outcomes as a predictor</li>
 </ul></li>
 <li>Matched analysis
 <ul>
-<li>Various methods for matching: propensity scores (PS), Mahalanobis distance</li>
-<li>Can use machine learning or other non-parametric methods for building PS model</li>
+<li>Various methods for matching: propensity scores (PS), Mahalanobis
+distance</li>
+<li>Can use machine learning or other non-parametric methods for
+building PS model</li>
 </ul></li>
 </ul></li>
 </ul>
@@ -426,7 +486,8 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 <!-- * Disease severity: baseline factor directly affecting outcome and indirectly affecting exposure  -->
 <!-- * Does the extra information help? -->
 </div>
-<div id="causal-model-with-time-dependent-confounding" class="slide section level1">
+<div id="causal-model-with-time-dependent-confounding"
+class="slide section level1">
 <h1>Causal model with time-dependent confounding</h1>
 <p><img src="Confounded-Exposure-Respose_files/figure-slidy/unnamed-chunk-16-1.png" width="864" style="display: block; margin: auto auto auto 0;" /></p>
 <ul>
@@ -437,15 +498,27 @@ Disease severity: baseline factor directly affecting outcome and indirectly affe
 <li>Joint PK-TS or PK-TS-OS models</li>
 </ul></li>
 <li>Use early exposure measure (Dai et al., 2020)</li>
-<li>Incorporate mediating biomarker (e.g., tumor size) (Kawakatsu et al., 2020)</li>
+<li>Incorporate mediating biomarker (e.g., tumor size) (Kawakatsu et
+al., 2020)</li>
 </ul>
 </div>
 <div id="additional-reading" class="slide section level1">
 <h1>Additional reading</h1>
 <ul>
-<li><p>Dai HI, Vugmeyster Y, Mangal N. Characterizing Exposure-Response Relationship for Therapeutic Monoclonal Antibodies in Immuno-Oncology and Beyond: Challenges, Perspectives, and Prospects. Clin Pharmacol Ther. 2020 Dec;108(6):1156–70.</p></li>
-<li><p>Kawakatsu S, Bruno R, Kågedal M, Li C, Girish S, Joshi A, Wu B. Confounding factors in exposure-response analyses and mitigation strategies for monoclonal antibodies in oncology. Br J Clin Pharmacol [Internet]. 2020 Nov 20; Available from: <a href="http://dx.doi.org/10.1111/bcp.14662" class="uri">http://dx.doi.org/10.1111/bcp.14662</a></p></li>
-<li><p>Hernán MA, Hernández-Díaz S, Werler MM, Mitchell AA. Causal knowledge as a prerequisite for confounding evaluation: an application to birth defects epidemiology. Am J Epidemiol. 2002 Jan 15;155(2):176–84.</p></li>
+<li><p>Dai HI, Vugmeyster Y, Mangal N. Characterizing Exposure-Response
+Relationship for Therapeutic Monoclonal Antibodies in Immuno-Oncology
+and Beyond: Challenges, Perspectives, and Prospects. Clin Pharmacol
+Ther. 2020 Dec;108(6):1156–70.</p></li>
+<li><p>Kawakatsu S, Bruno R, Kågedal M, Li C, Girish S, Joshi A, Wu B.
+Confounding factors in exposure-response analyses and mitigation
+strategies for monoclonal antibodies in oncology. Br J Clin Pharmacol
+[Internet]. 2020 Nov 20; Available from: <a
+href="http://dx.doi.org/10.1111/bcp.14662"
+class="uri">http://dx.doi.org/10.1111/bcp.14662</a></p></li>
+<li><p>Hernán MA, Hernández-Díaz S, Werler MM, Mitchell AA. Causal
+knowledge as a prerequisite for confounding evaluation: an application
+to birth defects epidemiology. Am J Epidemiol. 2002 Jan
+15;155(2):176–84.</p></li>
 </ul>
 </div>
 

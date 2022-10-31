@@ -65,19 +65,6 @@ dat_use <-
 ```
 
 
-# Key learning objectives for today
-
-* Conceptual understanding of TTE data and the impact of censoring
-* Visualizing relationships between TTE distribution and covariates
-* Key concepts of the Cox regression model, how to fit and interpret parameters
-* Fitting models to TTE data using parametric distributions
-
-# Not covered today, but coming soon
-
-* Bayesian analysis of TTE models
-    - Parametric non-linear effects
-* Effects for covariates that vary continuously with time
-* Repeated time to event
 
 
 # What is time-to-event data?
@@ -217,7 +204,7 @@ p2
 - Working with the <red>hazard function</red> alleviates some of the problems
 
 - Hazard function = instantaneous event rate, conditional on event happening on or after time $t$
-  - $h(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t ~|~  T \geq t )$
+  - $h(t) = \lim_{\Delta t \rightarrow 0} \frac{P(t < T \leq t+\Delta t ~|~  T \geq t )}{\Delta t}$
   - "conditional on event happening on or after time $t$" is what helps
 
 # Terminology
@@ -227,7 +214,7 @@ p2
   - This is the expected number of events to time $t$ [@noauthor_2011-gh]
 <br>
 - Probability density function = instantaneous event risk (aka *density*)
-  - $f(t) = \lim_{\Delta t \rightarrow 0} P(t < T \leq t+\Delta t)$
+  - $f(t) = \lim_{\Delta t \rightarrow 0} \frac{P(t < T \leq t+\Delta t)}{\Delta t} $
 <br>
 - Survival function = probability of an event happening after time $t$
   - $S(t) = P(T > t)$

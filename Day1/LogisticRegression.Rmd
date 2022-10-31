@@ -285,7 +285,7 @@ $$
 
 $$
 \begin{eqnarray*}
-L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = & l(\pi| \mathbf{Y}=\mathbf{y}) \\
+L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = &  \log l(\pi| \mathbf{Y}=\mathbf{y}) \\
  & = & (\# \, \text{of "ones"}) \log(\pi)
  + (n-\# \, \text{of "ones"}) \log(1-\pi) 
 \end{eqnarray*}
@@ -1055,13 +1055,13 @@ aedat %>% ungroup() %>%
 
 # Visual Predictive Checks
 
-Recall the VPC "recipe":
+A general VPC "recipe":
 
 * Simulate many replicates of the DV using the estimated model and observed predictors
 * Determine summary statistic(s) of interest
 * Calculate summary statistic for observed data
 * Calculate summary statistic for each simulated replicate
-* Plot distribution(s) of summary statistics
+* Plot distribution(s) of simulated summary statistics
 * Overlay observed value
 
 
