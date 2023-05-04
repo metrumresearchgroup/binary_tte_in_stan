@@ -33,8 +33,12 @@ library(mgcv)
 library(flexsurv)
 library(muhaz)
 library(Hmisc)
+library(furrr)
 
 theme_set(theme_bw())
+
+plan(multisession, workers = 2)
+
 ```
 
 
@@ -197,4 +201,86 @@ sim_surv %>% group_by(pred_times, group) %>%
 * Make a similar VPC using the Gompertz model.  Does this look any better?
 
 * Try fitting a parametric model using a smoothing spline for the effect of CAVGSS and plotting the VPC.  Is this better?
+
+
+
+## KMMC by-hand
+
+1. Write a function to calculate the running mean among subjects at risk
+
+```{r}
+
+running_mean <- function(.localdata, .cov_names, .time_var, .time_grid) {
+  .localdata[,'time_var'] <- .localdata[,.time_var]
+  
+ subsets = tibble(time = .time_grid) %>% 
+   mutate(subset = map(time, function(.x,.dtmp=.localdata) {
+         .dtmp %>% 
+           filter(time_var >= .x) %>% 
+           select(all_of(.cov_names))
+       }))
+
+subsets %>% 
+  mutate(means = map(subset, ~.x %>% pivot_longer(cols=everything()) %>% 
+                       group_by(name) %>% 
+                       summarise(mean_cov=mean(value)))) %>% 
+  select(-subset) %>% 
+  unnest(means)
+}
+
+```
+
+2. Calculate the grid of times at which to evaluate the means. It's recommended to use the observed event times.
+
+```{r}
+times <- dat_use %>% filter(AE01==1) %>% 
+  distinct(TTE) %>% 
+  pull(TTE) %>% 
+  as.numeric() %>% 
+  sort()
+```
+
+3. Evaluate the covariate means (CAVGss and body weight) in the observed data.  Since we want to stratify the plot by treatment group, we group by `PBO`.
+
+```{r}
+obs_means <- dat_use %>% 
+  group_by(PBO) %>% 
+  nest() %>% 
+  mutate(obs_means = map(data, ~running_mean(.x, c('CAVGSS','BWT'), 'TTE_SEVERE',times))) %>% 
+  select(-data) %>% 
+  unnest(obs_means)
+```
+
+4. Evaluate the covariate means in each of the simulated trials. Note that we group by both `sim` and `PBO` to achieve  this.
+
+```{r}
+sim_means <- sims_weibull %>% 
+  group_by(sim, PBO) %>% 
+  nest() %>% 
+  mutate(sim_means = map(data, ~running_mean(.x, c('CAVGSS','BWT'),'time',times)))
+```
+
+5. Calculate summary statistics at each event time across simulated trials.
+
+```{r}
+sim_stats <- sim_means %>% 
+  select(-data) %>% 
+  unnest(sim_means) %>% 
+  group_by(PBO,time,name) %>% 
+  summarise(med = median(mean_cov),
+            qlo = quantile(mean_cov,.05),
+            qhi = quantile(mean_cov,.95)) 
+```
+6. Make the plot
+
+```{r}
+ggplot(sim_stats,
+       aes(x=time, y=med)) +
+  geom_line(linetype='dashed') +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi), fill='red', alpha=0.2) +
+  geom_line(data=obs_means, aes(y=mean_cov) ) +
+  facet_grid(name~PBO, scales = 'free_y') +
+  labs(x='Time', y='Covariate mean')
+```
+For CAVGss, the observed data (solid line) shows that subjects in the risk set at later times to have lower exposures than the entire population (at the start of the study).  The KMMC shows that the model captures a similar trend.
 
