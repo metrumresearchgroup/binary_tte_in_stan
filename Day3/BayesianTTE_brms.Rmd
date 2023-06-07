@@ -198,13 +198,14 @@ mcmc_plot(fit_weibull, type='trace')
 
 # Posterior predictive checks
 
-Remeber our recipe
+Remember our recipe
 
 * Simulate many replicates of the DV using the estimated model and observed predictors
     * Accounting for censoring process
 * Determine summary statistic(s) of interest
     * K-M estimate of S(t)
     * Non-parametric estimate of h(t)
+    *  Mean covariate value among subjects at risk
 * Calculate summary statistic for observed data
 * Calculate summary statistic for each simulated replicate
 * Plot distribution(s) of summary statistics

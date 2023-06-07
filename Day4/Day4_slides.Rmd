@@ -61,7 +61,7 @@ bayesplot::color_scheme_set("viridis")
   
 * Thus, we need to be able to integrate the hazard function
 
-* For 'simple' TTE models, the hazard in integreble
+* For 'simple' TTE models, the hazard is integrable in closed-form
 
 * As we move away from simple TTE models, we may be working with hazard functions that don't have closed-form integrals
 
