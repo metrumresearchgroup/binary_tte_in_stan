@@ -119,7 +119,7 @@ p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\rig
 * Data
 * Model for the outcome(s) -- the likelihood
 * Models for the parameters -- the prior distribution
-* MCMC tool -- Stan (via `brms` or `rstan``)
+* MCMC tool -- Stan (via `brms` or `rstan`)
 
 # Ingredients for HMC/NUTS
 
@@ -197,9 +197,9 @@ summary(mod01_stan)
     * Plot of sampled values vs iteration 
     * Look for stationarity and good mixing: fuzzy caterpillar
 
-* $\hat{R}$
+* $\widehat{R}$
     * Heuristically: $\frac{\text{total variance of } \theta \text{ (between and within-chain)}}{\text{average within-chain variance of } \theta}$
-    * Target: $\hat{R} < 1.01$ (sometimes, you'll see a rule of $\hat{R} < 1.05$) 
+    * Target: $\widehat{R} < 1.01$ (sometimes, you'll see a rule of $\widehat{R} < 1.05$) 
 <!-- MW: Gelman has changed his opinion to 1.01. If the model is good 1.05 can go down to 1.01 with more iterations -->
     * Output: Summary and plot (`mcmc_plot(mod01_stan, type='rhat')`)
 

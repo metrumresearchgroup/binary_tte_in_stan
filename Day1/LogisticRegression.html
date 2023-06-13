@@ -311,9 +311,9 @@ class="slide section level1">
 <h1>Probability models: binary variable</h1>
 <p>Suppose we define a binary variable as</p>
 <p><span class="math display">\[
-Tall = \left\{ \begin{array}{ll}
-               1 &amp; Height &gt; 200 cm \\
-               0 &amp; Height \leq 200 cm
+\text{Tall} = \left\{ \begin{array}{ll}
+               1 &amp; \text{Height} &gt; 200 \text{ cm} \\
+               0 &amp; \text{Height} \leq 200 \text{ cm}
                \end{array}
        \right.
 \]</span></p>
@@ -342,13 +342,13 @@ class="slide section level1">
 mass functions:</p>
 <p>The <em>normal</em> (or <em>Gaussian</em>) pdf for height <span
 class="math display">\[
-    p(height \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
-      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(height - \mu
+    p(\text{height} \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
+      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(\text{height} - \mu
 \right)^2\right\}
 \]</span></p>
 <p>and the <em>Bernoulli</em> pmf for Tall</p>
 <p><span class="math display">\[
-    p( tall \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
+    p( \text{tall} \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
 \]</span></p>
 </div>
 <div id="the-likelihood-function" class="slide section level1">
@@ -420,7 +420,9 @@ observations</p>
 \begin{eqnarray*}
 l(\pi | \mathbf{Y}=\mathbf{y}) &amp; = &amp; \prod_{i=1}^{n} P(Y_i=y_i)
 \\
-  &amp; = &amp;   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \\
+  &amp; = &amp;   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \qquad
+\qquad \qquad\qquad\text{(*) Assuming} P(Y_i=1)=\pi \text{ for all
+subjects.} \\
 &amp; = &amp; \pi^{(\# \, \text{of &quot;ones&quot;})}(1-\pi)^{n - (\#
 \, \text{of &quot;ones&quot;})}
 \end{eqnarray*}
@@ -455,8 +457,8 @@ successes})}{\pi} - \frac{(n- \# \, \text{of successes})}{1-\pi}
 successes})}{n}
 \]</span></p>
 <ul>
-<li>Estimator for <span class="math inline">\(\hat \pi\)</span> is as
-expected from probability perspective</li>
+<li>Estimator for <span class="math inline">\(\widehat{\pi}\)</span> is
+as expected from probability perspective</li>
 <li>Note: common value of <span class="math inline">\(\pi\)</span> for
 all subjects</li>
 </ul>

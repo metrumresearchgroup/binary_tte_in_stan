@@ -50,9 +50,9 @@ _After_ the course self-exploration of those materials will also give you:
 # Course organization
 
 * 3 4 hour sessions
-    * Thursday Nov 3 PM 1:00-5:00
-    * Friday Nov 4 AM 8:00-12:00
-    * Friday Nov 4 PM 1:00-5:00
+    * Monday June 26 PM 1:00-5:00
+    * Tuesday June 27 AM 8:00-12:00
+    * Tuesday June 27 PM 1:00-5:00
 * Each session is a mix of 
     * Didactic (html slides that you can compile from Rmd if you want) 
     * Hands-on learning (Rmd workbooks that probably won't compile until you edit them)

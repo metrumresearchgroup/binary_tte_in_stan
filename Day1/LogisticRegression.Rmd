@@ -164,9 +164,9 @@ If we know $\mu$ and $\sigma$ we can
 Suppose we define a binary variable as
 
 $$
-Tall = \left\{ \begin{array}{ll}
-               1 & Height > 200 cm \\
-               0 & Height \leq 200 cm
+\text{Tall} = \left\{ \begin{array}{ll}
+               1 & \text{Height} > 200 \text{ cm} \\
+               0 & \text{Height} \leq 200 \text{ cm}
                \end{array}
        \right.
 $$
@@ -198,14 +198,14 @@ Both of these link to specific probability density or probability mass functions
 
 The _normal_ (or _Gaussian_) pdf for height
 $$
-    p(height \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
-      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2\right\}
+    p(\text{height} \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
+      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(\text{height} - \mu \right)^2\right\}
 $$
 
 and the _Bernoulli_ pmf for Tall
 
 $$
-    p( tall \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
+    p( \text{tall} \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
 $$
 
 
@@ -275,11 +275,10 @@ $$
 $$
 \begin{eqnarray*}
 l(\pi | \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i) \\
-  & = &   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \\
+  & = &   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \qquad \qquad \qquad\qquad\text{(*) Assuming } P(Y_i=1)=\pi \text{ for all subjects.} \\
 & = & \pi^{(\# \, \text{of "ones"})}(1-\pi)^{n - (\# \, \text{of "ones"})}
 \end{eqnarray*}
 $$
-
 
 <red>Joint log likelihood:</red>
 
@@ -309,7 +308,7 @@ $$
 \frac{\mathrm{d}L}{\mathrm{d}\pi} = 0 \iff  \pi = \frac{(\# \, \text{of successes})}{n}
 $$
 
-* Estimator for $\hat \pi$ is as expected from probability perspective
+* Estimator for $\widehat{\pi}$ is as expected from probability perspective
 * Note: common value of $\pi$ for all subjects
 
 
@@ -352,8 +351,8 @@ aedat %>%
 
 * `STUDYID`: protocol
 * `USUBJID`: unique subject id
-* `AE01`: adverse event of grade 3 or higher
-
+* `AE01`: adverse event of grade 3 or higher (1=yes, 0=no)
+* `CAVGSS`: model-predicted average steady-state concentration
 
 # Visualizing relationships
 
@@ -563,7 +562,7 @@ p &= \mathrm{expit}(x) \\[1em]
 
 * The `logit` function takes us from the unit interval to the full Real line: 
 
-$$ (0, 1) \stackrel{\mathrm{expit}}{\longrightarrow} \mathbb{R} $$
+$$ (0, 1) \stackrel{\mathrm{logit}}{\longrightarrow} \mathbb{R} $$
 
 * An alternative "link" function is the `probit` : 
 
@@ -611,7 +610,7 @@ Or equivalently:
 $$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C_i \,\, ; \,\,i = 1,\ldots, n$$
 
 
-# Logistic regression is a type of GLM
+# Logistic regression is a type of Generalized Linear Model (GLM)
 
 * The `generalized` in ***generalized linear model*** refers to the non-Normal residuals (in this case, Bernoulli residuals). 
 
@@ -632,7 +631,8 @@ $$\mu + \beta \log(C)  \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta}{C} \,\,\,\,\,\,
 
 Taking the following model as an example: 
 
-$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
+$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \\
+\,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
 
 Standard terminology to refer to the model components is:
 
@@ -797,8 +797,8 @@ data.frame(
         * "Early" (e.g., cycle 1)
         * Steady-state
     * When dose holidays or reductions are common
-        * Average to the end of the study
-        * Average up to the event (or end of study)
+        * Average to the end of the study (or some fixed time point, e.g., end of Cycle 1)
+        * Average up to the event (or end of study) --> Not a good choice!
         * I tend to avoid cumulative measures due to confounding with time
         * Adds another layer of variability to exposures which should be modeled
 
