@@ -1,8 +1,8 @@
 ---
 title: "Bayesian exposure-response modeling for binary data"
 output:
+  beamer_presentation: default
   slidy_presentation:
-#    theme: cerulean
     fig_width: 9
     fig_height: 5
     font_adjustment: 3
@@ -10,11 +10,9 @@ output:
     css: slidystyles.css
     footer: Metrum Research Group &copy 2021
     mathjax: local
-    self_contained: false
+    self_contained: no
     df_print: tibble
-#bibliography: alpha.bib
-#nocite: | 
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -68,13 +66,15 @@ expit <- function(x) 1 / (1+exp(-x))
 # A brief review of Bayesian inference
 
 
-$\color{firebrick}{\text{Bayes Rule}}$ the basis for inference about model parameters ($\theta$) given data ($y$) and prior knowledge about model parameters ($p\left(\theta\right)$):
+Bayes Rule is the basis for inference about model parameters $\theta$ given data $y$ and prior knowledge about model parameters $p\left(\theta\right)$:
+
 \begin{eqnarray*}
-p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)}
+p\left(\theta\,|\,y\right) &= \frac{p\left(\theta\right)p\left(y\,|\,\theta\right)}{p\left(y\right)}
 = \frac{p\left(\theta\right)p\left(y\,|\,\,\theta\right)}{\int{p\left(\theta\right)p\left(y\,|\,\theta\right) d\theta}}
 \\
-&\propto& p\left(\theta\right)p\left(y\,|\,\theta\right)
+&\propto p\left(\theta\right)p\left(y\,|\,\theta\right)
 \end{eqnarray*}
+
 <!-- The $p$'s are probabilities or probability densities of the specified random variables. -->
 
 :::{.notebox}
@@ -119,7 +119,7 @@ p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\rig
 * Data
 * Model for the outcome(s) -- the likelihood
 * Models for the parameters -- the prior distribution
-* MCMC tool -- Stan (via `brms` or `rstan`)
+* MCMC tool -- Stan (via `brms` or `rstan``)
 
 # Ingredients for HMC/NUTS
 
@@ -136,6 +136,8 @@ p\left(\theta\,|\,y\right) &=& \frac{p\left(\theta\right)p\left(y\,|\,\theta\rig
 
 
 # Let's re-fit our AE model using `brms`
+
+\tiny
 
 ```{r,echo=FALSE}
 load('../data/aedat.RDS')
@@ -164,6 +166,8 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                   seed = 123)
 ```
 
+\normalsize
+
 # What about the prior distributions?
 
 * By default, `brms` uses flat, non-informative prior distributions for regression coefficients
@@ -177,7 +181,7 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                   data = aedat, 
                   family = bernoulli(link = "logit"),
                   warmup = 500, 
-                  iter = 2000, 
+                  iter = 1000, 
                   chains = 4, 
                   init = "random", 
                   cores = 2,
@@ -197,9 +201,9 @@ summary(mod01_stan)
     * Plot of sampled values vs iteration 
     * Look for stationarity and good mixing: fuzzy caterpillar
 
-* $\widehat{R}$
+* $\hat{R}$
     * Heuristically: $\frac{\text{total variance of } \theta \text{ (between and within-chain)}}{\text{average within-chain variance of } \theta}$
-    * Target: $\widehat{R} < 1.01$ (sometimes, you'll see a rule of $\widehat{R} < 1.05$) 
+    * Target: $\hat{R} < 1.01$ (sometimes, you'll see a rule of $\hat{R} < 1.05$) 
 <!-- MW: Gelman has changed his opinion to 1.01. If the model is good 1.05 can go down to 1.01 with more iterations -->
     * Output: Summary and plot (`mcmc_plot(mod01_stan, type='rhat')`)
 
@@ -223,7 +227,8 @@ prior_summary(mod01_stan)
 # BRMS centers all predictors in the model
 
 Mathematically, the RHS of the model `y ~ x1 + x2` is 
-$$b\_Intercept + b\_x1 \cdot x1 + b\_x2 \cdot x2$$
+
+$b\_Intercept + b\_x1 \cdot x1 + b\_x2 \cdot x2$
 
 Or, equivalently,
 $$Intercept + b\_x1 \cdot (x1 - \overline{x1}) + b\_x2 \cdot (x2 - \overline{x2})$$

@@ -1,8 +1,8 @@
 ---
 title: "Exposure-response modeling for binary data"
 output:
+  beamer_presentation: default
   slidy_presentation:
-#    theme: cerulean
     fig_width: 9
     fig_height: 5
     font_adjustment: 3
@@ -10,11 +10,9 @@ output:
     css: slidystyles.css
     footer: Metrum Research Group &copy 2021
     mathjax: local
-    self_contained: false
+    self_contained: no
     df_print: tibble
-#bibliography: alpha.bib
-#nocite: | 
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -104,19 +102,19 @@ For now, we will use this high-level notation:
 
 In some cases (e.g., when setting up a model) we will be thinking  in the  data generating / probability direction: 
 
-$$
+
 \begin{eqnarray*} 
 \mu,\, \beta,\, C,\, X & \stackrel{\mathrm{Probability}}{\longrightarrow} & Y 
 \end{eqnarray*}
-$$
+
 
 In other cases we will be thinking in the model estimating / statistics direction:
 
-$$
+
 \begin{eqnarray*} 
 \mu,\, \beta & \stackrel{\mathrm{Statistics}}{\longleftarrow} &  C,\, X,\, y 
 \end{eqnarray*}
-$$
+
 
 <!-- # Modeling from a probabilistic point of view -->
 
@@ -164,9 +162,9 @@ If we know $\mu$ and $\sigma$ we can
 Suppose we define a binary variable as
 
 $$
-\text{Tall} = \left\{ \begin{array}{ll}
-               1 & \text{Height} > 200 \text{ cm} \\
-               0 & \text{Height} \leq 200 \text{ cm}
+Tall = \left\{ \begin{array}{ll}
+               1 & Height > 200 cm \\
+               0 & Height \leq 200 cm
                \end{array}
        \right.
 $$
@@ -198,14 +196,14 @@ Both of these link to specific probability density or probability mass functions
 
 The _normal_ (or _Gaussian_) pdf for height
 $$
-    p(\text{height} \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
-      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(\text{height} - \mu \right)^2\right\}
+    p(height \,|\, \mu, \sigma ) = \frac{1}{\sqrt{2\pi}
+      \sigma} \exp\left\{-\frac{1}{2\sigma^2} \left(height - \mu \right)^2\right\}
 $$
 
 and the _Bernoulli_ pmf for Tall
 
 $$
-    p( \text{tall} \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
+    p( tall \,|\, \pi ) = \pi^\text{tall} (1-\pi)^{1-\text{tall}}
 $$
 
 
@@ -226,10 +224,10 @@ $$
     function of the parameters given the data instead of as a function
     of the data given the parameters.
  
-<p align="center">
-<red>$L\left(\theta \,|\,y_{obs}, x\right)$</red> $=$ <grn>$p\left(y_{obs} \,|\,\theta,
-  x\right)$</grn>
-</p>
+
+$$ L\left(\theta \,|\,y_{obs}, x\right) = p\left(y_{obs} \,|\,\theta,
+  x\right)$$
+
 
 # Modeling from a probabilistic point of view: The likelihood function
 
@@ -270,25 +268,27 @@ $$
 
 # The Bernoulli joint likelihood function
 
-<red>Joint likelihood</red> for a sample of independent Bernoulli observations
+Joint likelihood for a sample of independent Bernoulli observations
 
-$$
+
 \begin{eqnarray*}
 l(\pi | \mathbf{Y}=\mathbf{y}) & = & \prod_{i=1}^{n} P(Y_i=y_i) \\
-  & = &   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \qquad \qquad \qquad\qquad\text{(*) Assuming } P(Y_i=1)=\pi \text{ for all subjects.} \\
+  & = &   \prod_{i=1}^{n}\pi^{y_i}(1-\pi)^{(1-y_i)} \\
 & = & \pi^{(\# \, \text{of "ones"})}(1-\pi)^{n - (\# \, \text{of "ones"})}
 \end{eqnarray*}
-$$
 
-<red>Joint log likelihood:</red>
 
-$$
+
+Joint log likelihood:
+
+
 \begin{eqnarray*}
 L(\pi \,\, | \,\, \mathbf{Y}=\mathbf{y}) & = &  \log l(\pi| \mathbf{Y}=\mathbf{y}) \\
  & = & (\# \, \text{of "ones"}) \log(\pi)
  + (n-\# \, \text{of "ones"}) \log(1-\pi) 
 \end{eqnarray*}
-$$
+
+
 
 # Maximum likelihood estimation for a simple model
 
@@ -297,18 +297,18 @@ $$
 
 > Derivative of joint log likelihood: 
 
+
 $$
-\begin{align*}
-\frac{\mathrm{d}L}{\mathrm{d}\pi} &= \frac{(\# \, \text{of successes})}{\pi} - \frac{(n- \# \, \text{of successes})}{1-\pi}
-\end{align*}
+\frac{\mathrm{d}L}{\mathrm{d}\pi} = \frac{(\# \, \text{of successes})}{\pi} - \frac{(n- \# \, \text{of successes})}{1-\pi}
 $$
+
 
 
 $$
 \frac{\mathrm{d}L}{\mathrm{d}\pi} = 0 \iff  \pi = \frac{(\# \, \text{of successes})}{n}
 $$
 
-* Estimator for $\widehat{\pi}$ is as expected from probability perspective
+* Estimator for $\hat \pi$ is as expected from probability perspective
 * Note: common value of $\pi$ for all subjects
 
 
@@ -351,8 +351,8 @@ aedat %>%
 
 * `STUDYID`: protocol
 * `USUBJID`: unique subject id
-* `AE01`: adverse event of grade 3 or higher (1=yes, 0=no)
-* `CAVGSS`: model-predicted average steady-state concentration
+* `AE01`: adverse event of grade 3 or higher
+
 
 # Visualizing relationships
 
@@ -375,6 +375,7 @@ Types of plots will depend on the predictor variable:
 # Probability vs categorical variable {.sourceCode.r.small}
 ::: columns
 
+\tiny
 :::: column
 ```{r, 'cat-plot', fig.show='hide'}
 aedat %>% 
@@ -390,6 +391,7 @@ aedat %>%
   ylim(0,1) +
   labs(x='Study', y='Probability of severe AE')
 ```
+\normalsize
 
 Note: `binom.confint` is in the `binom` package
 
@@ -408,6 +410,7 @@ Note: `binom.confint` is in the `binom` package
 ::: columns
 
 :::: column
+\tiny
 ```{r, 'cat-plot2', fig.show='hide'}
 aedat %>% 
   group_by(STUDYID) %>% 
@@ -422,6 +425,7 @@ aedat %>%
   ylim(0,1) +
   labs(x='Study', y='Probability of severe AE')
 ```
+\normalsize
 
 Note: `binom.confint` is in the `binom` package
 
@@ -442,6 +446,7 @@ Note: `binom.confint` is in the `binom` package
 :::{.columns}
 
 ::::{.column}
+\tiny
 ```{r, echo=FALSE}
 dat_eda <- aedat %>% group_by(Quartile) %>% mutate(MedConc = median(CAVGSS))
 ```
@@ -482,10 +487,11 @@ ggplot() +
   ) +
   labs(x='Steady-state Cavg', y='Probability of severe AE')
 ```
+\normalsize
 ::::
 
 ::::{.column}
-```{r, ref.label='cont-er', echo=FALSE}
+```{r, ref.label='cont-er', echo=FALSE, out.width="95%"}
 
 ```
 
@@ -551,18 +557,18 @@ $$\mathrm{logit}(p)=\log\left(\frac{p}{1-p}\right) \in (-\infty, \infty)$$
 
 * The standard logistic function (also called the "expit") is the inverse of the logit, `plogis()` in R:
 
-$$\begin{align*}
+\begin{align*}
 p &= \mathrm{expit}(x) \\[1em]
   & = \frac{1}{1+\exp(-x)} \\[1em]
   & = \frac{\exp(x)}{1 + \exp(x)}
-  \end{align*}$$ 
+\end{align*}
 
 
 # Other "link functions"
 
 * The `logit` function takes us from the unit interval to the full Real line: 
 
-$$ (0, 1) \stackrel{\mathrm{logit}}{\longrightarrow} \mathbb{R} $$
+$$ (0, 1) \stackrel{\mathrm{expit}}{\longrightarrow} \mathbb{R} $$
 
 * An alternative "link" function is the `probit` : 
 
@@ -571,10 +577,9 @@ where $\Phi$ is the Normal Cumulative Density Function (CDF):
 
 $$ \Phi(x) = P(\mbox{Std. Normal Variate} < x)  $$
 
-* An alternative "link" function is the `complementary log-log` : 
+* Alternative "link" function: `complementary log-log`
     * $\text{cloglog}(p) = \log( - \log(1 - p)$ 
-    * Used much less frequently than logit or probit
-    * Its an asymmetrical link function
+    * It's an asymmetrical link function
     * Shows up when transforming other models to binary outcomes, e.g. Poisson model to binary model
 
 # More About Link Functions
@@ -610,7 +615,7 @@ Or equivalently:
 $$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C_i \,\, ; \,\,i = 1,\ldots, n$$
 
 
-# Logistic regression is a type of Generalized Linear Model (GLM)
+# Logistic regression is a type of GLM
 
 * The `generalized` in ***generalized linear model*** refers to the non-Normal residuals (in this case, Bernoulli residuals). 
 
@@ -631,8 +636,7 @@ $$\mu + \beta \log(C)  \,\,\,\,\,\,\,\,\,\,\, \mu + \frac{\beta}{C} \,\,\,\,\,\,
 
 Taking the following model as an example: 
 
-$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \\
-\,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
+$$ Y_i \sim \mathrm{Ber}(\pi_i) \,\,\, \text{where} \,\,\, \mathrm{logit}(\pi_i) = \mu + \beta C^*_i \,\, ; \,\,i = 1,\ldots, n$$
 
 Standard terminology to refer to the model components is:
 
@@ -679,14 +683,14 @@ The right-hand side of the formula syntax:
 
 specifies that the linear predictor is 
 
-$$ 
+
 \begin{eqnarray*}
 \beta_0 & + & \beta_\mathrm{C} \mathrm{C} + \beta_\mathrm{W} \mathrm{W} + \\
 && \beta_\mathrm{PT1} \mathrm{I}_{\mathrm{PT}=\mathrm{PT1}} + 
 \beta_\mathrm{PT2} \mathrm{I}_{\mathrm{PT}=\mathrm{PT2}} + 
 \beta_\mathrm{M} \mathrm{I}_{\mathrm{SEX}=\mathrm{M}} 
 \end{eqnarray*}
-$$ 
+ 
 
 <!-- NB: formula syntax gets interpreted differently in R depending on the type of model being fit. E.g. models are specified differently in `nls`, `nlme`, `gnlm`, to name a few.  -->
 
@@ -709,10 +713,11 @@ mod01_glm <- glm(AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
                  family = binomial(link='logit'))
 ```
 
+\tiny
 ```{r}
 summary(mod01_glm)
 ```
-
+\normalsize
 
 # Interpreting coefficients in logit-link models: Intercept
 
@@ -751,7 +756,7 @@ In other words, $\exp(\beta_{\mathrm{PT1}})$ is the odds ratio for the effect of
 * Largest change always occurs at the inflection point
     * The derivative of the logistic function is maximized at $p=0.5$ and is maximized by $\beta/4$
 
-```{r, echo=FALSE, message=FALSE, width=4*1.6, height=4}
+```{r, echo=FALSE, message=FALSE, out.height="60%"}
 data.frame(
   LP = seq(-6,6,.1)
 ) %>%
@@ -796,11 +801,10 @@ data.frame(
     * When dose 'holidays' or reductions are rare
         * "Early" (e.g., cycle 1)
         * Steady-state
-    * When dose holidays or reductions are common
-        * Average to the end of the study (or some fixed time point, e.g., end of Cycle 1)
-        * Average up to the event (or end of study) --> Not a good choice!
-        * I tend to avoid cumulative measures due to confounding with time
-        * Adds another layer of variability to exposures which should be modeled
+    * When dose holidays or reductions are common, there are a number of common practices:
+        * Average to the end of the study and verage up to the event (or end of study). PROBLEMATIC!
+        * Best to develop a TTE dynamic model with time-varying exposure
+        * Decision about initial dose or entire regimen?
 
 
 # Workbook 04: Fitting a logistic regression model
@@ -844,6 +848,7 @@ data.frame(
 
 :::{.column}
 
+\tiny
 ```{r, 'response-resid', fig.show = 'hide'}
 dat_plus <- dat_mod
 dat_plus$res <- residuals(mod01_glm, type = "response")
@@ -855,6 +860,7 @@ ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
   labs(x='Steady-state Cavg', y='Response residuals')
 
 ```
+\normalsize
 :::
 
 :::{.column}
@@ -888,7 +894,7 @@ ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
 ::::{.columns}
 
 :::{.column}
-
+\tiny
 ```{r, 'deviance-resid', fig.show = 'hide'}
 dat_plus <- dat_mod
 dat_plus$res <- residuals(mod01_glm, type = "deviance")
@@ -900,6 +906,7 @@ ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
   labs(x='Steady-state Cavg', y='Deviance residuals')
 
 ```
+\normalsize
 :::
 
 :::{.column}
@@ -969,7 +976,7 @@ knitr::include_graphics("graphics/cdf_image_dharma.png")
 
 For binary data, $F(y)$ is a step function, with steps at 0 and 1.
 
-```{r, echo=FALSE}
+```{r, 'dhamrma-bin-resid',echo=FALSE, fig.show = 'hide'}
 data.frame(x=c(0,1), y=c(.25, 1)) %>% 
 ggplot() +
   geom_point(aes(x,y)) +
@@ -985,6 +992,12 @@ ggplot() +
                              ends="last", 
                              type = "closed")) +
   labs(x="y", y="F(y)")
+```
+
+
+
+```{r, ref.label='dhamrma-bin-resid', echo=FALSE, out.width='95%'}
+
 ```
 
 :::
@@ -1016,6 +1029,7 @@ Importantly, departures from a uniform distribution indicate lack of fit.
 
 :::{.column width=47.5%}
 
+\tiny
 ```{r, 'dharma-resid', fig.show = 'hide'}
 dharma_resids = simulateResiduals(mod01_glm,
                                   n = 1000,
@@ -1023,6 +1037,7 @@ dharma_resids = simulateResiduals(mod01_glm,
 
 plot(dharma_resids)
 ```
+\normalsize
 
 ```{r, ref.label='dharma-resid', echo=FALSE, out.width="95%"}
 
@@ -1036,6 +1051,7 @@ plot(dharma_resids)
 
 :::{.column width=47.5%}
 
+\tiny
 ```{r, 'quantile-resid', fig.show = 'hide'}
 aedat %>% ungroup() %>% 
   mutate(quantile_residual = dharma_resids$scaledResiduals) %>% 
@@ -1044,6 +1060,7 @@ aedat %>% ungroup() %>%
   geom_smooth() + 
   labs(y='Quantile residuals', x='Body Weight (kg)')
 ```
+\normalsize
 
 ```{r, ref.label='quantile-resid', echo=FALSE, out.width="95%"}
 
@@ -1067,6 +1084,7 @@ A general VPC "recipe":
 
 # Simulate data for a VPC
 
+\tiny
 ```{r}
 # Simulate using the simulate function in stats
 aedat_pp = bind_cols(aedat,
@@ -1077,14 +1095,14 @@ aedat_pp %>% ungroup() %>%
   select(USUBJID, PTTYPE, AE01, Quartile, name, value) %>% 
   slice_tail(n=4)
 ```
-
+\normalsize
 
 # Generate VPC for categorical predictor
 
 ::::{.columns}
 
 :::{.column}
-
+\tiny
 ```{r, 'bayes-vpc', fig.show = 'hide'}
 # Observed data summary
 obs_summary <- aedat %>% 
@@ -1104,10 +1122,12 @@ sim_summary %>%
   labs(x='', y='Proportion with AE') +
   coord_flip()
 ```
+
+\normalsize
 :::
 
 :::{.column}
-```{r, ref.label='bayes-vpc', echo=FALSE}
+```{r, ref.label='bayes-vpc', echo=FALSE, out.width="95%"}
 
 ```
 
@@ -1123,6 +1143,7 @@ sim_summary %>%
     * Fit generalized additive model (smoother) to each simulated dataset
     * Predict at a fixed grid of values (5$^{th}$ to 95$^{th}$ percentile)
 
+\tiny
 ```{r}
 summary_function <- function(.data, .x_name, .y_name='value') {
   .data <- .data %>% ungroup() %>% 
@@ -1136,18 +1157,22 @@ summary_function <- function(.data, .x_name, .y_name='value') {
   return( data.frame(xvar=x_grid, prediction = predictions))
 }
 ```
+\normalsize
 
 # Compute summary statistics for observed data
 
+\tiny
 ```{r}
 obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
   mutate(type='Observed')
 
 head(obs_summary)
 ```
+\normalsize
 
 # Compute summary on each simulated study
 
+\tiny
 ```{r}
 sim_summary <- aedat_pp %>% 
   # Nest everying except the simulation name
@@ -1166,13 +1191,14 @@ sim_summary <- aedat_pp %>%
             ) %>% 
   mutate(type = 'Simulated')
 ```
+\normalsize
 
 # Plot VPC
 
 ::::{.columns}
 
 :::{.column}
-
+\tiny
 ```{r, 'cont-vpc', fig.show='hide'}
 sim_summary %>% bind_rows(obs_summary) %>% 
   ggplot(aes(x=xvar, y=prediction)) +
@@ -1183,7 +1209,7 @@ sim_summary %>% bind_rows(obs_summary) %>%
        y='Probability of severe AE')
 
 ```
-
+\normalsize
 :::
 
 :::{.column}
