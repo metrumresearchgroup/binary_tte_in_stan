@@ -240,7 +240,8 @@ T*</p>
 <li>We’ll return to this when discussing model diagnostics</li>
 </ul></li>
 <li><p>Typical to assume that <span class="math inline">\(T\)</span> and
-<span class="math inline">\(C\)</span> are independent</p></li>
+<span class="math inline">\(C\)</span> are independent (conditional on
+covariates in the model)</p></li>
 </ul>
 </div>
 <div id="types-of-censoring" class="slide section level1">
@@ -292,9 +293,34 @@ class="math inline">\(t\)</span>” is what helps</li>
 </ul></li>
 </ul>
 </div>
+<div id="developing-some-intuition-about-the-hazard-function"
+class="slide section level1">
+<h1>Developing some intuition about the hazard function</h1>
+<p>Imagine event times are measured on a discrete scale (days).</p>
+<p>Probability density/mass for having an event on day 366: <span
+class="math inline">\(f(366) = P(T = 366)\)</span></p>
+<p>Probability of surviving longer than 365 days: <span
+class="math inline">\(S(365) = P(T &gt; 365)\)</span></p>
+<p>Probability of having an event on day 366 given survival through 365
+days (this is the intuition of the hazard function):</p>
+<p><span class="math display">\[\begin{align}
+h(t) &amp;= P(T = 366|T&gt;365) \\
+&amp;= P(T = 366 \text{ and } T &gt; 365) ~/~ P(T &gt; 365) \\
+&amp; \text{Note: T = 366 implies T&gt;365, so the conditional can be
+simplified} \\
+&amp;= P(T = 366)/T(365) \\
+h(365) &amp;= f(366)/S(365)
+\end{align}\]</span></p>
+<p>This is a discrete approximation; a rigorous derivation uses limits
+and <span class="math inline">\(\delta t\)</span></p>
+</div>
 <div id="terminology" class="slide section level1">
 <h1>Terminology</h1>
 <ul>
+<li>Hazard function:</li>
+<li><span class="math inline">\(h(t) = \lim_{\Delta t \rightarrow 0}
+\frac{P(t &lt; T \leq t+\Delta t ~|~ T \geq t )}{\Delta t}\)</span>
+<br></li>
 <li>Cumulative hazard = total hazard accumulated to time <span
 class="math inline">\(t\)</span>
 <ul>
@@ -306,7 +332,8 @@ class="math inline">\(t\)</span> <span class="citation">[1]</span>
 <li>Probability density function = instantaneous event risk (aka
 <em>density</em>)
 <ul>
-<li>$f(t) = _{t } $ <br></li>
+<li><span class="math inline">\(f(t) = \lim_{\Delta t \rightarrow 0}
+\frac{P(t &lt; T \leq t+\Delta t)}{\Delta t}\)</span> <br></li>
 </ul></li>
 <li>Survival function = probability of an event happening after time
 <span class="math inline">\(t\)</span>

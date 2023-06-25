@@ -178,7 +178,7 @@ p2
 
   * We'll return to this when discussing model diagnostics
 
-* Typical to assume that $T$ and $C$ are independent
+* Typical to assume that $T$ and $C$ are independent (conditional on covariates in the model)
   
 
 
@@ -207,14 +207,38 @@ p2
   - $h(t) = \lim_{\Delta t \rightarrow 0} \frac{P(t < T \leq t+\Delta t ~|~  T \geq t )}{\Delta t}$
   - "conditional on event happening on or after time $t$" is what helps
 
+# Developing some intuition about the hazard function
+
+Imagine event times are  measured on a discrete scale (days).
+
+Probability density/mass for having an event on day 366: $f(366) = P(T = 366)$
+  
+Probability of surviving longer than 365 days: $S(365) = P(T > 365)$
+  
+Probability of having an event on day 366 given survival through 365 days (this is the intuition of the hazard function): 
+
+\begin{align}
+h(t) &= P(T = 366|T>365) \\
+&= P(T = 366 \text{ and } T > 365) ~/~ P(T > 365) \\
+& \text{Note: T = 366 implies T>365, so the conditional can be simplified} \\
+&= P(T = 366)/T(365) \\
+h(365) &= f(366)/S(365) 
+\end{align}
+
+This is a discrete approximation;  a rigorous derivation uses limits and $\delta t$
+
+
 # Terminology
 
+- Hazard function:
+  - $h(t) = \lim_{\Delta t \rightarrow 0} \frac{P(t < T \leq t+\Delta t ~|~  T \geq t )}{\Delta t}$
+<br> 
 - Cumulative hazard = total hazard accumulated to time $t$
   - $H(t) = \int_0^t h(s) ds$
   - This is the expected number of events to time $t$ [@noauthor_2011-gh]
 <br>
 - Probability density function = instantaneous event risk (aka *density*)
-  - $f(t) = \lim_{\Delta t \rightarrow 0} \frac{P(t < T \leq t+\Delta t)}{\Delta t} $
+  - $f(t) = \lim_{\Delta t \rightarrow 0} \frac{P(t < T \leq t+\Delta t)}{\Delta t}$
 <br>
 - Survival function = probability of an event happening after time $t$
   - $S(t) = P(T > t)$

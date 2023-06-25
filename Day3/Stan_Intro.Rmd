@@ -326,7 +326,7 @@ parameters {
 
 # Transformed parameters block
 
-* Similar to the `transformed parameters` block but for parameters
+* Similar to the `transformed data` block but for parameters
 * Variables defined in terms of data and parameters 
 
 
