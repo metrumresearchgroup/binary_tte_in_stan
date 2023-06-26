@@ -41,7 +41,7 @@ theme_set(theme_bw())
 
 We'll use the `survfit` function to estimate the Survival function.  
 
-Using our example data from the last class, let's estimate the overall S(t), i.e., not stratifting by any covariates.
+Using our example data from the last class, let's estimate the overall S(t), i.e., not stratifying by any covariates.
 
 ```{r, "TRY toydata", purl=TRUE, results = "hide"}
 load('../data/aedat.RDS')
@@ -101,7 +101,7 @@ Often it's helpful to add the number of subjects at risk to the bottom of the pl
 
 **Exercise:**
 
-1. Obtain the Kaplan-Meier estimates for time to any AE by exposure quartile.  Hint: the righ hand side of the formula will be "~ Quartile"
+1. Obtain the Kaplan-Meier estimates for time to any AE by exposure quartile.  Hint: the right hand side of the formula will be "~ Quartile"
 
 2. Plot the estimates using ggsurvplot.  Do you see any evidence of an exposure-response relationship?
 

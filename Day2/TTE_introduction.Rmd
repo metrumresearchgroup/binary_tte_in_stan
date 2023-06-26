@@ -978,7 +978,7 @@ $$
     - $h(t) = \color{red}{h_{0,s}(t)} \exp(\theta_1 x_1 + \dots + \theta_p x_p)$
     - Often used in primary analysis of TTE endpoints in clinical trials (e.g., stratify by region)
 * Time-varying covariates 
-xs    - Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)
+    - Allows for covariates to be constant over intervals defined by the data (similar to how NONMEM treats time varying covariates)
     - Doesn't allow for continuously varying covariates
     - Frequently used when conditioning on an intermediate event (e.g., Stanford heart transplant data)
     

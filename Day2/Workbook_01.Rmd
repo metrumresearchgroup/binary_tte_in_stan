@@ -44,7 +44,7 @@ To better understand the relationship between the hazard, cumulative hazard, sur
 
 ## Exponential distribution
 
-The hazard is constant as a funtion of time: $h(t) = \lambda$.
+The hazard is constant as a function of time: $h(t) = \lambda$.
 
 From first principles:
  * h(t) = lambda
@@ -103,7 +103,7 @@ The hazard isn't easily expressed in closed form.  How can you derive it from fi
 
 Hint: the log normal pdf and survival function are obtained using the `dlnorm` and `plnorm` functions, respectively.
 
-Plot the log-normal hazard function for combinations of mean (1, 2) and starndard deviation (0.3,1) modifying the code below.
+Plot the log-normal hazard function for combinations of mean (1, 2) and standard deviation (0.3,1) modifying the code below.
 
 
 
