@@ -106,7 +106,8 @@ fit_lr <- stan(file = '../model/stan/logistic_regression_example.stan',
                data = stan_data,
                chains = 4,iter = 2000, warmup = 1000, 
                init = stan_inits, 
-               cores = 2)
+               cores = 2,
+               seed = 31425)
 ```
 
 
@@ -141,7 +142,7 @@ fit_lr <- stan(file = '../model/stan/logistic_regression_example.stan',
                data = stan_data,
                chains = 4,iter = 2000, warmup = 1000, 
                init = stan_inits, 
-               cores = 2)
+               cores = 2, seed = 31425)
 ```
 
 ```{r}
@@ -257,18 +258,18 @@ posterior_samples %>%
 
 *** Exercise: ***
 
-1. Copy the Stan model file to `../model/stan/logistic_regression_power.stan`
+1. Inspect the Stan model file `../model/stan/logistic_regression_power.stan`
 
-2. Modify the code to use a power model for SLD0 i.e., $\text{logit}\left(P(\text{ECOG}=1 | x)\right) = \alpha + \beta  x$.  You'll need to modify the parameters, model, and generated quantities blocks
+2. See how the code was modified to use a power model for SLD0 i.e., $\text{logit}\left(P(\text{ECOG}=1 | x)\right) = \alpha + \beta  x^\gamma$.  Focus on the parameters, model, and generated quantities blocks.
 
-3. did you get some post-warmup divergent transitions?  Follow the link provided by the Stan output (http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup) to read more.
+3. Run the model.  Did you get some post-warmup divergent transitions?  If so, follow the link provided by the Stan output (http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup) to read more.
   a. Look at the pairs plot for alpha, beta and the power parameter.  What do you see?  Try increasing the `adapt_delta` option to 0.95.  Does that fix the problem?
 
 ```{r}
 fit_lr_power <- stan(file = '../model/stan/logistic_regression_power.stan',
                data = stan_data,
                chains = 4,iter = 2000, warmup = 1000, 
-               cores = 2, control = list(adapt_delta = 0.95))
+               cores = 2,  seed=31425)
 ```
 
   b. Try a model which forces $\beta > 0$, does that fix the problem?  Do you think this is a reasonable solution, or would you try a different functional form?
