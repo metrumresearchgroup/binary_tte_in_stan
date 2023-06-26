@@ -176,6 +176,7 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
 
 # Model summary
 
+\tiny
 ```{r, echo=FALSE, eval=TRUE}
 mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,  
                   data = aedat, 
@@ -192,6 +193,7 @@ mod01_stan <- brm(formula = AE01 ~ CAVGSS + BWT + PTTYPE + SEXTXT,
 ```{r}
 summary(mod01_stan)
 ```
+\normalsize
 
 * Defaults: Estimate = posterior mean and Est.Err = posterior sd.  Can modify these using the `robust` argument to `brm`
 
@@ -215,14 +217,16 @@ summary(mod01_stan)
     
 # Traceplots
 
-```{r}
+```{r,out.width="95%"}
 bayesplot::mcmc_trace(mod01_stan)
 ```
 
 # Let's see the default priors in our model
+\tiny
 ```{r}
 prior_summary(mod01_stan)
 ```
+\normalsize
 
 # BRMS centers all predictors in the model
 
@@ -243,18 +247,21 @@ We need to specify priors for `Intercept`, `b_x1` and `b_x2`
 # To change them use the `set_priors` function
 
 A Normal(mean=0, sd=5) prior on all covariate effects:
+\tiny
 ```{r}
 priors_mod01 <- set_prior('normal(0,5)', class='b')
 ```
-
+\normalsize
 <br>
 
 A Normal(0,5) prior on CAVGSS and a DoubleExponential prior on the other effects:
   
+\tiny
 ```{r}
 priors_mod01_de <- set_prior('normal(0,5)', class='b', coef='CAVGSS') +
   set_prior('double_exponential(0,1)', class='b')
 ```
+\normalsize
 
 See [Stan functions reference](https://mc-stan.org/docs/2_26/functions-reference/index.html) for list of all available distributions.
 
@@ -327,7 +334,7 @@ aedat %>% ungroup() %>%
 
 # Simulate from posterior predictive distribution
 
-
+\tiny
 ```{r}
 aedat_pp = add_predicted_draws(newdata = aedat, mod01_stan)
 
@@ -335,13 +342,14 @@ aedat_pp %>% ungroup() %>%
   select(USUBJID, PTTYPE, AE01, Quartile:.prediction) %>% 
   slice_tail(n=4)
 ```
+\normalsize
 
 # Plot the VPC
 
 ::::{.columns}
 
 :::{.column}
-
+\tiny
 ```{r, 'bayes-vpc', fig.show = 'hide'}
 # Observed data summary
 obs_summary <- aedat %>% 
@@ -361,11 +369,11 @@ sim_summary %>%
   labs(x='', y='Proportion with AE') +
   coord_flip()
 ```
+\normalsize
 :::
 
 :::{.column}
-```{r, ref.label='bayes-vpc', echo=FALSE}
-
+```{r, ref.label='bayes-vpc', echo=FALSE,out.width="95%"}
 ```
 
 :::
@@ -378,6 +386,7 @@ sim_summary %>%
 * Fit generalized additive model (smoother) to each simulated dataset
 * Predict at a fixed grid of values (0 to 95$^{th}$ percentile)
 
+\tiny
 ```{r}
 summary_function <- function(.data, .x_name, .y_name='value') {
   .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
@@ -389,18 +398,22 @@ summary_function <- function(.data, .x_name, .y_name='value') {
   return( data.frame(xvar=x_grid, prediction = predictions))
 }
 ```
+\normalsize
 
 # Compute summary statistics for observed data
 
+\tiny
 ```{r}
 obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
   mutate(type='Observed')
 
 head(obs_summary)
 ```
+\normalsize
 
 # Compute summary on each simulated study
 
+\tiny
 ```{r}
 sim_summary <- aedat_pp %>% 
   # Nest everying except the simulation name
@@ -421,10 +434,11 @@ sim_summary <- aedat_pp %>%
             ) %>% 
   mutate(type = 'Simulated')
 ```
+\normalsize
 
 # Plot VPC
-
-```{r, 'cont-vpc'}
+\tiny
+```{r, 'cont-vpc', out.height="66%"}
 sim_summary %>% bind_rows(obs_summary) %>% 
   ggplot(aes(x=xvar, y=prediction)) +
   geom_line(aes(col=type, group=type)) +
@@ -432,6 +446,7 @@ sim_summary %>% bind_rows(obs_summary) %>%
   labs(x='Steady-state Cavg', y='Probability of severe AE')
 
 ```
+\normalsize
 
 # Model Comparison
 

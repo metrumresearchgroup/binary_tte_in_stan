@@ -220,7 +220,7 @@ $$
 <!--     distribution function we now refer to that function as a -->
 <!--     ***likelihood function***. -->
 
-* It is the ***same function*** as the PDF or pmf, but we now view it as a
+* It is the ***same expression*** as the PDF or pmf, but we now view it as a
     function of the parameters given the data instead of as a function
     of the data given the parameters.
  
@@ -316,6 +316,8 @@ $$
 
 * When we have a full logistic regression model with covariates, there is no analytical solution to the likelihood equations. 
 * However there is a numerical root finder that is specially tailored to the structure of logistic (and all GLM) models: the `Newton-Raphson` method ([see @2795]).
+* Historically, that was one reason for using GLMs. 
+* That reason is often not compelling any more, but there are still advantages in interpretation, e.g. versus non-monotonic models. 
 
 
 # Workbook 01: Exploring the binomial density
@@ -568,7 +570,7 @@ p &= \mathrm{expit}(x) \\[1em]
 
 * The `logit` function takes us from the unit interval to the full Real line: 
 
-$$ (0, 1) \stackrel{\mathrm{expit}}{\longrightarrow} \mathbb{R} $$
+$$ (0, 1) \stackrel{\mathrm{logit}}{\longrightarrow} \mathbb{R} $$
 
 * An alternative "link" function is the `probit` : 
 
@@ -802,7 +804,7 @@ data.frame(
         * "Early" (e.g., cycle 1)
         * Steady-state
     * When dose holidays or reductions are common, there are a number of common practices:
-        * Average to the end of the study and verage up to the event (or end of study). PROBLEMATIC!
+        * Average to the end of the study and average up to the event (or end of study). PROBLEMATIC!
         * Best to develop a TTE dynamic model with time-varying exposure
         * Decision about initial dose or entire regimen?
 
@@ -1010,8 +1012,8 @@ For binary data, this is:
 
 $$
 r_{q,i} = \begin{cases}
-  u \sim U(0,\pi_i)  & \text{if } y_i = 0\\
-  u \sim U(\pi_i, 1) & \text{if } y_i = 0
+  u \sim U(0,\hat{\pi}_i)  & \text{if } y_i = 0\\
+  u \sim U(\hat{\pi}_i, 1) & \text{if } y_i = 1
 \end{cases}
 $$
 :::
