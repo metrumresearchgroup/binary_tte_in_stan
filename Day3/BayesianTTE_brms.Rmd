@@ -70,7 +70,7 @@ bayesplot::color_scheme_set("viridis")
 
 # New dataset
 
-* **Models for change in tumour size, appearance of new lesions and survival probability in patients with advanced epithelial ovarian cancer** @Zecchin2016-rw
+* **Models for change in tumor size, appearance of new lesions and survival probability in patients with advanced epithelial ovarian cancer** @Zecchin2016-rw
     - DDMORE repository submission IDs: DDMODEL00000217, DDMODEL00000218
     - Data simulated from these models
 

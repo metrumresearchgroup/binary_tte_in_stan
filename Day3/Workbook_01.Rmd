@@ -130,9 +130,9 @@ Now, let's look at  on VPCs.  Fortunately, it is easy to simulate from these mod
 We'll simulate death times from the Weibull model.  Following the slides, we'll simulate censoring times from a log-normal model.
 
 ```{r}
-weibull_sims <- add_predicted_draws(model=fit01_weibull, 
+weibull_sims <- add_predicted_draws(object=fit01_weibull, 
                                     newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
-                                    prediction = 'survival_time')
+                                    value = 'survival_time')
 ```
 
 We'll use t-distribution priors with relatively low degrees of freedom.  
@@ -153,9 +153,9 @@ fit_censoring
 Next we'll simulate censoring  times
 
 ```{r}
-censoring_sims <- add_predicted_draws(model=fit_censoring, 
+censoring_sims <- add_predicted_draws(object=fit_censoring, 
                                       newdata = dos84 %>% select(ID, rts84, rts84_f, ECOG),
-                                      prediction = 'censoring_time')
+                                      value = 'censoring_time')
 ```
 
 Finally, we'll censor the death times.
@@ -229,7 +229,7 @@ sim_surv %>% group_by(pred_times, group) %>%
 
 * Make VPCs for the censoring model by RTS quartile and ECOG status.  Do you need to update the censoring model?
 
-* Fit a model or two using alternative parametric families (Gamma, lognormal, or frechet).  Include both relative tumor size at Day 84 and baseline ECOG status.
+* Fit a model or two using alternative parametric families (Gamma, lognormal, or Freshet).  Include both relative tumor size at Day 84 and baseline ECOG status.
 
 * Compare to the Weibull model using LOO.  Which model do you think would be better at predicting OS for future patients?  Does it appear that you need a non-linear effect of RTS?
 
