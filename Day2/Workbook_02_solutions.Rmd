@@ -1,0 +1,133 @@
+---
+title: "Introduction to TTE modeling: Workbook 2"
+author: "Kaplan-Meier estimates and plots"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  # html_document:
+  #   css: docs/src/styles/styles.css
+  #   number_sections: true
+  #   theme: united
+  #   toc: true
+  #   toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(survival)
+library(survminer)
+library(texreg)
+library(mgcv)
+library(flexsurv)
+library(muhaz)
+library(Hmisc)
+
+theme_set(theme_bw())
+```
+
+# Estimating the survival function 
+
+We'll use the `survfit` function to estimate the Survival function.  
+
+Using our example data from the last class, let's estimate the overall S(t), i.e., not stratifying by any covariates.
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+
+aedat <-
+  aedat %>% 
+  mutate(AETOXGR = factor(aedat$AETOXGR, 0:3, labels=c("None","Mild","Moderate","Severe")),
+         ae_any = AETOXGR != 'None') %>% 
+  group_by(USUBJID) %>%
+  # End of study for patients without a severe event
+  mutate(TTE_SEVERE = case_when(
+    STUDYID=="PROTA" ~ 2,
+    STUDYID=="PROTB" ~ 6
+  ),
+  # Time of severe event for those that had one
+  TTE_SEVERE = ifelse(AETOXGR=="Severe", TTE, TTE_SEVERE)
+  )
+
+# Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+dat_use <-
+  aedat %>% arrange(USUBJID, TTE_SEVERE) %>% slice(1) %>%
+  group_by(PBO) %>%
+  mutate(Quartile = ifelse(PBO == "PBO", "PBO",
+                           paste0("Q", ntile(CAVGSS, n = 4)))) %>% 
+  ungroup() %>% 
+  mutate(rowid = 1:n())
+
+```
+
+
+The key elements:
+
+* `survfit`: the function used to obtain the K-M (or Flemming-Harrington) estimate of the survival function
+  - stype=1 (the default)   gives the K-M estimate
+  - stype=2 gives the Fleming-Harrington estimate
+
+* `Surv` function for defining the outcome
+  - For right-censored data, the first argument is the observed event time variable, and the second argument is the even indicator (1 or TRUE for an event; 0 or FALSE for censoring)
+  
+Obtaining the estimate and looking at some output:
+
+```{r}
+km_est = survfit(Surv(TTE,ae_any)~1, data = dat_use)
+
+print(km_est)
+```
+
+```{r}
+summary(km_est)
+```
+
+
+Plotting the estimate using `ggsurvplot`:
+
+```{r}
+ggsurvplot(km_est, risk.table = TRUE)
+```
+
+Often it's helpful to add the number of subjects at risk to the bottom of the plot (a risk table).
+
+**Exercise:**
+
+1. Obtain the Kaplan-Meier estimates for time to any AE by exposure quartile.  Hint: the right hand side of the formula will be "~ Quartile"
+
+```{r}
+km_est_css = survfit(Surv(TTE,ae_any)~Quartile, data = dat_use)
+
+```
+
+2. Plot the estimates using ggsurvplot.  Do you see any evidence of an exposure-response relationship?
+
+```{r}
+ggsurvplot(km_est_css, risk.table = TRUE)
+```
+
+3. Repeat steps 1 and 2 for time to a severe AE (event time variable is TTE_SEVERE, and the event indicator variable is AE01). Do you see any evidence of an exposure-response relationship?
+
+```{r}
+km_est_severe_css = survfit(Surv(TTE_SEVERE,AE01)~Quartile, data = dat_use)
+ggsurvplot(km_est_severe_css)
+```
+
+3. Extra: Plot the K-M estimates by patient type, faceted by exposure quartile. Hint: Fit model `Surv(TTE,AY_any)~PTTYPE` and use the `facet.by` argument to `ggsurvplot`
+
+```{r}
+fit <- survfit(Surv(TTE_SEVERE,AE01)~PTTYPE, data=dat_use)
+ggsurvplot(fit, facet.by = 'Quartile', data=dat_use)
+```
+
