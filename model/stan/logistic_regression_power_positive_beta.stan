@@ -9,7 +9,7 @@ data {
 
 parameters {
   real alpha;  // intercept
-  real beta ;  // slope
+  real<lower=0> beta ;  // slope
   real<lower=0> gamma; // power parameter
 }
 
