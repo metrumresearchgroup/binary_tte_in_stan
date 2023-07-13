@@ -136,6 +136,11 @@ fit02_weibull <- brm(TIME | cens(1-DV) ~ rts84 + ECOG,
 
 ```
 
+How do the parameter estimates compare?
+
+```{r}
+fit02_weibull
+```
 
 Let's look at the LOO-IC
 
@@ -154,7 +159,7 @@ weibull_sims <- add_predicted_draws(object=fit01_weibull,
                                     value = 'survival_time')
 ```
 
-We'll use t-distribution priors with relatively low degrees of freedom.  
+For the censoring model, we'll use t-distribution priors with relatively low degrees of freedom.  
 
 ```{r}
 censoring_priors <- prior('student_t(3,0,2.5)',class='b')
@@ -243,17 +248,99 @@ sim_surv %>% group_by(pred_times, group) %>%
   ylim(0,1) + labs(x='Time (days)', y='Surviving fraction')
 ```
 
+\newpage
 
 ***Exercise:***
 
 * Make VPCs for the censoring model by RTS quartile and ECOG status.  Do you need to update the censoring model?
 
-* Fit a model or two using alternative parametric families (Gamma, lognormal, or Freshet).  Include both relative tumor size at Day 84 and baseline ECOG status.
+***
+> __Answer:__
+
+> For evaluating the censoring model, we'll reverse the event indicator.  That is, an "event" now corresponds to a patient being censored.  We'll do this for both the observed and simulated data and then plot the VPC.
+
+
+```{r, echo=TRUE, results='hide'}
+obs_cens = vpc_stat_km(dos84 %>% mutate(time=TIME, event=1-DV), group.var = 'rts84_f')
+
+sim_cens = event_sims %>% 
+  mutate(time=event_time, event=1-as.numeric(delta)) %>% 
+  nest(data = -.draw) %>% 
+  mutate(km_est = map(data, ~vpc_stat_km(., group.var='rts84_f',pred_times=sort(unique(obs_surv$pred_times))))) %>% 
+  select(-data) %>% 
+  unnest(cols=km_est)
+```
+
+
+```{r, fig.cap='VPC for censoring model stratified by relative change in tumor size to Day 84.'}
+sim_cens %>% group_by(pred_times, group) %>% 
+  summarise(med=mean(preds), 
+            lcl = quantile(preds,probs = 0.05),
+            ucl = quantile(preds, probs=0.95)) %>% 
+  ggplot(aes(x=pred_times)) +
+  geom_step(aes(y=med), color='red') +
+  geom_ribbon(aes(ymin=lcl, ymax=ucl), fill='red', alpha=0.2) +
+  geom_step(data=obs_cens,aes(y=preds)) +
+  facet_wrap(~group) +
+  ylim(0,1) + labs(x='Time (days)', y='Surviving fraction')
+```
+
+> This looks pretty good.
+
+
+***
+
+\newpage
+
+* Fit a model or two using alternative parametric families (Gamma, lognormal, or Frechet).  Include both relative tumor size at Day 84 and baseline ECOG status.
+
+***
+
+> __Answer:__
+>  Let's look at the lognormal model as an alternative since it allows for a non-monotonic hazard function (unlike the Weibull model).
+
+```{r}
+fit01_lognormal <-brm(TIME | cens(1 - DV) ~ rts84 + ECOG, data=dos84, family = lognormal())
+```
+
+```{r}
+fit01_lognormal
+```
+
+> The Rhat values show that the sampler seems to have converged and we have high ESS values.   Let's calculate the ELPD.
+
+***
+
+\newpage
 
 * Compare to the Weibull model using LOO.  Which model do you think would be better at predicting OS for future patients?  Does it appear that you need a non-linear effect of RTS?
 
-Hint: 
+
+***
+
+> We can look at the ELPD-loo values from each of our models as an approximate measure of out-of-sample predictive performance.
+
+For the Weibull model we have:
+
 ```{r}
-#loo_compare(loo_weibull, loo_gamma)
+loo_weibull
+```
+
+And for the log normal model we have:
+
+```{r}
+loo_lognormal <- loo(fit01_lognormal)
+
+loo_lognormal
 
 ```
+
+Based on these the ELPD is higher for the log-normal model, indicating it might be a better fit.  We can quantify this better with a pairwise comparison (which allows us to get a standard error of the difference):
+
+```{r}
+loo_compare(loo_weibull, loo_lognormal)
+```
+
+So, the difference in LOOIC is about twice the standard error, indicting that the log normal model is a bit better for out-of-sample predictions.
+
+***
