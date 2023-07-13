@@ -1,0 +1,172 @@
+---
+title: "Workbook"
+author: "Model Fitting"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    # css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(DHARMa)
+
+expit <- function(x) 1 / (1+exp(-x))
+```
+
+
+
+# Workbook: Fitting a logistic regression model
+
+```{r, purl=TRUE, results = "hide"}
+# Preamble of data assembly done in previous workbooks
+
+load('../data/aedat.RDS')
+source('preprocess_data.R')
+```
+
+Let's start by fitting a model with effects of steady-state Cavg and patient type.  Note that patient type is a factor. and the reference level is "HV".
+
+```{r}
+levels(aedat$PTTYPE)
+```
+
+
+```{r, "TRY firstglm", purl=TRUE, results = "hide"}
+mod01 <- glm(AE01 ~ CAVGSS + PTTYPE,
+             family = binomial(link = "logit"),
+             data = aedat,
+             )
+```
+
+Exercise:
+
+* Re-fit the model using a probit link (mod01_probit)
+
+```{r, "TRY firstglm", purl=TRUE, results = "hide"}
+mod01_probit <- glm(AE01 ~ CAVGSS + PTTYPE,
+             family = binomial(link = "probit"),
+             data = aedat,
+             )
+```
+
+* Re-fit the model with STUDYID as an additional covariate (mod02)
+
+```{r}
+mod02 <- glm(AE01 ~ CAVGSS + PTTYPE + STUDYID, # having verified that STUDYID is a factor var!
+             family = binomial(link = "logit"),
+             data = aedat,
+             )
+```
+
+
+## Reading R help
+
+R help pages can be overwhelming.  Nonetheless, take a look at the following help files.
+
+```{r, "TRY extractors", purl=TRUE, results = "hide"}
+?glm # See especially the "See Also" section
+?summary.glm # See expecially the "Value" section
+?confint
+?predict
+?predict.glm
+```
+
+Exercise:
+
+* Print out a table of estimated coefficients and their standard errors.
+* Print out 95% confidence intervals for the model parameters.
+* Print out 90% confidence intervals for the model parameters.
+
+```{r}
+summary(mod02) # or, to trim it down a bit :
+summary(mod02)$coefficients 
+```
+
+
+```{r}
+confint(mod02)
+```
+
+
+## Model intercept
+
+```{r, "TRY intercept", purl=TRUE, results = "hide"}
+partab01 <- cbind(coef(mod01), confint(mod01))
+partab01
+```
+
+Exercise:
+
+* Make the intercept more interpretable by applying the inverse of the link function.  What scale is this?
+* What exposure and covariate settings does the intercept correspond to?
+
+```{r}
+# You can extract the intercept row like this:
+partab01['(Intercept)',]
+```
+
+
+```{r}
+expit(partab01['(Intercept)',]) # this puts it on the probability scale
+```
+
+
+```{r}
+# or equivalently: 
+plogis(partab01['(Intercept)',])
+```
+
+
+## Re-coding predictors
+
+```{r, "TRY recoding", purl=TRUE, results = "hide"}
+ref_bwt <- median(aedat$BWT) # will want reference value later, so save as variable!
+dat_mod <- aedat %>% mutate(
+  BWT_norm = BWT - ref_bwt,
+  PTTYPE = factor(PTTYPE, levels = c("PT1", "PT2", "HV"))
+  )
+?relevel
+```
+
+Exercise: 
+
+* Re-fit model `mod01` including CAVGSS, the re-coded PTTYPE and normalized body weight.  What exposure and covariate settings does the intercept corresponds to?
+
+```{r}
+mod03 <- glm(AE01 ~ CAVGSS + PTTYPE + BWT_norm,
+             family = binomial(link = "logit"),
+             data = dat_mod, 
+             )
+```
+
+* How many fold higher are the odds of an AE for `PT1` versus `HV`?
+
+```{r}
+partab03 <- cbind(coef(mod01), confint(mod01))
+exp(partab03['PTTYPEPT1', ])
+```
+
+Solution note: so, about 3.5-fold higher. 
+
+

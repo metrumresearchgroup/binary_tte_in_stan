@@ -1,0 +1,189 @@
+---
+title: "Workbook"
+author: "Visualizing binary data"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    # css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(DHARMa)
+
+expit <- function(x) 1 / (1+exp(-x))
+```
+
+
+
+# Workbook: Visualizing binary data
+
+```{r, "TRY toydata", purl=TRUE, results = "hide"}
+load('../data/aedat.RDS')
+source('preprocess_data.R')
+```
+
+* This data set is comprised of a two week study (protocol A) and a six week study (protocol B)
+* The data set includes patients of type `PT2`, a patient type that (let's say) has not been studied at higher dose levels.
+* Suppose further that a dose level under consideration for a phase 2 study in `PT2` would have typical value exposures near 2.5 ug/mL.
+* The objective of *this* analysis will be to determine whether the AE rate will be "sufficiently low" in `PT2` at that exposure.
+
+```{r}
+str(aedat)
+```
+
+
+## EDA: Data key
+
+
+```{r, "TRY datakey", purl=TRUE, results = "hide"}
+# Count subjects by study and treatment
+aedat %>% ungroup() %>% count(AETOXGR,AE01)
+
+aedat %>% count(STUDYID, STUDYDUR, PTTYPE, PBO)
+
+```
+
+
+Exercise: Evaluate the preceding code and based on that answer the following:
+
+* If we fit a model for `AE01`, what are the implications of combining data from studies of two different durations?
+* How can we assess whether the differing durations are likely to be problematic?
+
+
+
+## Derived variables
+
+Both for EDA and for model-checking, it's generally helpful to have quartiles of exposure:
+
+```{r, "TRY varderive", purl=TRUE, results = "hide"}
+aedat %>% group_by(Quartile) %>% 
+  summarise(n=n(),
+            min= min(CAVGSS), 
+            median=median(CAVGSS),
+            max=max(CAVGSS))
+```
+
+
+## EDA: Pairs plots
+
+```{r, "TRY covplot", purl=TRUE, results = "hide", width=10, height=10}
+dat_eda <- aedat %>% ungroup() %>%
+  select(STUDYID, SEXTXT, PTTYPE, CAVGSS, BWT, Quartile) %>%
+  mutate( # tell plot fn how to plot vars
+   CAVGSS = as.numeric(CAVGSS),
+   BWT = as.numeric(BWT)
+  )
+
+p <- ggpairs(dat_eda,
+        axisLabels = "internal",
+        columnLabels = c(rep("", 3), # 4 categorical variables
+                         "Cavg", "Weight",  # continuous variables
+                         "" # Quartile
+                         )
+        ) + theme_light()
+p
+
+ggsave("ggpairs.pdf", p, height=10, width=10)
+```
+
+Suppose we were planning to fit a model that included all of the following covariates:
+
+* Sex
+* Patient type
+* Study
+* Weight
+* (as well as Cavg)
+
+Should we expect this to be problematic?
+
+
+## EDA: Categorical covariate plot
+
+```{r}
+aedat %>% 
+  group_by(SEXTXT) %>% 
+  summarise(x = sum(AE01), n=n()) %>% 
+  mutate(phat = x / n,
+         lcl = binom.confint(x,n,methods = "wilson")$lower,
+         ucl = binom.confint(x,n,methods = "wilson")$upper) %>% 
+  ggplot(aes(x=SEXTXT, y=phat)) + 
+  geom_col() +
+  geom_errorbar(aes(ymin=lcl, ymax=ucl), 
+                width = 0.2) +
+  labs(x='', y='Probability of a severe AE')
+```
+
+
+## EDA: E-R relationship
+
+```{r, "TRY ereda", purl=TRUE, results = "hide"}
+dat_eda <- aedat %>% group_by(Quartile) %>% mutate(MedConc = median(CAVGSS))
+
+p <- ggplot() +
+  geom_rug(data = filter(dat_eda, AE01 == 0),
+           aes(x = CAVGSS), sides = "b") +
+  geom_rug(data = filter(dat_eda, AE01 == 1),
+           aes(x = CAVGSS), sides = "t") +
+  # NB: default smoother is problematic for binary
+  # data. So, we use a GAM with family='binomial'
+  geom_smooth(data = dat_eda,
+              aes(x = CAVGSS, y = AE01),
+              method='gam', formula=y~s(x),
+              method.args = list(family='binomial')) +
+  stat_summary(
+    data = dat_eda,
+    aes(x = MedConc, y = AE01, group = MedConc),
+    fun = function(y) sum(y) / length(y),
+    geom = "point"
+  ) +
+  stat_summary(
+    data = dat_eda,
+    aes(x = MedConc, y = AE01),   
+    # Wilson CI recommended by Agresti and Coull (2000) review paper
+    fun.min = function(y) {
+      binom.confint(sum(y),length(y),
+                    methods = "wilson")$lower
+      },
+    fun.max = function(y) {
+      binom.confint(sum(y), length(y),
+                    methods = "wilson")$upper
+      },
+    geom = "errorbar"
+  )
+p
+p + facet_wrap(~STUDYID) # Note exposure quartile not re-computed per-study. This is probably what you want.  
+p + facet_wrap(~SEXTXT)
+p + facet_wrap(~PTTYPE)
+```
+
+Exercise: List several key findings based on the EDA, and note any implications or expectations that relate to modeling these data.
+
+Solution notes: 
+
+- E-R relationship seems to vary by protocol, with higher exposure leading to higher event rates only for Protocol B. This could be due to the longer duration of Protocol B (this would need to be investigated by looking at the distribution of event times).
+- E-R relationship seems steeper for patient type PT1, but it is hard to disentangle the true cause because these patients were only in Protocol B, the longer study. 
+- E-R relationship does not seem to depend on Sex. 
+
+
+- 

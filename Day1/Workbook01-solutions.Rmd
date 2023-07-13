@@ -1,0 +1,122 @@
+---
+title: "Workbook"
+author: "Binomial Density"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    # css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(DHARMa)
+
+expit <- function(x) 1 / (1+exp(-x))
+```
+
+# Workbook: Exploring the binomial density
+
+## rbinom
+
+```{r, "TRY rbinom", purl=TRUE, results = "hide"}
+set.seed(314159)
+y <- rbinom(n=20, size=1, prob=0.5)
+table(y)
+```
+
+Exercise:
+
+* Generate 100 independent Bernoulli observations with success probability = 0.2.
+* Do the same thing again, both with and without re-setting the "seed"
+
+```{r}
+set.seed(1)
+rbinom(n=100, size=1, prob=0.2)
+rbinom(n=100, size=1, prob=0.2)
+set.seed(1)
+rbinom(n=100, size=1, prob=0.2)
+```
+
+
+## dbinom
+
+```{r, "dbinom", purl=TRUE, results = "hide"}
+set.seed(1)
+pp <- 0.7 # probability that event happens
+y <- 1 # indicates event occured
+nn <- 1 # number of "attempts"
+pp^y*(1-pp)^(nn-y)
+dbinom(x=y, size=nn, prob=pp) # same thing
+y <- c(0, 0, 0, 1, 0, 1)
+# Likelihood contributions, evaluated at p = 0.1
+dbinom(x=y, size=1, prob=0.1)
+```
+
+
+## Likelihood computation
+
+```{r, "TRY dbinom", purl=TRUE, results = "hide"}
+set.seed(1)
+# Joint likelihood, evaluated at p = 0.1
+prod(dbinom(x=y, size=1, prob=0.1))
+```
+
+Exercise do one of the following:
+
+* Use trial and error to find the probability that maximizes the joint likelihood.
+* Use some more clever trick to accomplish the same goal.
+
+
+
+```{r}
+# Trial and error evaluation of joint likelihood: 
+prod(dbinom(x = y, size = 1, prob = 0.1))
+prod(dbinom(x = y, size = 1, prob = 0.2))
+prod(dbinom(x = y, size = 1, prob = 0.3))
+prod(dbinom(x = y, size = 1, prob = 0.4))
+# Maximum seems to be somewhere near p = 0.3
+```
+
+```{r}
+# More clever approach using grid search 
+joint_likelihood <- function(p) prod(dbinom(x = y, size = 1, prob = p))
+pdat <- tibble(p = seq(0, 1, by = 0.01)) %>% 
+  rowwise() %>% 
+  mutate(lik = joint_likelihood(p))
+pdat$p[which.max(pdat$lik)]
+```
+
+
+## Likelihood maximization
+
+Advanced exercise: look up `?optim` and use that to maximize the joint likelihood
+
+```{r}
+optim(p = 0.5, # initial value
+      joint_likelihood, # function to be maximized
+      method = "Brent", # per help page, use this for 1d problems
+      lower = 0, upper = 1, # solution must be between 0 and 1
+      control = list(fnscale = -1) # maximize rather than minimize
+      )$par
+```
+

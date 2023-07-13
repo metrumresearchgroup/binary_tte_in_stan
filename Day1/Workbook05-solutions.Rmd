@@ -1,0 +1,444 @@
+---
+title: "Workbook"
+author: "Model Evaluation"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    # css: docs/src/styles/styles.css
+    number_sections: true
+    theme: united
+    toc: true
+    toc_float: true
+params:
+  include: TRUE
+---
+
+
+```{r,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(comment='.',fig.align=TRUE,message=FALSE,warning=FALSE)
+```
+
+
+# Preliminaries for R examples
+
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(haven)
+library(GGally)
+library(binom)
+library(texreg)
+library(mgcv)
+library(DHARMa)
+
+expit <- function(x) 1 / (1+exp(-x))
+
+theme_set(theme_bw())
+```
+
+```{r, purl=TRUE, results = "hide"}
+# Preamble of data assembly and model fitting done in previous workbooks
+
+load('../data/aedat.RDS')
+source("preprocess_data.R")
+
+mod01 <- glm(AE01 ~ CAVGSS + PTTYPE,
+             family = binomial(link = "logit"),
+             data = aedat,
+             )
+
+ref_bwt <- median(aedat$BWT) # will want reference value later, so save as variable!
+dat_mod <- aedat %>% mutate(
+  BWT_norm = BWT - ref_bwt,
+  PTTYPE = factor(PTTYPE, levels = c("PT1", "PT2", "HV"))
+)
+
+mod03 <- glm(AE01 ~ CAVGSS + PTTYPE + BWT_norm,
+             family = binomial(link = "logit"),
+             data = dat_mod,
+             )
+```
+
+
+# Workbook: Model evaluation and comparison
+
+
+## Residual plot
+
+
+```{r, "TRY resid", purl=TRUE, results = "hide"}
+dat_plus <- dat_mod
+dat_plus$res <- residuals(mod01, type = "response")
+dat_plus$pred <- fitted(mod01)
+
+resplot <-
+  ggplot(dat_plus, aes(x = CAVGSS, y = res)) +
+  geom_point() +
+  geom_smooth()
+
+resplot  
+resplot + facet_wrap(~ PTTYPE)
+
+# deviance residuals
+dat_plus$resd <- residuals(mod01, type = "deviance")
+dat_plus$pred <- fitted(mod01)
+
+resplot <-
+  ggplot(dat_plus, aes(x = CAVGSS, y = resd)) +
+  geom_point() +
+  geom_smooth()
+
+resplot  
+resplot + facet_wrap(~ PTTYPE)
+
+```
+
+Suggestive of:
+
+* Over-predicting rates for HV at high exposures.
+* Possibly underpredicting at mid-range exposures for `PT1`.
+
+Exercise: Plot residuals by `BWT`, faceting by `STUDYID`.
+
+```{r}
+ggplot(dat_plus, aes(x = BWT, y = resd)) +
+  geom_point() +
+  geom_smooth() + 
+  facet_wrap(~ STUDYID)
+```
+
+
+***Extra credit Exercise:***
+
+Binned residuals are another way to smooth out the discreteness in binary residuals.
+The general algorithm is to:
+
+1. Bin the data by fitted value
+2. Within each bin, calculate the average
+    * residual
+    * fitted probability of the outcome
+    * continuous covariate values
+3. Plot the average residual (y axis) against the other average metrics per bin
+4. Include thresholds for the residuals at +/- 2*sqrt(p_bin(1-p_bin)/n_bin), where p_bin is the fitted probability
+
+```{r}
+
+```
+
+
+
+# DHARMa residuals
+
+The simulareResiduals function in the DHARMa package calculates the smoothed quantile residuals
+
+```{r}
+
+simulationOutput = DHARMa::simulateResiduals(mod01, n = 1000)
+plot(simulationOutput)
+DHARMa::plotResiduals(simulationOutput)
+DHARMa::plotResiduals(simulationOutput,form=dat_mod$CAVGSS,xlab="CAVGSS")
+
+```
+
+## VPC vs a categorical covariate
+
+First, we'll simulate some data.  
+
+```{r}
+# Simulate using the simulate function in stats
+aedat_pp = bind_cols(aedat,
+                     stats::simulate(mod03, nsim=500)) %>% 
+  pivot_longer(cols=sim_1:sim_500, values_to='value', names_to='name')
+```
+
+Look at the simulated data and the help file for the stats::simulate function.  Do you understand the structure of the data?
+
+
+Let's make a categorical VPC for percent of subjects with a severe AE by exposure quartile.
+
+```{r, "TRY glmvpc"}
+# Define the summary statistic
+vpc_statistic <- function(x) sum(x, na.rm = TRUE) / sum(!is.na(x))
+```
+
+Now, we'll apply the summary function to the observed data and plot the results for reference. (We'll add the simulation-based values next.)
+
+```{r}
+obs_stat <- dat_mod %>%
+  group_by(PTTYPE, Quartile) %>%
+  summarise(pAE = vpc_statistic(AE01)) %>% 
+  mutate(type='Observed')
+
+
+ggplot(obs_stat) +
+  geom_point(aes(x = Quartile, y = pAE)) +
+  facet_wrap(~ PTTYPE)
+```
+
+Next, we'll apply the same summary function to each simulated dataset.
+
+```{r, "TRY2 glmvpc", purl=TRUE, results = "hide"}
+#Simulated data summary
+sim_summary <- aedat_pp %>% 
+  group_by(name,PTTYPE,Quartile) %>% 
+  summarise(pAE = vpc_statistic(value)) %>% 
+  mutate(type='Predicted')
+```
+
+Look at the summary od the simulated data.  Do you understand the format and how we got here?
+
+Now let's put together the pieces for plotting
+
+```{r}
+comb_stat <- sim_summary %>% 
+  bind_rows(obs_stat) %>% 
+  group_by(type,PTTYPE, Quartile) %>% 
+  summarise(phat = median(pAE),
+            lcl = quantile(pAE, probs = 0.05),
+            ucl = quantile(pAE, probs = 0.95)) 
+
+  comb_stat %>% 
+  ggplot(aes(x=Quartile, y=phat, group=type, col=type)) +
+    geom_point() +
+    geom_errorbar(aes(ymin=lcl, ymax=ucl)) +
+    facet_wrap(~PTTYPE) +
+    labs(y='Proportion with severe AE', x='Exposure Quartile')
+```
+
+
+
+Exercise: Create a VPC for the proportion of patients with a severe AE within each gender.
+
+```{r}
+obs_stat <- dat_mod %>%
+  group_by(SEXTXT) %>%
+  summarise(pAE = vpc_statistic(AE01)) %>% 
+  mutate(type='Observed')
+
+set.seed(1)
+
+aedat_pp = bind_cols(aedat,
+                     stats::simulate(mod03, nsim=500)) %>% # I changed nsim to 50 just to show that agreement between obs and pred isn't guaranteed
+  pivot_longer(cols=sim_1:sim_500, values_to='value', names_to='name')
+
+sim_summary <- aedat_pp %>% 
+  group_by(name,SEXTXT) %>% 
+  summarise(pAE = vpc_statistic(value)) %>% 
+  mutate(type='Predicted')
+
+comb_stat <- sim_summary %>% 
+  bind_rows(obs_stat) %>% 
+  group_by(type,SEXTXT) %>% 
+  summarise(phat = median(pAE),
+            lcl = quantile(pAE, probs = 0.05),
+            ucl = quantile(pAE, probs = 0.95)) 
+
+comb_stat %>% 
+  ggplot(aes(x=SEXTXT, y=phat, group=type, col=type)) +
+    geom_point() +
+    geom_errorbar(aes(ymin=lcl, ymax=ucl)) +
+    labs(y='Proportion with severe AE', x='Sex') 
+```
+
+```{r}
+# The above fit seems to good to be true, but we can check that the average prediction within each group 
+# actually does nearly equal the empirical rate within each group. (This is because of we happen to be fitting 
+# using almost exactly the model that was used to generate the data.)
+dat_mod$Pred <- predict(mod03, type = "response")
+
+dat_mod %>% 
+  group_by(SEXTXT) %>% 
+  summarise(OBS = mean(AE01), 
+            PRED = mean(Pred))
+```
+
+
+## VPC against continuous predictors
+
+* Summary statistic = non-parametric estimate of exposure-response relationship, evaluated at a fixed grid of values
+    * Fit generalized additive model (smoother) to each simulated dataset
+    * Predict at a fixed grid of values (5$^{th}$ to 95$^{th}$ percentile)
+
+```{r}
+summary_function <- function(.data, .x_name, .y_name='value') {
+  .data <- .data %>% ungroup() %>% rename('xvar' = .x_name, 'yvar'=.y_name)
+  x_grid <- with(.data, seq(from = quantile(xvar, probs=0.05),
+                           to = quantile(xvar,probs = 0.95), 
+                           length = 100))
+  fit <- gam(yvar ~ s(xvar), family=binomial(link='logit'), data=.data)
+  predictions <- predict(fit, newdata = data.frame(xvar=x_grid), type='response')
+  return( data.frame(xvar=x_grid, prediction = predictions))
+}
+```
+
+Compute summary statistics for observed data
+
+```{r}
+obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
+  mutate(type='Observed')
+
+head(obs_summary)
+```
+
+Compute summary on each simulated study
+
+```{r}
+sim_summary <- aedat_pp %>% 
+  # Nest everying except the simulation name
+  nest(cols=-name) %>% 
+  # Use 200 sims for demonstration
+  slice(1:200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, .x_name='CAVGSS'))) %>% 
+  select(name, predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+```
+
+Combine and plot
+
+```{r, 'cont-vpc', fig.show='hide'}
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='Steady-state Cavg', y='Probability of severe AE')
+
+```
+
+
+Exercise: Make a similar VPC plotted against bodyweight.
+
+```{r}
+obs_summary <- summary_function(aedat, .x_name = 'BWT', .y_name='AE01') %>% 
+  mutate(type='Observed')
+
+sim_summary <- aedat_pp %>% 
+  # Nest everying except the simulation name
+  nest(cols=-name) %>% 
+  # Use 200 sims for demonstration
+  slice(1:200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, .x_name='BWT'))) %>% 
+  select(name, predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='Body Weight (kg)', y='Probability of severe AE')
+
+# no need to worry about the warning(s) -- they just indicate inability to fit a gam to some of the simulation reps
+```
+
+
+Extended Exercise:
+
+* Re-fit the first model (mod01) to allow a different slope of exposure-response relationship for each level of `PTTYPE`. 
+(Hint: the formula will be AE01 ~ CAVGSS*PTTYPE)
+* Re-generate the residual and VPCs and compare the results.
+* Read `?aic` and compare the models with and without interaction in terms of AIC.
+
+```{r}
+mod04 <- glm(AE01 ~ CAVGSS * PTTYPE,
+             family = binomial(link = "logit"),
+             data = aedat,
+             )
+```
+
+
+For brevity let's just focus on the VPCs with respect to CAVG : 
+
+```{r}
+# Simulate using the simulate function in stats
+aedat_pp_04 = bind_cols(aedat,
+                     stats::simulate(mod04, nsim=500)) %>% 
+  pivot_longer(cols=sim_1:sim_500, values_to='value', names_to='name')
+
+obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
+  mutate(type='Observed')
+
+sim_summary <- aedat_pp_04 %>% 
+  # Nest everying except the simulation name
+  nest(cols=-name) %>% 
+  # Use 200 sims for demonstration
+  slice(1:200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, .x_name='CAVGSS'))) %>% 
+  select(name, predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='CAVGSS', y='Probability of severe AE')
+```
+```{r}
+# Simulate using the simulate function in stats
+aedat_pp_01 = bind_cols(aedat,
+                     stats::simulate(mod01, nsim=500)) %>% 
+  pivot_longer(cols=sim_1:sim_500, values_to='value', names_to='name')
+
+obs_summary <- summary_function(aedat, .x_name = 'CAVGSS', .y_name='AE01') %>% 
+  mutate(type='Observed')
+
+sim_summary <- aedat_pp_01 %>% 
+  # Nest everying except the simulation name
+  nest(cols=-name) %>% 
+  # Use 200 sims for demonstration
+  slice(1:200) %>% 
+  # Compute summary stats for each simulated dataset
+  mutate(predictions = map(cols, ~summary_function(.x, .x_name='CAVGSS'))) %>% 
+  select(name, predictions) %>% 
+  unnest(cols=predictions) %>% 
+  # Summarise across simulated data sets
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+
+sim_summary %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='CAVGSS', y='Probability of severe AE')
+```
+
+The VPC for mod04 looks slightly better than the one for mod01. Let's see if AIC agrees: 
+
+```{r}
+AIC(mod01, mod04)
+```
+
+The above would suggest that the model with interaction has a better fit.
+
+Interestingly, BIC does not agree in this case. As is expected generally, BIC puts a stiffer penalty on model complexity and so favors the model without interaction: 
+
+```{r}
+BIC(mod01, mod04)
+```
+
