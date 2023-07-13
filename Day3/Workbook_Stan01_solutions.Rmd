@@ -198,7 +198,7 @@ head(posterior_predictive_samples)
 sim_summary <- posterior_predictive_samples %>% 
   # Join original data
   left_join(dos %>% select(ID,SLD0)) %>% 
-  # Nest everying except the simulation name
+  # Nest everything except the simulation name
   nest(cols=-.draw) %>% 
   # Use 200 sims for demonstration
   sample_n(size=200) %>% 
@@ -280,35 +280,129 @@ fit_lr_power <- stan(file = '../model/stan/logistic_regression_power.stan',
 ```{r}
 print(fit_lr_power,pars = c('alpha','beta','gamma'))
 ```
-> There are no divegent transitions, but the effective sample sizes are low and Rhat values could be a bit smaller.  We can probably fix those problems by running the chains longer.
+> There are some divegent transitions, so we need to be cautious about interpreting the posterior summaries...
 
 ***
   a. Look at the pairs plot for alpha, beta and the power parameter.  What do you see?  Try increasing the `adapt_delta` option to 0.95.  Does that fix the problem?
 
-```{r}
-mcmc_pairs(fit_lr_power, pars=c('alpha','beta','gamma'))
-```
+> Let's look at the pairs plot, highlighting the divergent transitions by putting them in the upper off-digonal plots.
 
 ```{r}
-fit_lr_power2 <- stan(file = '../model/stan/logistic_regression_power.stan',
+mcmc_pairs(fit_lr_power, 
+           condition = pairs_condition(nuts='divergent__'),  # How to handle the divergent  transitions
+           pars=c('alpha','beta','gamma'),                   # Which parameters to plot
+           np = nuts_params(fit_lr_power))                   # Where to find the divergent transition info
+```
+
+> The DTs seem to be scattered throughout the distributions.   Let's increase the `adapt_delta` setting and re-run the model.
+
+
+```{r}
+fit_lr_power_delta0.95 <- stan(file = '../model/stan/logistic_regression_power.stan',
                data = stan_data,
-               chains = 4,iter = 3000, warmup = 1000, 
+               chains = 4,iter = 2000, warmup = 1000, 
                cores = 2,  seed=31425,
                control = list(adapt_delta=0.95))
 ```
+ 
 
+ > We are still getting divergent transitions, so simply increasing the `adapt_delta` setting wasn't the solution.
+
+***
+
+
+\newpage
+ 
   b. Try a model which forces $\beta > 0$, does that fix the problem?  Do you think this is a reasonable solution, or would you try a different functional form?
+
+***
+
+> The new model code is in the file `../model/stan/logistic_regression_power_postive_beta.stan`.
+
+```{r}
+fit_lr_power2 <- stan(file = '../model/stan/logistic_regression_power_positive_beta.stan',
+               data = stan_data,
+               chains = 4,iter = 2000, warmup = 1000, 
+               cores = 2,  seed=31425)
+```
+
+```{r}
+print(fit_lr_power2, pars=c('alpha','beta','gamma'))
+```
+
+> No divergent transitions (Yay!). We can probably address the Rhat and ESS values by running our chains a bit longer.
+
+***
+
+\newpage
 
 4. Check convergence and model fit using a VPC.  For the VPC, you can use the code above with no changes.
 
+***
+
+> Let's run the model with more posterior samples and nudging up the adapt delta paramter, then check the VPC.
+
+```{r}
+fit_lr_power3 <- stan(file = '../model/stan/logistic_regression_power_positive_beta.stan',
+               data = stan_data,
+               chains = 4,iter = 4000, warmup = 2000, 
+               cores = 2,  seed=31425, control=list(adapt_delta=0.90))
+```
+
+```{r}
+print(fit_lr_power3, pars=c('alpha','beta','gamma'))
+```
+
+
+
+```{r}
+posterior_predictive_samples3 = gather_draws(fit_lr_power3, Ysim[ID]) %>% 
+  rename(Chain = .chain)
+
+sim_summary3 <- posterior_predictive_samples3 %>% 
+  left_join(dos %>% select(ID,SLD0)) %>% 
+  nest(cols=-.draw) %>% 
+  sample_n(size=200) %>% 
+  mutate(predictions = map(cols, ~summary_function(.x, 
+                                                   .x_name='SLD0',
+                                                   .y_name='.value'))) %>% 
+  select(.draw,predictions) %>% 
+  unnest(cols=predictions) %>% 
+  group_by(xvar) %>% 
+  summarise(qlo = quantile(prediction, probs = 0.05),
+            qhi = quantile(prediction, probs = 0.95),
+            prediction=median(prediction)
+            ) %>% 
+  mutate(type = 'Simulated')
+
+sim_summary3 %>% bind_rows(obs_summary) %>% 
+  ggplot(aes(x=xvar, y=prediction)) +
+  geom_line(aes(col=type, group=type)) +
+  geom_ribbon(aes(ymin=qlo, ymax=qhi, fill=type), alpha=0.2) +
+  labs(x='Baseline SLD', y='P(ECOG=1)')
+```
+***
+
+
+\newpage
+
 5. Compare models using LOO-IC.  Which model do you think will provide better predictions for future patients?
+
+***
+
+> __Answer:__
 
 ```{r}
 loo_base <- loo(fit_lr)
-loo_power <- loo(fit_lr_power)
+loo_power <- loo(fit_lr_power3)
 
 print(loo_base)
 print(loo_power)
 
 loo::loo_compare(loo_base, loo_power)
 ```
+
+
+> Based on ELPD, the two models provide similar out-of-sample predictive performance.  So, either model would be a reasonable choice (given that the VPCs look okay).  Following the parsimony principle, we might select the simpler model.
+
+***
